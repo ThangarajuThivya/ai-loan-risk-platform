@@ -214,6 +214,70 @@ router.patch(
 // GET /api/currency/exchange/admin/position (admin) — net FX exposure.
 router.get("/admin/position", verifyToken, allowRoles("admin"), fxExchangeController.getPosition);
 
+// --- bank-wide FX inventory (Task 3) -------------------------------------
+// One notional vault per currency — no branch dimension. Every write goes
+// through fxInventoryModel.applyMovement (see the controller); there is no
+// direct SQL UPDATE of balances anywhere in this stack.
+
+// GET /api/currency/exchange/admin/inventory (admin, staff) — read-only for
+// staff, who need to see stock levels in the review queue (Task 7) before
+// approving a 'buy' request. Writes below stay admin-only.
+router.get(
+  "/admin/inventory",
+  verifyToken,
+  allowRoles("admin", "staff"),
+  fxExchangeController.listInventory
+);
+
+// PATCH /api/currency/exchange/admin/inventory/:code (admin) — opening
+// balance (absolute target) or adjustment (signed delta).
+router.patch(
+  "/admin/inventory/:code",
+  verifyToken,
+  allowRoles("admin"),
+  [
+    CODE_VALIDATOR,
+    body("action")
+      .exists({ checkFalsy: true })
+      .withMessage("action is required")
+      .isIn(["opening_balance", "adjustment"])
+      .withMessage("action must be one of: opening_balance, adjustment"),
+    body("amount")
+      .exists()
+      .withMessage("amount is required")
+      .isFloat()
+      .withMessage("amount must be a number")
+      .toFloat(),
+    body("note").optional().isString().trim().isLength({ max: 500 }),
+    // opening_balance sets an absolute stock level, so a negative target
+    // makes no physical sense; adjustment is a signed delta and a zero
+    // delta is a no-op that shouldn't create a ledger row.
+    body().custom((value) => {
+      if (value.action === "opening_balance" && !(value.amount >= 0)) {
+        throw new Error("amount must be zero or positive for an opening balance.");
+      }
+      if (value.action === "adjustment" && value.amount === 0) {
+        throw new Error("amount must be non-zero for an adjustment.");
+      }
+      return true;
+    }),
+  ],
+  fxExchangeController.updateInventory
+);
+
+// GET /api/currency/exchange/admin/inventory/:code/movements (admin).
+router.get(
+  "/admin/inventory/:code/movements",
+  verifyToken,
+  allowRoles("admin"),
+  [
+    CODE_VALIDATOR,
+    query("limit").optional().isInt({ min: 1, max: 500 }),
+    query("offset").optional().isInt({ min: 0 }),
+  ],
+  fxExchangeController.listInventoryMovements
+);
+
 const REPORT_QUERY_VALIDATORS = [
   query("from").optional().isISO8601().withMessage("from must be a YYYY-MM-DD date"),
   query("to").optional().isISO8601().withMessage("to must be a YYYY-MM-DD date"),

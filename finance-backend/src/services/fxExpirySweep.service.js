@@ -16,6 +16,7 @@
  */
 
 const fxExchangeModel = require("../models/fxExchangeModel");
+const fxInventoryModel = require("../models/fxInventoryModel");
 const notificationModel = require("../models/notificationModel");
 
 const DEFAULT_SLA_MS = Number(process.env.FX_REQUEST_REVIEW_SLA_MS) || 3 * 24 * 60 * 60 * 1000;
@@ -34,17 +35,36 @@ async function sweepExpiredRequests(slaMs = DEFAULT_SLA_MS) {
 
   let expiredCount = 0;
   for (const id of ids) {
+    // Fetched BEFORE the transition (it used to be read after) because the
+    // release below needs the request's currency, and after the transition
+    // is too late to be inside its transaction.
+    const row = await fxExchangeModel.findById(id);
+    if (!row) continue;
+
     const result = await fxExchangeModel.transitionStatus({
       id,
       fromStatuses: ["pending_review"],
       toStatus: "expired",
       actorUserId: null,
       note: "Auto-expired: exceeded the review SLA without a staff decision.",
+      // Expiry is the third terminal, non-settled exit. Like reject and
+      // cancel it only fires from 'pending_review' today, so there is never
+      // a reservation to hand back and this no-ops — but an unreleased
+      // reservation leaks stock permanently and silently, and this sweep is
+      // the one path with no human watching it, so it is wired too.
+      beforeCommit: async (conn) => {
+        await fxInventoryModel.releaseReservation({
+          requestId: id,
+          currencyCode: row.currency_code,
+          actorUserId: null,
+          note: `Reservation released — ${row.reference_no} expired.`,
+          conn,
+        });
+      },
     });
     if (!result.ok) continue;
     expiredCount += 1;
 
-    const row = await fxExchangeModel.findById(id);
     await notificationModel
       .create({
         userId: result.userId,

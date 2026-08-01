@@ -209,6 +209,16 @@ async function findQueue({ status = "pending_review", currency, limit = 100, off
  * be trusted column names, never user input, since they're interpolated
  * into the SQL (values are still parameterized).
  *
+ * `beforeCommit`, if given, runs INSIDE this transaction once the status
+ * change and its audit event are written but before the commit, receiving
+ * the same connection. It is how side effects that must be atomic with the
+ * transition itself participate — the reserve-on-approve inventory gate
+ * (fxInventoryModel.applyMovement) is the first such caller. Throwing from
+ * it rolls the whole transition back, so a failed reservation leaves the
+ * request in its original status with no audit event: the approval simply
+ * did not happen. Errors propagate to the caller untouched, `err.status`
+ * and all.
+ *
  * @param {object} p
  * @param {number} p.id
  * @param {string[]} p.fromStatuses statuses this transition is legal from
@@ -216,9 +226,19 @@ async function findQueue({ status = "pending_review", currency, limit = 100, off
  * @param {number} [p.actorUserId]
  * @param {string} [p.note]
  * @param {object} [p.extraFields] extra column:value pairs for the UPDATE
+ * @param {(conn: object, current: object) => Promise<void>} [p.beforeCommit]
+ *   atomic side effect; throwing rolls the transition back
  * @returns {Promise<{notFound:true}|{conflict:true,status:string}|{ok:true,userId:number,previousStatus:string}>}
  */
-async function transitionStatus({ id, fromStatuses, toStatus, actorUserId, note, extraFields = {} }) {
+async function transitionStatus({
+  id,
+  fromStatuses,
+  toStatus,
+  actorUserId,
+  note,
+  extraFields = {},
+  beforeCommit,
+}) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -253,6 +273,14 @@ async function transitionStatus({ id, fromStatuses, toStatus, actorUserId, note,
        VALUES (?, ?, ?, ?, ?)`,
       [id, current.status, toStatus, actorUserId || null, note || null]
     );
+
+    // Runs with the request row already locked, so the inventory row is
+    // always taken second — a consistent lock order for every writer that
+    // touches both, which is what keeps concurrent approvals from
+    // deadlocking against each other.
+    if (beforeCommit) {
+      await beforeCommit(conn, current);
+    }
 
     await conn.commit();
     return { ok: true, userId: current.user_id, previousStatus: current.status };

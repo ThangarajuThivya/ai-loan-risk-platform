@@ -9,7 +9,7 @@
     "migrate": "node db/migrate.js",
     "seed:demo": "node scripts/seedDemoData.js",
     "smoke": "node scripts/smokeCheck.js",
-    "test": "node src/services/__tests__/recommendation.test.js && node src/services/__tests__/crossRate.test.js && node src/services/__tests__/fxQuote.test.js && node src/services/__tests__/liveForecast.test.js && node src/services/__tests__/liveAnomaly.test.js && node src/services/__tests__/fxVar.test.js && node src/services/__tests__/fxCompliance.test.js && node src/services/__tests__/fxReports.test.js"
+    "test": "node src/services/__tests__/recommendation.test.js && node src/services/__tests__/crossRate.test.js && node src/services/__tests__/fxQuote.test.js && node src/services/__tests__/liveForecast.test.js && node src/services/__tests__/liveAnomaly.test.js && node src/services/__tests__/fxVar.test.js && node src/services/__tests__/fxCompliance.test.js && node src/services/__tests__/fxReports.test.js && node src/services/__tests__/fxInventoryConcurrency.test.js"
   },
   "keywords": [],
   "author": "",

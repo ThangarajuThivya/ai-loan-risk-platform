@@ -698,6 +698,8 @@
       "perTransactionLimit": "Per-transaction limit",
       "remainingToday": "Remaining today",
       "overLimitWarning": "This amount exceeds your per-transaction limit or today's remaining allowance. Reduce the amount to continue.",
+      "availableStock": "Available at the bank",
+      "mayNeedOrderingIn": "We may not hold enough of this currency right now — it may need to be ordered in, which can take a little longer. You can still submit your request.",
       "submitting": "Submitting…",
       "submitRequest": "Submit Request",
       "requestSubmittedTitle": "Request Submitted",
