@@ -126,8 +126,8 @@ flowchart LR
 - Role-based routing (`customer` / `staff` / `admin`), each with its own dashboard shell.
 - Full trilingual UI (English / Sinhala / Tamil) via `react-i18next`, headline-level translation — admin/staff tooling and database-sourced content (loan products, FAQ entries, etc.) stay English.
 - **Customer portal** — apply for a loan (wizard form with optional applicant-declared fields), view application history and risk/recommendation results, edit profile; a Currency tab (simplified quarterly exchange-rate outlook, live rate board, rate-history chart); a full FX exchange-request flow — quote in either the foreign currency or a target LKR amount (server inverts the rate either way), live per-transaction/daily limit headroom shown before committing, supporting-document upload when the exchange is over the admin-configured compliance threshold, submit, history, cancel, audit timeline, and a printable settlement slip once a request is approved or settled; read-only FAQ.
-- **Staff portal** — review and decide (approve/reject) loan applications, read-only customer/product views, standalone risk calculator, a Currency tab with the full forecast/trend/volatility breakdown and anomaly-alert log, an FX Exchange review queue (approve/reject/counter-quote/settle, with per-request compliance-document status and an approval gate that blocks approving a request still missing required evidence), FAQ management (CRUD).
-- **Admin portal** — everything staff has, plus loan-product CRUD, staff account management, a Currency Analytics tab (model/cache status, currency activate/deactivate, cache refresh), FX configuration (spreads, limits, documentation threshold, net position, live-feed refresh), an FX Reports tab (status-rate/volume/spread-revenue aggregates over a date range, plus CSV export of the underlying request rows), FAQ management (CRUD), and a Messages/contact-support inbox.
+- **Staff portal** — review and decide (approve/reject) loan applications, read-only customer/product views, standalone risk calculator, a Currency tab with the full forecast/trend/volatility breakdown and anomaly-alert log, an FX Exchange review queue (approve/reject/counter-quote/settle, with per-request compliance-document status and inventory-availability status, each with its own approval gate — see §9.7/§9.9), FAQ management (CRUD).
+- **Admin portal** — everything staff has, plus loan-product CRUD, staff account management, a Currency Analytics tab (model/cache status, currency activate/deactivate, cache refresh), FX configuration (spreads, limits, documentation threshold, bank-wide inventory, net position, live-feed refresh), an FX Reports tab (status-rate/volume/spread-revenue aggregates over a date range, plus CSV export of the underlying request rows), FAQ management (CRUD), and a Messages/contact-support inbox.
 
 ### 6.2 Backend (API gateway)
 - **Authentication & authorization** — registration, login, JWT issuance/refresh, OTP-based forgot-password, RBAC.
@@ -138,6 +138,7 @@ flowchart LR
 - **Currency analytics orchestration** — proxy the currency ML service's `/analyze` per currency, role-shape the response (simplified for customers, full detail for staff/admin), cache results in MySQL for 24h, log flagged anomalies, expose admin currency management (see §9.4/§9.5).
 - **Live FX rate feed & board** — polls a free public FX API hourly for a customer-facing LKR buy/sell board, kept as a separate, clearly-labelled data plane from the trained-model output (§9.5).
 - **FX exchange-request workflow** — customer requests a locked quote (in either the foreign currency or a target LKR amount), submits, staff review (approve/reject/counter-offer)/settle, admin configures spreads/limits/documentation threshold, all persisted with a full audit trail (see §9.6). Requests over the configured LKR threshold require an uploaded supporting document before staff can approve them (see §9.7). An admin-only reports endpoint aggregates status rates, settled volume, and spread revenue over a date range, with a matching CSV export (see §9.8).
+- **FX inventory** — bank-wide (no per-branch) foreign-currency stock, reserved atomically at approval and consumed/released at settlement or terminal rejection, with a single-writer append-only ledger (see §9.9).
 - **FAQ management** — public/customer read-only catalog; staff/admin CRUD, with optional Sinhala/Tamil translations per entry (English is the source of truth).
 - **Contact/support messaging** — public contact form persisted to the DB; admin inbox to triage and respond.
 - **Persistence** — all reads/writes to MySQL.
@@ -736,6 +737,93 @@ Implementation: `finance-backend/src/controllers/fxExchange.controller.js`
 (`getReports`, `exportReportsCsv`, `computeSpreadRevenueLkr`),
 `finance-frontend/src/components/admin/AdminReports.jsx`.
 
+### 9.9 FX inventory (bank-wide stock)
+§9.6 tracks what customers *ask for*; this tracks whether the bank actually
+*holds* it. Approving a `buy` request is a promise to hand the customer
+foreign currency at the branch — from Phase FX-inventory onward that promise
+is checked and committed against real stock, not made blind.
+
+**Scope: one notional vault per currency, bank-wide.** There is no
+per-branch stock — `fx_exchange_requests.branch` stays free text and
+inventory never reads it (branch normalization was explicitly out of scope;
+see §13). There is no LKR-side inventory, no denomination breakdown, and no
+procurement/replenishment workflow — see §13 for what each of those would
+require and why none of it is here.
+
+**Schema** — `fx_inventory` (one row per currency: `on_hand_units`,
+`reserved_units`, a nullable `reorder_level_units` for the low-stock alert,
+`is_active`) and `fx_inventory_movements`, an append-only ledger:
+`movement_type` (`restock`, `adjustment`, `reserve`, `settle_out`,
+`settle_in`, `release`; the original `settlement` value predates the
+reserve/settle split and is kept but no longer written, since dropping an
+ENUM value would silently rewrite any row still holding it), signed
+`delta_units`/`delta_reserved_units`, `balance_after`/`reserved_after`
+snapshots taken in the same transaction as the write, an optional
+`request_id`, and the acting staff/admin's `user_id`.
+
+**Single writer.** `fxInventoryModel.applyMovement` is the only function
+anywhere in the codebase permitted to change `on_hand_units` or
+`reserved_units`; it always writes the balance and its ledger row in one
+transaction, so the ledger is guaranteed, not just conventionally, a
+complete history of every balance that has ever existed.
+
+**Reserve-on-approve, atomically.** Approving a `buy` reserves
+`foreign_amount` units via a single guarded statement —
+`UPDATE ... SET reserved_units = reserved_units + ? WHERE currency_code = ?
+AND (on_hand_units - reserved_units) >= ?` — never a read followed by a
+write. `affectedRows = 0` means the stock isn't there (or another approval
+just took it) and raises a `409` naming the shortage; the transition is
+rolled back with it, so a failed reservation never leaves the request
+half-approved. Two concurrent approvals racing for the same stock can never
+both succeed: proven directly, across 200 repeated races, by
+`finance-backend/src/services/__tests__/fxInventoryConcurrency.test.js`.
+Approving a `sell` reserves nothing — the customer is bringing currency
+*in*, not drawing it down.
+
+**Settlement moves the physical stock.** `buy` → `settle_out`: both
+`reserved_units` and `on_hand_units` fall by the settled amount (the
+reservation is consumed, not just released — the notes left the vault).
+`sell` → `settle_in`: `on_hand_units` rises; `reserved_units` is untouched,
+since a sell never reserved.
+
+**Release: the leak-prevention path.** Any approved `buy` that reaches a
+terminal, non-settled state (rejected, cancelled, or expired after
+approval) must hand its reservation back, or `reserved_units` only ever
+grows, `available` (`on_hand − reserved`) drifts toward zero, and approvals
+eventually stop working bank-wide with nothing to explain why.
+`fxInventoryModel.releaseReservation` is reusable and idempotent — it
+derives the outstanding amount from the ledger itself rather than trusting
+a caller-supplied number, so a request that never reserved is a no-op, and
+a request that already settled cannot be double-released. Wired into
+reject, cancel, and the background expiry sweep.
+
+**Advisory-only surfaces.** `POST /quote` includes `available_amount` /
+`sufficient_stock` for `buy` quotes (`null` for `sell`, where stock is
+irrelevant) so a customer sees likely fulfillability before submitting —
+this never blocks submission. The staff review queue shows the same
+availability before approval and disables **Approve** (not reject or
+counter-quote) when stock is insufficient, mirroring the §9.7 documents
+gate. In both places the atomic check inside `reviewRequest` remains the
+only real enforcement point; a stale advisory read can at worst show a
+badge that lags reality for a few seconds, never let an approval through it
+shouldn't.
+
+**Admin console** — an Inventory tab (opening-balance and adjustment
+editors, paginated movement history) alongside Spreads/Limits/Position/
+Audit/Rate Feed. Every write goes through `applyMovement`; there is no
+direct `UPDATE fx_inventory` anywhere in the admin path either. Reads are
+open to staff (needed to see availability before approving); writes are
+admin-only.
+
+Implementation: `finance-backend/src/models/fxInventoryModel.js`,
+`db/migrations/015`–`018_*.sql`, `controllers/fxExchange.controller.js`
+(the inventory endpoints, and the `reviewRequest`/`settleRequest` gates),
+`services/fxExpirySweep.service.js`,
+`finance-frontend/src/components/admin/AdminFxExchange.jsx` (Inventory tab),
+`finance-frontend/src/components/currency/FxRequestQueue.jsx` (staff
+availability), `finance-frontend/src/pages/customer/CurrencyExchange.jsx`
+(customer advisory).
+
 ---
 
 ## 10. Data model
@@ -844,9 +932,10 @@ foreign-key chain): `currency_rates` (live-board snapshot), `currency_rate_histo
 `requires_documents`, a submission-time snapshot; see §9.7),
 `fx_request_documents` (uploaded compliance evidence — filename/MIME/size and
 a server-side `storage_path`, never returned to a client), `fx_limits`
-(per-transaction/daily caps plus a nullable `document_threshold_lkr`). Plus
-`faqs` (staff/admin-managed, optional Sinhala/Tamil columns) and
-`contact_messages` (public contact form → admin inbox).
+(per-transaction/daily caps plus a nullable `document_threshold_lkr`),
+`fx_inventory`/`fx_inventory_movements` (bank-wide stock and its append-only
+ledger — see §9.9). Plus `faqs` (staff/admin-managed, optional Sinhala/Tamil
+columns) and `contact_messages` (public contact form → admin inbox).
 
 **Status:** all tables above exist and are applied by `npm run migrate`
 (from `finance-backend/`) via numbered, idempotent migrations under
@@ -908,3 +997,7 @@ commands and ordering.
 - **No real CRIB bureau integration** — the loan-risk model's CRIB fields are self-declared or neutral-default, not pulled from a live bureau API.
 - **Loan-risk dataset is synthetic**, not real applicant data (see §7.1).
 - **i18n is headline-level** — admin/staff tooling and DB-sourced content (loan products, most FAQ entries unless translated) stay English by design, not a gap to close.
+- **FX inventory has no per-branch dimension** — one notional vault per currency, bank-wide (§9.9). `fx_exchange_requests.branch` is free text ("Colombo", "colombo", "Colombo 07" are three different strings today) and normalizing it was explicitly out of scope for this feature; keying stock off that column as-is would silently split one currency's stock across typo-distinct "branches" with no way to detect it. Real per-branch stock would need a `branches` table and a `branch_id` foreign key on `fx_inventory`, not a reinterpretation of the existing string.
+- **No LKR-side inventory** — `fx_inventory` tracks foreign-currency stock only. The LKR a customer hands over on a `buy` settlement, or receives on a `sell` settlement, is not modeled anywhere; §9.6 already establishes that no money moves inside this system. Adding it would mean a second, LKR-denominated ledger with its own reserve/settle semantics — a materially different feature, not an extension of this one.
+- **No denomination-level inventory** — a vault holds "10,000 USD," not a breakdown by note (e.g. how many $100s vs $20s). Real cash operations care about denomination mix for physical handover; nothing in `fx_inventory` or `fx_inventory_movements` records it, and adding it would mean a denomination dimension on every movement row, not just a new column.
+- **No replenishment/procurement workflow** — restocking is a manual admin action (the opening-balance/adjustment editors in the Inventory tab, §9.9), not a purchase order, supplier relationship, or approval chain. There is no vendor, procurement-request, or purchase-order entity anywhere in the schema; an admin restock is indistinguishable, structurally, from a correction.

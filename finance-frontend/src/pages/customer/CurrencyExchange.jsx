@@ -14,6 +14,7 @@ import {
   ListChecks,
   Info,
   ShieldCheck,
+  Boxes,
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -488,6 +489,28 @@ export default function CurrencyExchange() {
                                 <p className="mt-2 flex items-start gap-1.5">
                                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                                   {t("customer.currencyExchange.overLimitWarning")}
+                                </p>
+                              )}
+                              {/* Advisory stock line — 'buy' only; the server
+                                  sends null for 'sell', where the vault level
+                                  is irrelevant. Never gates the Next button:
+                                  the real check happens at staff approval. */}
+                              {quote.available_amount !== null &&
+                                quote.available_amount !== undefined && (
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span>{t("customer.currencyExchange.availableStock")}</span>
+                                    <span className="font-mono font-semibold">
+                                      {Number(quote.available_amount).toLocaleString("en-LK", {
+                                        maximumFractionDigits: 2,
+                                      })}{" "}
+                                      {quote.currency_code}
+                                    </span>
+                                  </div>
+                                )}
+                              {!overLimit && quote.sufficient_stock === false && (
+                                <p className="mt-2 flex items-start gap-1.5 text-amber-700">
+                                  <Boxes className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                  {t("customer.currencyExchange.mayNeedOrderingIn")}
                                 </p>
                               )}
                               {!overLimit && quote.will_require_documents && (

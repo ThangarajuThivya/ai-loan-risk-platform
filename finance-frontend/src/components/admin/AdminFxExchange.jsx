@@ -15,6 +15,10 @@ import {
   CheckCircle2,
   XCircle,
   Save,
+  Boxes,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  ArrowRightLeft,
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -62,10 +66,16 @@ function previewSpread(midRate, buySpreadBps, sellSpreadBps) {
 const SUB_TABS = [
   { id: "spreads", label: "Spreads", icon: Gauge },
   { id: "limits", label: "Limits", icon: Wallet },
+  { id: "inventory", label: "Inventory", icon: Boxes },
   { id: "position", label: "Position", icon: BarChart3 },
   { id: "audit", label: "Audit", icon: History },
   { id: "rate-feed", label: "Rate Feed", icon: Radio },
 ];
+
+const formatUnits = (value) =>
+  value === null || value === undefined
+    ? "—"
+    : Number(value).toLocaleString("en-LK", { maximumFractionDigits: 2 });
 
 function ConfirmModal({ title, icon: Icon, children, onCancel, onConfirm, confirmLabel, busy, disabled }) {
   return (
@@ -691,6 +701,417 @@ function LimitsView() {
   );
 }
 
+const MOVEMENT_LABELS = {
+  restock: { label: "Restock / Opening Balance", icon: ArrowDownCircle, className: "text-emerald-700" },
+  settlement: { label: "Settlement", icon: ArrowRightLeft, className: "text-brand-primary" },
+  adjustment: { label: "Adjustment", icon: ArrowUpCircle, className: "text-amber-700" },
+};
+
+function InventoryMovementsPanel({ code, onClose }) {
+  const [movements, setMovements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const PAGE_SIZE = 20;
+
+  const load = async (nextOffset) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get(`/currency/exchange/admin/inventory/${code}/movements`, {
+        params: { limit: PAGE_SIZE, offset: nextOffset },
+      });
+      const rows = res.data?.movements || [];
+      setMovements((prev) => (nextOffset === 0 ? rows : [...prev, ...rows]));
+      setHasMore(rows.length === PAGE_SIZE);
+      setOffset(nextOffset);
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't load movement history.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!cancelled) await load(0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-2xl shadow-xl border border-slate-100 w-full max-w-2xl p-6 max-h-[85vh] flex flex-col"
+      >
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <h3 className="font-bold text-slate-900">{code} Movement History</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="flex items-start space-x-2 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl p-3 text-xs mb-3">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="overflow-y-auto flex-1 -mx-2 px-2">
+          {movements.length === 0 && !loading ? (
+            <p className="text-sm text-slate-400 text-center py-8">No movements recorded yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {movements.map((m) => {
+                const meta = MOVEMENT_LABELS[m.movement_type] || {
+                  label: m.movement_type,
+                  icon: ArrowRightLeft,
+                  className: "text-slate-600",
+                };
+                const Icon = meta.icon;
+                return (
+                  <div key={m.id} className="border border-slate-100 rounded-xl p-3 text-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`inline-flex items-center gap-1.5 font-bold ${meta.className}`}>
+                        <Icon className="w-3.5 h-3.5" /> {meta.label}
+                      </span>
+                      <span className="text-slate-400">{formatDateTime(m.created_at)}</span>
+                    </div>
+                    <p className="text-slate-600">
+                      On hand: {m.delta_units > 0 ? "+" : ""}
+                      {formatUnits(m.delta_units)} → balance {formatUnits(m.balance_after)}
+                      {m.delta_reserved_units !== 0 && (
+                        <>
+                          {" "}
+                          &middot; Reserved: {m.delta_reserved_units > 0 ? "+" : ""}
+                          {formatUnits(m.delta_reserved_units)} → {formatUnits(m.reserved_after)}
+                        </>
+                      )}
+                    </p>
+                    {m.note && <p className="text-slate-400 mt-1 italic">{m.note}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {loading && (
+            <div className="flex items-center justify-center py-4 text-slate-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          )}
+        </div>
+
+        {hasMore && !loading && (
+          <button
+            onClick={() => load(offset + PAGE_SIZE)}
+            className="mt-3 shrink-0 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 self-center"
+          >
+            Load More
+          </button>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
+function InventoryView() {
+  const { showToast } = useToast();
+  const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // { currency_code, action: 'opening_balance' | 'adjustment', amount, note }
+  const [editing, setEditing] = useState(null);
+  const [pendingSave, setPendingSave] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [historyCode, setHistoryCode] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.get("/currency/exchange/admin/inventory");
+      setInventory(res.data?.inventory || []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Couldn't load FX inventory.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const startEdit = (row, action) => {
+    setEditing({
+      currency_code: row.currency_code,
+      action,
+      amount: action === "opening_balance" ? String(row.on_hand) : "",
+      note: "",
+      before: row,
+    });
+  };
+
+  const amountValid = (() => {
+    if (!editing) return false;
+    const n = Number(editing.amount);
+    if (editing.amount === "" || Number.isNaN(n)) return false;
+    return editing.action === "opening_balance" ? n >= 0 : n !== 0;
+  })();
+
+  const requestSave = () => {
+    if (!editing || !amountValid) return;
+    setPendingSave({ ...editing, amount: Number(editing.amount) });
+  };
+
+  const confirmSave = async () => {
+    if (!pendingSave) return;
+    setSaving(true);
+    try {
+      const res = await api.patch(`/currency/exchange/admin/inventory/${pendingSave.currency_code}`, {
+        action: pendingSave.action,
+        amount: pendingSave.amount,
+        note: pendingSave.note || undefined,
+      });
+      setInventory((prev) =>
+        prev.map((row) => (row.currency_code === res.data.inventory.currency_code ? res.data.inventory : row))
+      );
+      showToast({
+        type: "success",
+        title: "Inventory Updated",
+        message: `${pendingSave.currency_code}'s stock balance has been updated.`,
+      });
+      setEditing(null);
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Update Failed",
+        message: err.response?.data?.message || "Couldn't update this currency's inventory.",
+      });
+    } finally {
+      setSaving(false);
+      setPendingSave(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 flex items-center justify-center text-slate-400">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-start space-x-2 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl p-4 text-xs">
+        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+        <span>{error}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 text-[10px] uppercase font-semibold tracking-wider text-slate-500 text-left">
+                <th className="px-4 py-3">Currency</th>
+                <th className="px-4 py-3">On Hand</th>
+                <th className="px-4 py-3">Reserved</th>
+                <th className="px-4 py-3">Available</th>
+                <th className="px-4 py-3">Reorder Level</th>
+                <th className="px-4 py-3">Updated</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {inventory.map((row) => {
+                const low = row.reorder_level_units != null && row.on_hand <= row.reorder_level_units;
+                return (
+                  <tr key={row.currency_code} className="hover:bg-slate-50/60">
+                    <td className="px-4 py-3 font-bold text-slate-800">
+                      {row.currency_code}
+                      {low && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-md align-middle">
+                          <AlertTriangle className="w-3 h-3" /> Low
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-slate-600">{formatUnits(row.on_hand)}</td>
+                    <td className="px-4 py-3 font-mono text-slate-600">{formatUnits(row.reserved)}</td>
+                    <td className="px-4 py-3 font-mono font-bold text-slate-800">{formatUnits(row.available)}</td>
+                    <td className="px-4 py-3 font-mono text-slate-500">
+                      {row.reorder_level_units == null ? "—" : formatUnits(row.reorder_level_units)}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{formatDateTime(row.updated_at)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setHistoryCode(row.currency_code)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 border border-slate-200 hover:bg-slate-50"
+                        >
+                          <History className="w-3.5 h-3.5" /> History
+                        </button>
+                        <button
+                          onClick={() => startEdit(row, "adjustment")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-700 border border-amber-200 hover:bg-amber-50"
+                        >
+                          <ArrowUpCircle className="w-3.5 h-3.5" /> Adjust
+                        </button>
+                        <button
+                          onClick={() => startEdit(row, "opening_balance")}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-brand-primary border border-brand-primary/20 hover:bg-brand-primary/5"
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Opening Balance
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-slate-400 leading-relaxed">
+        One bank-wide vault per currency — there is no branch-level stock. Available = On Hand − Reserved. Every
+        change is recorded in the movement ledger with the acting admin's user id; balances are never edited
+        directly.
+      </p>
+
+      <AnimatePresence>
+        {editing && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 w-full max-w-sm p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-slate-900">
+                  {editing.action === "opening_balance"
+                    ? `Set ${editing.currency_code} Opening Balance`
+                    : `Adjust ${editing.currency_code} Stock`}
+                </h3>
+                <button onClick={() => setEditing(null)} className="text-slate-400 hover:text-slate-700">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-[10px] text-slate-400 uppercase font-semibold mb-1">
+                  {editing.action === "opening_balance"
+                    ? `Opening Balance (units of ${editing.currency_code})`
+                    : `Adjustment (signed units of ${editing.currency_code})`}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min={editing.action === "opening_balance" ? "0" : undefined}
+                  value={editing.amount}
+                  onChange={(e) => setEditing((v) => ({ ...v, amount: e.target.value }))}
+                  placeholder={editing.action === "adjustment" ? "e.g. -250 or 500" : undefined}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary"
+                />
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                  {editing.action === "opening_balance"
+                    ? "The absolute stock level to set — currently " + formatUnits(editing.before.on_hand) + "."
+                    : "Positive adds stock, negative removes it (e.g. a stock-count correction or write-off)."}
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Note (optional)</label>
+                <input
+                  type="text"
+                  maxLength={500}
+                  value={editing.note}
+                  onChange={(e) => setEditing((v) => ({ ...v, note: e.target.value }))}
+                  placeholder="Reason for this change"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setEditing(null)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={requestSave}
+                  disabled={!amountValid}
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-brand-primary hover:bg-brand-primary/95 text-white disabled:opacity-50"
+                >
+                  Review &amp; Save
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {pendingSave && (
+          <ConfirmModal
+            title={`Confirm ${pendingSave.currency_code} Inventory Change`}
+            icon={Boxes}
+            busy={saving}
+            confirmLabel="Confirm & Save"
+            onCancel={() => setPendingSave(null)}
+            onConfirm={confirmSave}
+          >
+            <p className="text-sm text-slate-600 mb-3">
+              {pendingSave.action === "opening_balance"
+                ? `This sets ${pendingSave.currency_code}'s on-hand stock to an absolute value.`
+                : `This posts a signed adjustment against ${pendingSave.currency_code}'s current stock.`}
+            </p>
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 text-xs space-y-1">
+              <p>
+                On hand: {formatUnits(pendingSave.before.on_hand)} →{" "}
+                <strong>
+                  {pendingSave.action === "opening_balance"
+                    ? formatUnits(pendingSave.amount)
+                    : formatUnits(pendingSave.before.on_hand + pendingSave.amount)}
+                </strong>
+              </p>
+              {pendingSave.note && <p>Note: {pendingSave.note}</p>}
+            </div>
+          </ConfirmModal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {historyCode && (
+          <InventoryMovementsPanel code={historyCode} onClose={() => setHistoryCode(null)} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function PositionView() {
   const [positions, setPositions] = useState([]);
   const [risk, setRisk] = useState(null);
@@ -805,6 +1226,7 @@ export default function AdminFxExchange({ customers }) {
 
       {tab === "spreads" && <SpreadsView />}
       {tab === "limits" && <LimitsView />}
+      {tab === "inventory" && <InventoryView />}
       {tab === "position" && <PositionView />}
       {tab === "audit" && (
         <FxRequestQueue

@@ -28,6 +28,7 @@ const { validationResult } = require("express-validator");
 
 const { FX_DOCUMENT_DIR } = require("../config/multer");
 const fxExchangeModel = require("../models/fxExchangeModel");
+const fxInventoryModel = require("../models/fxInventoryModel");
 const currencyModel = require("../models/currencyModel");
 const notificationModel = require("../models/notificationModel");
 const fxQuote = require("../services/fxQuote.service");
@@ -157,15 +158,27 @@ exports.getQuote = async (req, res) => {
     // remains the sole enforcement point (a second request submitted in
     // between could still push the daily total over, and must still be
     // rejected there).
-    const [limits, todaysTotal] = await Promise.all([
+    const [limits, todaysTotal, vault] = await Promise.all([
       fxExchangeModel.getEffectiveLimits(currencyCode),
       fxExchangeModel.sumTodaysCommittedLkr(req.user.user_id),
+      // Advisory only — see the response fields below.
+      fxInventoryModel.findByCurrency(currencyCode),
     ]);
     const maxPerTransactionLkr = Number(limits.max_per_transaction_lkr);
     const maxPerCustomerPerDayLkr = Number(limits.max_per_customer_per_day_lkr);
     const remainingTodayLkr = round2(Math.max(0, maxPerCustomerPerDayLkr - todaysTotal));
     const documentThresholdLkr =
       limits.document_threshold_lkr == null ? null : Number(limits.document_threshold_lkr);
+
+    // A currency with no vault row yet reports null (unknown), not 0 — the
+    // customer shouldn't be told stock is exhausted when it was simply never
+    // configured, and this is advisory anyway.
+    const availableAmount =
+      direction === "buy" && vault
+        ? round2(vault.on_hand_units - vault.reserved_units)
+        : null;
+    const sufficientStock =
+      availableAmount === null ? null : availableAmount >= quote.foreign_amount;
 
     return res.status(200).json({
       ...quote,
@@ -179,6 +192,18 @@ exports.getQuote = async (req, res) => {
       // admin changes it.
       document_threshold_lkr: documentThresholdLkr,
       will_require_documents: requiresDocumentsFor(quote.quoted_lkr_amount, limits),
+      // Stock the bank could hand over today, for a 'buy' only: a 'sell'
+      // brings currency IN, so the vault's level is irrelevant to it and
+      // both fields are null rather than 0 — null means "does not apply",
+      // which the UI must not render as "none left".
+      //
+      // ADVISORY ONLY. These are a snapshot at quote time and are never an
+      // enforcement point: nothing here blocks submission, and by the time
+      // staff review the request another approval may have taken the stock.
+      // The real gate is the atomic reserve-on-approve check in
+      // reviewRequest, which is the only thing that can actually refuse.
+      available_amount: availableAmount,
+      sufficient_stock: sufficientStock,
     });
   } catch (err) {
     if (err instanceof fxQuote.QuoteError) {
@@ -359,6 +384,17 @@ exports.cancelRequest = async (req, res) => {
       toStatus: "cancelled",
       actorUserId: req.user.user_id,
       note: "Cancelled by customer.",
+      // Terminal and not settled — hand back anything reserved. A no-op
+      // from 'pending_review'; see the same note on the reject path.
+      beforeCommit: async (conn) => {
+        await fxInventoryModel.releaseReservation({
+          requestId: row.id,
+          currencyCode: row.currency_code,
+          actorUserId: req.user.user_id,
+          note: `Reservation released — ${row.reference_no} cancelled.`,
+          conn,
+        });
+      },
     });
     if (result.conflict) {
       return res.status(409).json({
@@ -436,6 +472,9 @@ exports.reviewRequest = async (req, res) => {
 
     let toStatus;
     let extraFields = { reviewed_by: req.user.user_id, review_note: note || null };
+    // Set only for an approval that must commit stock (see below); stays
+    // undefined for reject/counter, which never touch inventory.
+    let beforeCommit;
     if (action === "approve") {
       // A request that was flagged as needing evidence cannot be approved
       // until at least one document exists. Rejecting and counter-quoting
@@ -450,8 +489,60 @@ exports.reviewRequest = async (req, res) => {
         });
       }
       toStatus = "ready_for_settlement";
+
+      // Approval is the promise: from here the bank owes this customer the
+      // foreign currency at the branch, so the stock is committed now rather
+      // than discovered missing at settlement.
+      //
+      // Direction decides whether there is anything to reserve. 'buy' means
+      // the customer buys foreign currency FROM the bank, so the bank must
+      // hold it — reserve. 'sell' means the customer brings foreign currency
+      // TO the bank, which adds stock rather than consuming it, and the LKR
+      // the bank pays out is deliberately not modelled as inventory (LKR is
+      // out of scope) — nothing to reserve.
+      //
+      // This is a second, independent gate: the documents check above and
+      // this one must BOTH pass. It is deliberately not merged with
+      // /admin/position, which measures net economic exposure across every
+      // committed request — a different question from "are the notes in the
+      // vault right now".
+      if (row.direction === "buy") {
+        const reserveAmount = Number(row.foreign_amount);
+        beforeCommit = async (conn) => {
+          await fxInventoryModel.applyMovement({
+            currencyCode: row.currency_code,
+            requestId: row.id,
+            reason: "reserve",
+            // Nothing physically leaves the vault at approval — the notes
+            // are still there, just spoken for. on_hand moves at settlement.
+            deltaOnHand: 0,
+            deltaReserved: reserveAmount,
+            // The gate itself: applied atomically with the write, so a
+            // second approval racing this one cannot reserve the same stock.
+            requireAvailable: reserveAmount,
+            actorUserId: req.user.user_id,
+            note: `Reserved on approval of ${row.reference_no}.`,
+            conn,
+          });
+        };
+      }
     } else if (action === "reject") {
       toStatus = "rejected";
+      // Terminal and NOT settled, so any stock this request is holding has
+      // to go back. A rejection from 'pending_review' never reserved
+      // anything and releaseReservation no-ops; it is wired anyway because
+      // the cost of a missing release is a silent, permanent leak, and
+      // because rejection is exactly the transition that would start
+      // carrying a reservation the day approve-then-reject becomes legal.
+      beforeCommit = async (conn) => {
+        await fxInventoryModel.releaseReservation({
+          requestId: row.id,
+          currencyCode: row.currency_code,
+          actorUserId: req.user.user_id,
+          note: `Reservation released — ${row.reference_no} rejected.`,
+          conn,
+        });
+      };
     } else if (action === "counter") {
       toStatus = "pending_review";
       extraFields.quoted_rate = countered_rate;
@@ -469,6 +560,10 @@ exports.reviewRequest = async (req, res) => {
       actorUserId: req.user.user_id,
       note: note || (action === "approve" ? "Approved by staff." : undefined),
       extraFields,
+      // Reserves stock in the same transaction as the status change, so a
+      // request can never end up approved without its inventory committed,
+      // nor stock committed against an approval that didn't land.
+      beforeCommit,
     });
     if (result.conflict) {
       return res.status(409).json({
@@ -500,6 +595,13 @@ exports.reviewRequest = async (req, res) => {
 
     return res.status(200).json(serializeRequest(updated));
   } catch (err) {
+    // The reserve-on-approve gate refusing for want of stock — including
+    // losing a race to a concurrent approval of the same currency. The
+    // transition was rolled back, so the request is still pending_review
+    // and can be approved once the vault is restocked, or rejected.
+    if (err instanceof fxInventoryModel.InsufficientInventoryError) {
+      return res.status(409).json({ message: err.message, inventory: err.details });
+    }
     console.error("FX REVIEW REQUEST ERROR:", err);
     return res.status(500).json({ message: "Failed to review the exchange request." });
   }
@@ -516,12 +618,54 @@ exports.settleRequest = async (req, res) => {
       return res.status(404).json({ message: "Exchange request not found." });
     }
 
+    // Settlement is where the notes actually change hands, so this is where
+    // on_hand_units finally moves — the counterpart to the approval-time
+    // reservation, and the point at which that reservation is consumed.
+    const settledAmount = Number(row.foreign_amount);
+    const beforeCommit = async (conn) => {
+      if (row.direction === "buy") {
+        // The customer collects the currency: it leaves the vault, and the
+        // reservation that was holding it goes with it. Both fall by the
+        // same amount, so `available` (on_hand - reserved) is unchanged by
+        // settling — the stock was already spoken for at approval.
+        await fxInventoryModel.applyMovement({
+          currencyCode: row.currency_code,
+          requestId: row.id,
+          reason: "settle_out",
+          deltaOnHand: -settledAmount,
+          deltaReserved: -settledAmount,
+          actorUserId: req.user.user_id,
+          note: `Settled ${row.reference_no} — currency handed to customer.`,
+          conn,
+        });
+      } else {
+        // The customer hands foreign currency TO the bank, so stock rises.
+        // Nothing was ever reserved for a 'sell' (see reviewRequest), which
+        // is why reserved_units is deliberately untouched here. The LKR paid
+        // out in exchange is not modelled — LKR is out of scope.
+        await fxInventoryModel.applyMovement({
+          currencyCode: row.currency_code,
+          requestId: row.id,
+          reason: "settle_in",
+          deltaOnHand: settledAmount,
+          deltaReserved: 0,
+          actorUserId: req.user.user_id,
+          note: `Settled ${row.reference_no} — currency received from customer.`,
+          conn,
+        });
+      }
+    };
+
     const result = await fxExchangeModel.transitionStatus({
       id: row.id,
       fromStatuses: ["ready_for_settlement"],
       toStatus: "settled",
       actorUserId: req.user.user_id,
       note: note || "Settled at branch.",
+      // Same transaction as the status change: a request cannot end up
+      // 'settled' without its stock movement, nor the stock move for a
+      // settlement that didn't land.
+      beforeCommit,
     });
     if (result.conflict) {
       return res.status(409).json({
@@ -788,6 +932,142 @@ exports.updateSpread = async (req, res) => {
   } catch (err) {
     console.error("FX UPDATE SPREAD ERROR:", err);
     return res.status(500).json({ message: "Failed to update spread configuration." });
+  }
+};
+
+// --- bank-wide FX inventory (Task 3) -------------------------------------
+//
+// One notional vault per currency_code — no branch dimension (see migration
+// 015's header; fx_exchange_requests.branch stays free text). Every write
+// below goes through fxInventoryModel.applyMovement, the schema's single
+// writer of balances — there is no direct UPDATE fx_inventory anywhere in
+// this controller.
+
+/** Coerce an fxInventoryModel row into the on_hand/reserved/available shape the admin screen reads. */
+function serializeInventory(row) {
+  const onHand = Number(row.on_hand_units);
+  const reserved = Number(row.reserved_units);
+  return {
+    currency_code: row.currency_code,
+    on_hand: onHand,
+    reserved,
+    available: round2(onHand - reserved),
+    reorder_level_units: row.reorder_level_units,
+    is_active: !!row.is_active,
+    updated_at: row.updated_at,
+  };
+}
+
+function serializeMovement(row) {
+  return {
+    id: row.id,
+    currency_code: row.currency_code,
+    movement_type: row.movement_type,
+    delta_units: Number(row.delta_units),
+    delta_reserved_units: Number(row.delta_reserved_units),
+    balance_after: Number(row.balance_after),
+    reserved_after: Number(row.reserved_after),
+    request_id: row.request_id,
+    created_by: row.created_by,
+    note: row.note,
+    created_at: row.created_at,
+  };
+}
+
+// GET /api/currency/exchange/admin/inventory (admin) — on_hand/reserved/available
+// for every currency the bank holds a vault for.
+exports.listInventory = async (req, res) => {
+  try {
+    const rows = await fxInventoryModel.listInventory();
+    return res.status(200).json({ inventory: rows.map(serializeInventory) });
+  } catch (err) {
+    console.error("FX LIST INVENTORY ERROR:", err);
+    return res.status(500).json({ message: "Failed to fetch FX inventory." });
+  }
+};
+
+// PATCH /api/currency/exchange/admin/inventory/:code (admin) — the only two
+// admin-initiated ways to move stock: setting an opening balance (an
+// absolute target for on_hand_units, e.g. when a currency vault is first
+// stocked or corrected to match a physical count) or a signed adjustment
+// (a relative correction/write-off). Both always resolve to
+// fxInventoryModel.applyMovement so the ledger and balance can never drift
+// apart, and both always record the acting admin's user_id.
+exports.updateInventory = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Invalid request.", errors: errors.array() });
+  }
+
+  const code = req.params.code.toUpperCase();
+  const { action, amount, note } = req.body;
+
+  try {
+    const current = await fxInventoryModel.findByCurrency(code);
+    if (!current) {
+      return res.status(404).json({ message: `No inventory vault exists for ${code}.` });
+    }
+
+    let deltaOnHand;
+    let reason;
+    let defaultNote;
+    if (action === "opening_balance") {
+      // Reuses the 'restock' movement_type — "notes received into the
+      // vault" is exactly what setting an opening balance is (see
+      // fx_inventory_movements' movement_type comment in migration 015).
+      // amount is the ABSOLUTE target on_hand_units, so the delta applied
+      // is relative to whatever is currently on hand.
+      reason = "restock";
+      deltaOnHand = round2(amount - Number(current.on_hand_units));
+      defaultNote = `Opening balance set to ${amount} by admin.`;
+    } else {
+      // action === "adjustment": amount IS the signed delta.
+      reason = "adjustment";
+      deltaOnHand = amount;
+      defaultNote = `Manual adjustment of ${amount > 0 ? "+" : ""}${amount} by admin.`;
+    }
+
+    const updated = await fxInventoryModel.applyMovement({
+      currencyCode: code,
+      requestId: null,
+      reason,
+      deltaOnHand,
+      deltaReserved: 0,
+      actorUserId: req.user.user_id,
+      note: note || defaultNote,
+    });
+
+    return res.status(200).json({ inventory: serializeInventory(updated) });
+  } catch (err) {
+    console.error("FX UPDATE INVENTORY ERROR:", err);
+    return res.status(500).json({ message: "Failed to update FX inventory." });
+  }
+};
+
+// GET /api/currency/exchange/admin/inventory/:code/movements (admin) —
+// paginated ledger history for one currency, newest first.
+exports.listInventoryMovements = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Invalid request.", errors: errors.array() });
+  }
+
+  const code = req.params.code.toUpperCase();
+  const { limit, offset } = req.query;
+  try {
+    const current = await fxInventoryModel.findByCurrency(code);
+    if (!current) {
+      return res.status(404).json({ message: `No inventory vault exists for ${code}.` });
+    }
+    const rows = await fxInventoryModel.listMovements({
+      currency: code,
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+    });
+    return res.status(200).json({ movements: rows.map(serializeMovement) });
+  } catch (err) {
+    console.error("FX LIST INVENTORY MOVEMENTS ERROR:", err);
+    return res.status(500).json({ message: "Failed to fetch inventory movement history." });
   }
 };
 

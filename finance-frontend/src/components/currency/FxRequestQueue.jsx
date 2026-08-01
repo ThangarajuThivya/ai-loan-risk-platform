@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Inbox,
+  Boxes,
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -136,6 +137,37 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
 
   const [pendingAction, setPendingAction] = useState(null); // { type, note, counteredRate }
   const [actioning, setActioning] = useState(false);
+
+  // currency_code -> { on_hand, reserved, available } — the bank-wide vault
+  // (Phase FX-inventory). Advisory display data only; the real gate is the
+  // atomic reserve-on-approve check the server runs on approve, so a stale
+  // read here can never let staff approve past what the server allows —
+  // it only means a "sufficient" badge briefly lags the true state.
+  const [inventory, setInventory] = useState({});
+
+  const loadInventory = async () => {
+    try {
+      const res = await api.get("/currency/exchange/admin/inventory");
+      const map = {};
+      (res.data?.inventory || []).forEach((row) => {
+        map[row.currency_code] = row;
+      });
+      setInventory(map);
+    } catch {
+      // Non-fatal — the queue and approve/reject/counter still work without
+      // it; requests just won't show a stock indicator.
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!cancelled) await loadInventory();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchPage = async (offset) => {
     const params = { limit: PAGE_SIZE, offset };
@@ -290,6 +322,10 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
       }
 
       await refreshDetail(ref, applicant);
+      // Approve reserves stock, settle consumes a reservation, reject/expire
+      // may release one — any of them can move the vault, so refresh rather
+      // than let the queue show a stale "sufficient" badge.
+      loadInventory();
       showToast({
         type: "success",
         title: `${ACTION_META[type].label} Successful`,
@@ -325,6 +361,22 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
   // queue having to fetch the document list itself.
   const docCount = Number(selectedRequest?.document_count ?? 0);
   const docsSatisfied = !selectedRequest?.requires_documents || docCount > 0;
+
+  // Bank-wide vault availability for a 'buy' request — 'sell' brings
+  // currency IN and never reserves, so this is null (not applicable) for
+  // it. Also null when the vault for that currency hasn't loaded/isn't
+  // configured — unknown must not read as "insufficient".
+  const stockInfoFor = (request) => {
+    if (!request || request.direction !== "buy") return null;
+    const inv = inventory[request.currency_code];
+    if (!inv) return null;
+    const requested = Number(request.foreign_amount);
+    const available = Number(inv.available);
+    return { available, requested, sufficient: available >= requested };
+  };
+
+  const stockInfo = stockInfoFor(selectedRequest);
+  const stockSatisfied = !stockInfo || stockInfo.sufficient;
 
   return (
     <div className="space-y-6">
@@ -481,7 +533,9 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
                     </td>
                   </tr>
                 )}
-                {filteredRequests.map((r) => (
+                {filteredRequests.map((r) => {
+                  const rowStock = stockInfoFor(r);
+                  return (
                   <tr
                     key={r.reference_no}
                     onClick={() => openDetail(r)}
@@ -535,13 +589,27 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
                             : "Docs missing"}
                         </span>
                       )}
+                      {/* Compact stock indicator — 'buy' requests only, so
+                          staff can spot unfulfillable requests without
+                          opening each row. Silent when there's nothing to
+                          say: a 'sell', a vault that hasn't loaded, or
+                          sufficient stock all render nothing here. */}
+                      {rowStock && !rowStock.sufficient && (
+                        <span
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700"
+                          title={`Only ${rowStock.available.toLocaleString()} ${r.currency_code} available, ${rowStock.requested.toLocaleString()} requested`}
+                        >
+                          <Boxes className="w-3 h-3" /> Insufficient stock
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500 font-mono">{formatDate(r.created_at)}</td>
                     <td className="px-5 py-4 text-right">
                       <ChevronRight className="w-4 h-4 text-slate-300 inline-block" />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -727,6 +795,49 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
                           </p>
                         </div>
                       </div>
+                      {/* Bank-wide vault availability — 'buy' only; 'sell'
+                          never draws from the vault and has nothing to show
+                          here. Advisory display: the real gate runs
+                          server-side, atomically, at approval. */}
+                      {selectedRequest.direction === "buy" && (
+                        <div
+                          className={`rounded-2xl border p-4 flex items-start gap-3 sm:col-span-2 ${
+                            stockInfo && !stockInfo.sufficient
+                              ? "bg-rose-50 border-rose-100"
+                              : "bg-slate-50 border-slate-100"
+                          }`}
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
+                            <Boxes className="w-4.5 h-4.5 text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wider">
+                              Bank Inventory — {selectedRequest.currency_code}
+                            </p>
+                            {stockInfo ? (
+                              <>
+                                <p className="text-sm font-bold text-slate-800">
+                                  {stockInfo.available.toLocaleString()} available ·{" "}
+                                  {stockInfo.requested.toLocaleString()} requested
+                                </p>
+                                <p
+                                  className={`text-[11px] mt-0.5 font-semibold ${
+                                    stockInfo.sufficient ? "text-emerald-600" : "text-rose-700"
+                                  }`}
+                                >
+                                  {stockInfo.sufficient
+                                    ? "Sufficient stock on hand"
+                                    : "Insufficient stock — cannot be approved until restocked"}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-xs text-slate-400">
+                                Inventory data unavailable for this currency.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4 flex items-start gap-3">
                         <div className="w-9 h-9 rounded-xl bg-slate-200 flex items-center justify-center shrink-0">
                           <MapPin className="w-4.5 h-4.5 text-slate-500" />
@@ -796,15 +907,28 @@ export default function FxRequestQueue({ customers = [], defaultStatus = "pendin
                           </span>
                         </div>
                       )}
+                      {selectedRequest.status === "pending_review" && !stockSatisfied && (
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 text-amber-800 rounded-xl p-3.5 text-xs mb-3">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>
+                            The bank does not currently hold enough {selectedRequest.currency_code} to
+                            fulfill this request ({stockInfo.available.toLocaleString()} available,{" "}
+                            {stockInfo.requested.toLocaleString()} requested). It cannot be approved
+                            until the vault is restocked — you can still reject or counter-quote it.
+                          </span>
+                        </div>
+                      )}
                       {selectedRequest.status === "pending_review" && (
                         <div className="flex flex-wrap gap-2.5">
                           <button
                             onClick={() => requestAction("approve")}
-                            disabled={!docsSatisfied}
+                            disabled={!docsSatisfied || !stockSatisfied}
                             title={
-                              docsSatisfied
-                                ? undefined
-                                : "Supporting documents are required before this request can be approved."
+                              !docsSatisfied
+                                ? "Supporting documents are required before this request can be approved."
+                                : !stockSatisfied
+                                  ? "The bank does not currently hold enough of this currency to approve this request."
+                                  : undefined
                             }
                             className="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-50"
                           >
