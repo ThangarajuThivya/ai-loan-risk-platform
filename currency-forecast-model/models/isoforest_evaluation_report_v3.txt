@@ -1,0 +1,38 @@
+Isolation Forest Anomaly Detector - Evaluation Report
+============================================================
+Generated on: 2026-07-28T14:22:11.857306+00:00
+Version: v3
+Currencies: LKR, INR, EUR, GBP, JPY
+Contamination: 0.01
+Train end: 2022-12-31 | Val end: 2024-06-30
+
+--- LKR (fit rows: 11496, eval rows: 517) ---
+  flagged in fit window : 1.00% (target ~1.00% by construction)
+  flagged in eval window: 0.39%
+  sanity check vs statistical extreme-move threshold: model flagged 2 day(s), statistical baseline flagged 3 day(s), 2 in common (agreement=99.8%)
+
+--- INR (fit rows: 12749, eval rows: 517) ---
+  flagged in fit window : 1.00% (target ~1.00% by construction)
+  flagged in eval window: 0.00%
+  sanity check vs statistical extreme-move threshold: model flagged 0 day(s), statistical baseline flagged 0 day(s), 0 in common (agreement=100.0%)  <-- agreement % is vacuous here: neither method flagged anything in this window
+
+--- EUR (fit rows: 6551, eval rows: 517) ---
+  flagged in fit window : 1.01% (target ~1.00% by construction)
+  flagged in eval window: 0.19%
+  sanity check vs statistical extreme-move threshold: model flagged 1 day(s), statistical baseline flagged 1 day(s), 1 in common (agreement=100.0%)
+
+--- GBP (fit rows: 13855, eval rows: 517) ---
+  flagged in fit window : 1.00% (target ~1.00% by construction)
+  flagged in eval window: 0.00%
+  sanity check vs statistical extreme-move threshold: model flagged 0 day(s), statistical baseline flagged 0 day(s), 0 in common (agreement=100.0%)  <-- agreement % is vacuous here: neither method flagged anything in this window
+
+--- JPY (fit rows: 13846, eval rows: 517) ---
+  flagged in fit window : 1.00% (target ~1.00% by construction)
+  flagged in eval window: 0.58%
+  sanity check vs statistical extreme-move threshold: model flagged 3 day(s), statistical baseline flagged 5 day(s), 3 in common (agreement=99.6%)
+
+Note: unsupervised model, no ground-truth anomaly labels exist. 'sanity
+check' compares model flags against a simple statistical extreme-move
+threshold from the fit period -- rough agreement is reassuring, exact
+agreement is not the goal -- see 'Realistic expectations' in this
+file's module docstring.

@@ -1,0 +1,28 @@
+# currency-forecast-model — Python dependencies
+
+# Phase 1 (data pipeline)
+pandas==3.0.5
+numpy==2.5.1
+pyarrow==25.0.0
+
+# Phase 2/3 (training) + Phase 4 (serving) — the same four model libraries
+# are needed at inference time to load/run the trained artifacts (see
+# src/model_utils.py), so these are no longer training-only. Pinned to what
+# was used to write/sanity-check the notebooks and run the FastAPI service
+# locally. Kaggle images preinstall tensorflow/xgboost/scikit-learn (usually
+# a different exact version — the notebooks don't depend on anything
+# version-specific); `arch` is NOT preinstalled on Kaggle, hence the
+# `!pip install arch` cell in train_garch_volatility.ipynb.
+scikit-learn==1.9.0
+xgboost==3.3.0
+arch==8.0.0
+joblib==1.5.3
+tensorflow-cpu==2.21.0  # LSTM only; use plain `tensorflow` if you have a local GPU
+
+# Phase 4 (FastAPI inference service, api/main.py)
+fastapi==0.140.0
+uvicorn==0.51.0
+
+# TODO: pin once Phase 1's automated pull is built (src/data_fetcher.py stays
+# a stub — see CURRENCY_FEATURE.md §"Phase 1 output").
+#   requests

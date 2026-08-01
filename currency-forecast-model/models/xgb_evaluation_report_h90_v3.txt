@@ -1,0 +1,59 @@
+XGBoost Long-Horizon Trend Classifier (v2) - Evaluation Report
+==================================================================
+Generated on: 2026-07-28T14:22:09.557828+00:00
+Version: v3  |  Horizon: 90 trading days
+Currencies: LKR, INR, EUR, GBP, JPY
+Flat threshold: 0.0 | Classes: ['down', 'up']
+Train end: 2022-12-31 | Val end: 2024-06-30
+
+IMPORTANT: this predicts LONG-HORIZON trend direction, a different
+and easier task than next-day direction (the v1 next-day variant is
+described in this script's module docstring; the code itself has been
+removed -- see git history).
+Test rows less than the horizon apart overlap in their forward-return
+window, so treat accuracy as 'over overlapping windows', not N
+independent bets. The trend-continuation baseline (predict the
+trend keeps going) is the meaningful comparison, not 50%.
+
+--- LKR (test rows: 427) ---
+  model                      : accuracy=0.8478  f1_macro=0.4588
+  majority-class baseline    : accuracy=0.8478  (always predicts up)
+  trend-continuation baseline: accuracy=0.7213
+  improvement vs majority    : +0.0 pts
+  improvement vs continuation: +12.6 pts
+
+--- INR (test rows: 427) ---
+  model                      : accuracy=0.8618  f1_macro=0.4629
+  majority-class baseline    : accuracy=0.8618  (always predicts up)
+  trend-continuation baseline: accuracy=0.7237
+  improvement vs majority    : +0.0 pts
+  improvement vs continuation: +13.8 pts
+
+--- EUR (test rows: 427) ---
+  model                      : accuracy=0.5714  f1_macro=0.3636
+  majority-class baseline    : accuracy=0.5714  (always predicts down)
+  trend-continuation baseline: accuracy=0.4379
+  improvement vs majority    : +0.0 pts
+  improvement vs continuation: +13.3 pts
+
+--- GBP (test rows: 426) ---
+  model                      : accuracy=0.5610  f1_macro=0.3782
+  majority-class baseline    : accuracy=0.5516  (always predicts down)
+  trend-continuation baseline: accuracy=0.2441
+  improvement vs majority    : +0.9 pts
+  improvement vs continuation: +31.7 pts
+
+--- JPY (test rows: 427) ---
+  model                      : accuracy=0.3185  f1_macro=0.2416
+  majority-class baseline    : accuracy=0.3185  (always predicts down)
+  trend-continuation baseline: accuracy=0.4801
+  improvement vs majority    : +0.0 pts
+  improvement vs continuation: -16.2 pts
+
+
+currency  model_accuracy  model_f1_macro  majority_baseline_accuracy  continuation_baseline_accuracy  improvement_vs_majority_pts  improvement_vs_continuation_pts
+     LKR        0.847775        0.458809                    0.847775                        0.721311                     0.000000                        12.646370
+     INR        0.861827        0.462893                    0.861827                        0.723653                     0.000000                        13.817330
+     EUR        0.571429        0.363636                    0.571429                        0.437939                     0.000000                        13.348946
+     GBP        0.561033        0.378199                    0.551643                        0.244131                     0.938967                        31.690141
+     JPY        0.318501        0.241563                    0.318501                        0.480094                     0.000000                       -16.159251

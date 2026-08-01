@@ -1,0 +1,51 @@
+FX VaR Historical-Simulation Scenarios - Build Report
+======================================================================
+Generated on: 2026-07-28T14:29:33.765569+00:00
+Method: historical simulation | Return type: log | Quote: LKR
+Pair convention: LKR per 1 unit (matches the trading board)
+Scenarios: 7087 days, 1999-01-05 -> 2026-07-24
+Currencies: USD, EUR, GBP, JPY, INR
+
+DATA PREPARATION ONLY - no model was trained, loaded or modified.
+
+Cross rates, not per-USD rates. The bank's exposure is in LKR, so its
+risk is the cross rate against LKR moving. H.10 stores everything
+per-USD, so each series is rebuilt as (LKR per USD)/(C per USD) before
+differencing — the same construction crossRate.service.js uses for the
+customer board. Using raw per-USD returns would measure the wrong risk
+and would report a USD position as risk-free.
+
+Rows where any currency is missing are dropped rather than filled.
+Joint scenarios are the whole point: filling per-currency would
+fabricate co-movement that never occurred and quietly corrupt the
+correlation structure the diversification benefit is computed from.
+
+ANNUALIZED VOLATILITY (%, from these scenarios)
+----------------------------------------------------------------------
+  USD       6.39%
+  EUR      11.04%
+  GBP      11.13%
+  JPY      11.69%
+  INR       8.86%
+
+CORRELATION MATRIX (daily log returns vs LKR)
+----------------------------------------------------------------------
+       USD    EUR    GBP    JPY    INR
+USD  1.000  0.576  0.577  0.537  0.698
+EUR  0.576  1.000  0.764  0.528  0.535
+GBP  0.577  0.764  1.000  0.444  0.540
+JPY  0.537  0.528  0.444  1.000  0.375
+INR  0.698  0.535  0.540  0.375  1.000
+
+Correlation is what makes portfolio VaR smaller than the sum of the
+per-currency VaRs — the diversification benefit the Node side reports.
+Note these are all cross rates against a common quote currency, so
+they share the LKR leg and are correlated partly for that reason
+alone; the benefit is real but smaller than an uncorrelated book's.
+
+CAVEATS
+----------------------------------------------------------------------
+  - Scenarios span 1999-01-05 to 2026-07-24, the underlying dataset's own range — derived from the data, not hardcoded, so this line stays true after a refresh. They describe the return DISTRIBUTION and CORRELATION structure, which are far more stable over time than price levels, but they cannot reflect a regime change occurring after the end date.
+  - Historical simulation can only produce losses of a kind that already happened in this window; it is not a stress test and will understate a genuinely unprecedented move.
+  - Scenarios are equally weighted, so a calm recent period does not reduce the influence of an old crisis day (and vice versa).
+  - VaR is a quantile, not a worst case: it says nothing about how bad the tail beyond it is. Expected Shortfall is reported alongside for that reason.

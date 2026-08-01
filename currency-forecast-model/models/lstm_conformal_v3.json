@@ -1,0 +1,633 @@
+{
+  "version": "v3",
+  "generated_at": "2026-07-28T14:18:40.623375+00:00",
+  "method": "split_conformal_signed_residual",
+  "point_forecast_model": "lstm_per_horizon_delta",
+  "calibration_split": "validation (2022-12-31 < date <= 2024-06-30)",
+  "coverage_measured_on": "test (date > 2024-06-30)",
+  "levels": [
+    0.5,
+    0.8,
+    0.9,
+    0.95
+  ],
+  "units": "same as the forecast \u2014 currency units per 1 USD; offsets add to predicted_rate",
+  "caveats": [
+    "Coverage is MARGINAL, not conditional: it holds on average across days, and is not a promise about any particular day.",
+    "Conformal's finite-sample guarantee assumes exchangeability, which time series violate; the empirical_coverage_test figures are the real evidence, not the nominal level.",
+    "The calibration split influenced early stopping during training, so bands may be slightly optimistic.",
+    "Offsets are absolute, in the model's own 2017-era rate scale, and are not transferable to live rates at a different level."
+  ],
+  "results": {
+    "LKR": {
+      "1": {
+        "n_calibration": 374,
+        "n_test": 516,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.6316218248663101,
+            "upper_offset": 0.38575720149565507,
+            "width": 1.017379026361965,
+            "empirical_coverage_test": 0.751937984496124,
+            "baseline_width": 1.0125714470358456,
+            "baseline_empirical_coverage_test": 0.7596899224806202
+          },
+          "0.8": {
+            "lower_offset": -1.6145809397977942,
+            "upper_offset": 1.2110308478860246,
+            "width": 2.825611787683819,
+            "empirical_coverage_test": 0.936046511627907,
+            "baseline_width": 2.8453879942868436,
+            "baseline_empirical_coverage_test": 0.936046511627907
+          },
+          "0.9": {
+            "lower_offset": -3.0208759001869567,
+            "upper_offset": 2.3991269198330984,
+            "width": 5.420002820020056,
+            "empirical_coverage_test": 0.9825581395348837,
+            "baseline_width": 5.411438722661474,
+            "baseline_empirical_coverage_test": 0.9825581395348837
+          },
+          "0.95": {
+            "lower_offset": -4.115150982045872,
+            "upper_offset": 3.3917239592037136,
+            "width": 7.506874941249586,
+            "empirical_coverage_test": 0.9903100775193798,
+            "baseline_width": 7.502139983967668,
+            "baseline_empirical_coverage_test": 0.9903100775193798
+          }
+        }
+      },
+      "7": {
+        "n_calibration": 374,
+        "n_test": 510,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -3.0578689983184324,
+            "upper_offset": 1.242156982421875,
+            "width": 4.300025980740307,
+            "empirical_coverage_test": 0.7745098039215687,
+            "baseline_width": 4.29998779296875,
+            "baseline_empirical_coverage_test": 0.7784313725490196
+          },
+          "0.8": {
+            "lower_offset": -6.777169783485127,
+            "upper_offset": 3.266190635966737,
+            "width": 10.043360419451865,
+            "empirical_coverage_test": 0.9352941176470588,
+            "baseline_width": 10.043363193777148,
+            "baseline_empirical_coverage_test": 0.9352941176470588
+          },
+          "0.9": {
+            "lower_offset": -11.283206307314297,
+            "upper_offset": 10.264640114524155,
+            "width": 21.54784642183845,
+            "empirical_coverage_test": 0.9921568627450981,
+            "baseline_width": 21.548157309465875,
+            "baseline_empirical_coverage_test": 0.9921568627450981
+          },
+          "0.95": {
+            "lower_offset": -16.26450564134567,
+            "upper_offset": 12.74194401215742,
+            "width": 29.00644965350309,
+            "empirical_coverage_test": 0.9980392156862745,
+            "baseline_width": 29.006447368764622,
+            "baseline_empirical_coverage_test": 0.9980392156862745
+          }
+        }
+      },
+      "30": {
+        "n_calibration": 374,
+        "n_test": 487,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -12.221347258052724,
+            "upper_offset": 2.274068087817514,
+            "width": 14.495415345870239,
+            "empirical_coverage_test": 0.7166324435318275,
+            "baseline_width": 14.440124674914355,
+            "baseline_empirical_coverage_test": 0.7063655030800822
+          },
+          "0.8": {
+            "lower_offset": -25.426138321983622,
+            "upper_offset": 5.100883443087816,
+            "width": 30.52702176507144,
+            "empirical_coverage_test": 0.8891170431211499,
+            "baseline_width": 31.108058337859287,
+            "baseline_empirical_coverage_test": 0.8993839835728953
+          },
+          "0.9": {
+            "lower_offset": -38.67716963660908,
+            "upper_offset": 10.166836825284095,
+            "width": 48.84400646189317,
+            "empirical_coverage_test": 0.9507186858316222,
+            "baseline_width": 51.648624114174254,
+            "baseline_empirical_coverage_test": 0.9691991786447639
+          },
+          "0.95": {
+            "lower_offset": -43.80868579232119,
+            "upper_offset": 26.12003526330634,
+            "width": 69.92872105562753,
+            "empirical_coverage_test": 1.0,
+            "baseline_width": 70.15661506856829,
+            "baseline_empirical_coverage_test": 1.0
+          }
+        }
+      }
+    },
+    "INR": {
+      "1": {
+        "n_calibration": 374,
+        "n_test": 516,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.07114602155226438,
+            "upper_offset": 0.068878173828125,
+            "width": 0.14002419538038938,
+            "empirical_coverage_test": 0.43410852713178294,
+            "baseline_width": 0.14000701904296875,
+            "baseline_empirical_coverage_test": 0.4476744186046512
+          },
+          "0.8": {
+            "lower_offset": -0.1611480712890625,
+            "upper_offset": 0.15882257471747577,
+            "width": 0.31997064600653824,
+            "empirical_coverage_test": 0.6627906976744186,
+            "baseline_width": 0.3199920654296875,
+            "baseline_empirical_coverage_test": 0.6686046511627907
+          },
+          "0.9": {
+            "lower_offset": -0.212225704907096,
+            "upper_offset": 0.25879773226651276,
+            "width": 0.47102343717360873,
+            "empirical_coverage_test": 0.7635658914728682,
+            "baseline_width": 0.471024334749436,
+            "baseline_empirical_coverage_test": 0.7713178294573644
+          },
+          "0.95": {
+            "lower_offset": -0.29113149387951204,
+            "upper_offset": 0.3787996016721675,
+            "width": 0.6699310955516795,
+            "empirical_coverage_test": 0.8604651162790697,
+            "baseline_width": 0.6699909067408925,
+            "baseline_empirical_coverage_test": 0.8585271317829457
+          }
+        }
+      },
+      "7": {
+        "n_calibration": 374,
+        "n_test": 510,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.1821803536644594,
+            "upper_offset": 0.1303253173828125,
+            "width": 0.3125056710472719,
+            "empirical_coverage_test": 0.2549019607843137,
+            "baseline_width": 0.3125171763374206,
+            "baseline_empirical_coverage_test": 0.2549019607843137
+          },
+          "0.8": {
+            "lower_offset": -0.409639001530122,
+            "upper_offset": 0.42131483108602075,
+            "width": 0.8309538326161428,
+            "empirical_coverage_test": 0.5450980392156862,
+            "baseline_width": 0.8309646443249705,
+            "baseline_empirical_coverage_test": 0.5450980392156862
+          },
+          "0.9": {
+            "lower_offset": -0.5301620361001734,
+            "upper_offset": 0.6603625904430043,
+            "width": 1.1905246265431777,
+            "empirical_coverage_test": 0.6862745098039216,
+            "baseline_width": 1.1905105305228003,
+            "baseline_empirical_coverage_test": 0.6862745098039216
+          },
+          "0.95": {
+            "lower_offset": -0.720436912169431,
+            "upper_offset": 0.7106016434450204,
+            "width": 1.4310385556144514,
+            "empirical_coverage_test": 0.7313725490196078,
+            "baseline_width": 1.4310161162187711,
+            "baseline_empirical_coverage_test": 0.7313725490196078
+          }
+        }
+      },
+      "30": {
+        "n_calibration": 374,
+        "n_test": 487,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.39295388288038935,
+            "upper_offset": 0.21692269881141377,
+            "width": 0.6098765816918031,
+            "empirical_coverage_test": 0.22587268993839835,
+            "baseline_width": 0.609989145860315,
+            "baseline_empirical_coverage_test": 0.22792607802874743
+          },
+          "0.8": {
+            "lower_offset": -0.575015307747744,
+            "upper_offset": 0.47691492090888205,
+            "width": 1.051930228656626,
+            "empirical_coverage_test": 0.3737166324435318,
+            "baseline_width": 1.052035571419619,
+            "baseline_empirical_coverage_test": 0.37782340862423
+          },
+          "0.9": {
+            "lower_offset": -0.7745937408610462,
+            "upper_offset": 0.6273689270019532,
+            "width": 1.4019626678629993,
+            "empirical_coverage_test": 0.4702258726899384,
+            "baseline_width": 1.4019794362114077,
+            "baseline_empirical_coverage_test": 0.47638603696098564
+          },
+          "0.95": {
+            "lower_offset": -0.9333194997858874,
+            "upper_offset": 0.8869096480588862,
+            "width": 1.8202291478447736,
+            "empirical_coverage_test": 0.5626283367556468,
+            "baseline_width": 1.8202597062217998,
+            "baseline_empirical_coverage_test": 0.5667351129363449
+          }
+        }
+      }
+    },
+    "EUR": {
+      "1": {
+        "n_calibration": 374,
+        "n_test": 516,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.0022500775714609073,
+            "upper_offset": 0.0027346228533250126,
+            "width": 0.00498470042478592,
+            "empirical_coverage_test": 0.5717054263565892,
+            "baseline_width": 0.004983867234724729,
+            "baseline_empirical_coverage_test": 0.5717054263565892
+          },
+          "0.8": {
+            "lower_offset": -0.005333142165831703,
+            "upper_offset": 0.005150151762732845,
+            "width": 0.01048329392856455,
+            "empirical_coverage_test": 0.8507751937984496,
+            "baseline_width": 0.01049136446121542,
+            "baseline_empirical_coverage_test": 0.8507751937984496
+          },
+          "0.9": {
+            "lower_offset": -0.006529653773588293,
+            "upper_offset": 0.006604579362002286,
+            "width": 0.013134233135590579,
+            "empirical_coverage_test": 0.9069767441860465,
+            "baseline_width": 0.013145910227362483,
+            "baseline_empirical_coverage_test": 0.9069767441860465
+          },
+          "0.95": {
+            "lower_offset": -0.007593826495389888,
+            "upper_offset": 0.007914350632040261,
+            "width": 0.015508177127430148,
+            "empirical_coverage_test": 0.936046511627907,
+            "baseline_width": 0.015507260427117987,
+            "baseline_empirical_coverage_test": 0.936046511627907
+          }
+        }
+      },
+      "7": {
+        "n_calibration": 374,
+        "n_test": 510,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.006560724368069899,
+            "upper_offset": 0.006805473151691457,
+            "width": 0.013366197519761355,
+            "empirical_coverage_test": 0.5254901960784314,
+            "baseline_width": 0.013444313391007205,
+            "baseline_empirical_coverage_test": 0.5215686274509804
+          },
+          "0.8": {
+            "lower_offset": -0.011694008335072727,
+            "upper_offset": 0.01218969777306133,
+            "width": 0.023883706108134055,
+            "empirical_coverage_test": 0.8156862745098039,
+            "baseline_width": 0.024057085820060362,
+            "baseline_empirical_coverage_test": 0.8176470588235294
+          },
+          "0.9": {
+            "lower_offset": -0.01677163734155543,
+            "upper_offset": 0.015337927774949509,
+            "width": 0.03210956511650494,
+            "empirical_coverage_test": 0.9058823529411765,
+            "baseline_width": 0.03217693541776688,
+            "baseline_empirical_coverage_test": 0.9058823529411765
+          },
+          "0.95": {
+            "lower_offset": -0.01912770902409273,
+            "upper_offset": 0.017504563943587553,
+            "width": 0.036632272967680284,
+            "empirical_coverage_test": 0.9411764705882353,
+            "baseline_width": 0.03669293009661101,
+            "baseline_empirical_coverage_test": 0.9392156862745098
+          }
+        }
+      },
+      "30": {
+        "n_calibration": 374,
+        "n_test": 487,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.012050811938423524,
+            "upper_offset": 0.014415811089908376,
+            "width": 0.0264666230283319,
+            "empirical_coverage_test": 0.4394250513347023,
+            "baseline_width": 0.026572791650333508,
+            "baseline_empirical_coverage_test": 0.4394250513347023
+          },
+          "0.8": {
+            "lower_offset": -0.02434100059264484,
+            "upper_offset": 0.025840690429197913,
+            "width": 0.05018169102184275,
+            "empirical_coverage_test": 0.7679671457905544,
+            "baseline_width": 0.050696293619227284,
+            "baseline_empirical_coverage_test": 0.7679671457905544
+          },
+          "0.9": {
+            "lower_offset": -0.03198771027320209,
+            "upper_offset": 0.029558160088279037,
+            "width": 0.061545870361481125,
+            "empirical_coverage_test": 0.8295687885010267,
+            "baseline_width": 0.06184861255202065,
+            "baseline_empirical_coverage_test": 0.8275154004106776
+          },
+          "0.95": {
+            "lower_offset": -0.03503167278626386,
+            "upper_offset": 0.03158854896372018,
+            "width": 0.06662022174998404,
+            "empirical_coverage_test": 0.864476386036961,
+            "baseline_width": 0.06714391644625745,
+            "baseline_empirical_coverage_test": 0.864476386036961
+          }
+        }
+      }
+    },
+    "GBP": {
+      "1": {
+        "n_calibration": 374,
+        "n_test": 516,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.0023393630981445312,
+            "upper_offset": 0.0024419471541828014,
+            "width": 0.004781310252327333,
+            "empirical_coverage_test": 0.5813953488372093,
+            "baseline_width": 0.00477422367442738,
+            "baseline_empirical_coverage_test": 0.5813953488372093
+          },
+          "0.8": {
+            "lower_offset": -0.005248386910892426,
+            "upper_offset": 0.004692863015567551,
+            "width": 0.009941249926459977,
+            "empirical_coverage_test": 0.8798449612403101,
+            "baseline_width": 0.009936934167688538,
+            "baseline_empirical_coverage_test": 0.877906976744186
+          },
+          "0.9": {
+            "lower_offset": -0.00617555405366867,
+            "upper_offset": 0.0060813697901639105,
+            "width": 0.01225692384383258,
+            "empirical_coverage_test": 0.9321705426356589,
+            "baseline_width": 0.012260275250450179,
+            "baseline_empirical_coverage_test": 0.9321705426356589
+          },
+          "0.95": {
+            "lower_offset": -0.007676530330576361,
+            "upper_offset": 0.0072355777184593545,
+            "width": 0.014912108049035717,
+            "empirical_coverage_test": 0.9631782945736435,
+            "baseline_width": 0.01491692996917562,
+            "baseline_empirical_coverage_test": 0.9631782945736435
+          }
+        }
+      },
+      "7": {
+        "n_calibration": 374,
+        "n_test": 510,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.006115798644203553,
+            "upper_offset": 0.005831263282082297,
+            "width": 0.01194706192628585,
+            "empirical_coverage_test": 0.5333333333333333,
+            "baseline_width": 0.011935322998679257,
+            "baseline_empirical_coverage_test": 0.5313725490196078
+          },
+          "0.8": {
+            "lower_offset": -0.011408629264423554,
+            "upper_offset": 0.011085527465942697,
+            "width": 0.02249415673036625,
+            "empirical_coverage_test": 0.7803921568627451,
+            "baseline_width": 0.022541756935935596,
+            "baseline_empirical_coverage_test": 0.7843137254901961
+          },
+          "0.9": {
+            "lower_offset": -0.015793550779475248,
+            "upper_offset": 0.013045760718258947,
+            "width": 0.028839311497734194,
+            "empirical_coverage_test": 0.8862745098039215,
+            "baseline_width": 0.02888403585887848,
+            "baseline_empirical_coverage_test": 0.8862745098039215
+          },
+          "0.95": {
+            "lower_offset": -0.018031615624453295,
+            "upper_offset": 0.015368439934470445,
+            "width": 0.03340005555892374,
+            "empirical_coverage_test": 0.9392156862745098,
+            "baseline_width": 0.03342914421928121,
+            "baseline_empirical_coverage_test": 0.9392156862745098
+          }
+        }
+      },
+      "30": {
+        "n_calibration": 374,
+        "n_test": 487,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.007890634039506555,
+            "upper_offset": 0.012982376756515096,
+            "width": 0.02087301079602165,
+            "empirical_coverage_test": 0.4127310061601643,
+            "baseline_width": 0.02254967925382808,
+            "baseline_empirical_coverage_test": 0.43121149897330596
+          },
+          "0.8": {
+            "lower_offset": -0.01791613274079593,
+            "upper_offset": 0.027608532637835814,
+            "width": 0.04552466537863174,
+            "empirical_coverage_test": 0.8028747433264887,
+            "baseline_width": 0.0494922259274651,
+            "baseline_empirical_coverage_test": 0.8459958932238193
+          },
+          "0.9": {
+            "lower_offset": -0.022469736675527645,
+            "upper_offset": 0.03426411477002231,
+            "width": 0.05673385144554995,
+            "empirical_coverage_test": 0.9096509240246407,
+            "baseline_width": 0.05922602204715505,
+            "baseline_empirical_coverage_test": 0.919917864476386
+          },
+          "0.95": {
+            "lower_offset": -0.02788656503758966,
+            "upper_offset": 0.039373264274495196,
+            "width": 0.06725982931208485,
+            "empirical_coverage_test": 0.9650924024640657,
+            "baseline_width": 0.0698939555469044,
+            "baseline_empirical_coverage_test": 0.9815195071868583
+          }
+        }
+      }
+    },
+    "JPY": {
+      "1": {
+        "n_calibration": 374,
+        "n_test": 516,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.3278585831749248,
+            "upper_offset": 0.5732084876075786,
+            "width": 0.9010670707825034,
+            "empirical_coverage_test": 0.4437984496124031,
+            "baseline_width": 0.9024639435630432,
+            "baseline_empirical_coverage_test": 0.44573643410852715
+          },
+          "0.8": {
+            "lower_offset": -0.9200097558332637,
+            "upper_offset": 1.1354311366769712,
+            "width": 2.055440892510235,
+            "empirical_coverage_test": 0.7887596899224806,
+            "baseline_width": 2.0569556741153483,
+            "baseline_empirical_coverage_test": 0.7887596899224806
+          },
+          "0.9": {
+            "lower_offset": -1.3624313680883398,
+            "upper_offset": 1.4319721568714494,
+            "width": 2.7944035249597894,
+            "empirical_coverage_test": 0.8895348837209303,
+            "baseline_width": 2.7913423834000044,
+            "baseline_empirical_coverage_test": 0.8934108527131783
+          },
+          "0.95": {
+            "lower_offset": -1.558972853390291,
+            "upper_offset": 1.6865814535375596,
+            "width": 3.2455543069278505,
+            "empirical_coverage_test": 0.9224806201550387,
+            "baseline_width": 3.2519935159122255,
+            "baseline_empirical_coverage_test": 0.9224806201550387
+          }
+        }
+      },
+      "7": {
+        "n_calibration": 374,
+        "n_test": 510,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": -0.40267593465386864,
+            "upper_offset": 1.9785396963517297,
+            "width": 2.381215631005598,
+            "empirical_coverage_test": 0.47843137254901963,
+            "baseline_width": 2.412454533704462,
+            "baseline_empirical_coverage_test": 0.4803921568627451
+          },
+          "0.8": {
+            "lower_offset": -2.313172447490182,
+            "upper_offset": 3.087920816186915,
+            "width": 5.401093263677097,
+            "empirical_coverage_test": 0.7509803921568627,
+            "baseline_width": 5.422937648181609,
+            "baseline_empirical_coverage_test": 0.7529411764705882
+          },
+          "0.9": {
+            "lower_offset": -3.114925404920935,
+            "upper_offset": 3.585296630859376,
+            "width": 6.70022203578031,
+            "empirical_coverage_test": 0.8352941176470589,
+            "baseline_width": 6.725482593883168,
+            "baseline_empirical_coverage_test": 0.8392156862745098
+          },
+          "0.95": {
+            "lower_offset": -4.133524767217789,
+            "upper_offset": 3.917860714509527,
+            "width": 8.051385481727316,
+            "empirical_coverage_test": 0.907843137254902,
+            "baseline_width": 8.04182654396098,
+            "baseline_empirical_coverage_test": 0.9117647058823529
+          }
+        }
+      },
+      "30": {
+        "n_calibration": 374,
+        "n_test": 487,
+        "calibration_from": "2023-01-03",
+        "calibration_to": "2024-06-28",
+        "levels": {
+          "0.5": {
+            "lower_offset": 0.5362189797794118,
+            "upper_offset": 5.102247839942973,
+            "width": 4.566028860163561,
+            "empirical_coverage_test": 0.4414784394250513,
+            "baseline_width": 4.567266209240266,
+            "baseline_empirical_coverage_test": 0.42915811088295686
+          },
+          "0.8": {
+            "lower_offset": -2.7550968435358874,
+            "upper_offset": 6.952080711323946,
+            "width": 9.707177554859832,
+            "empirical_coverage_test": 0.7474332648870636,
+            "baseline_width": 9.958978989545036,
+            "baseline_empirical_coverage_test": 0.75564681724846
+          },
+          "0.9": {
+            "lower_offset": -5.837990745503634,
+            "upper_offset": 7.85058524391868,
+            "width": 13.688575989422315,
+            "empirical_coverage_test": 0.8480492813141683,
+            "baseline_width": 13.938427807813023,
+            "baseline_empirical_coverage_test": 0.8562628336755647
+          },
+          "0.95": {
+            "lower_offset": -9.036769275359292,
+            "upper_offset": 8.375177230426974,
+            "width": 17.41194650578627,
+            "empirical_coverage_test": 0.917864476386037,
+            "baseline_width": 17.755340290579568,
+            "baseline_empirical_coverage_test": 0.9240246406570842
+          }
+        }
+      }
+    }
+  }
+}

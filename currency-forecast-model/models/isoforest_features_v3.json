@@ -1,0 +1,90 @@
+{
+  "version": "v3",
+  "trained_at": "2026-07-28T14:22:11.857306+00:00",
+  "model_type": "isolation_forest",
+  "currencies": [
+    "LKR",
+    "INR",
+    "EUR",
+    "GBP",
+    "JPY"
+  ],
+  "feature_columns": [
+    "return",
+    "abs_return",
+    "zscore_5",
+    "roll_vol_5",
+    "zscore_20",
+    "roll_vol_20",
+    "gap_from_ma20"
+  ],
+  "contamination": 0.01,
+  "train_end": "2022-12-31",
+  "val_end": "2024-06-30",
+  "seed": 42,
+  "artifact_pattern": {
+    "model": "isoforest_{ccy}_v3.joblib"
+  },
+  "results": {
+    "LKR": {
+      "n_fit_rows": 11496,
+      "n_eval_rows": 517,
+      "fit_flagged_pct": 0.01000347947112039,
+      "eval_flagged_pct": 0.0038684719535783366,
+      "extreme_move_sanity_check": {
+        "agreement_rate": 0.9980657640232108,
+        "both_flagged_days": 2,
+        "statistical_flagged_days": 3,
+        "model_flagged_days": 2
+      }
+    },
+    "INR": {
+      "n_fit_rows": 12749,
+      "n_eval_rows": 517,
+      "fit_flagged_pct": 0.01004000313750098,
+      "eval_flagged_pct": 0.0,
+      "extreme_move_sanity_check": {
+        "agreement_rate": 1.0,
+        "both_flagged_days": 0,
+        "statistical_flagged_days": 0,
+        "model_flagged_days": 0
+      }
+    },
+    "EUR": {
+      "n_fit_rows": 6551,
+      "n_eval_rows": 517,
+      "fit_flagged_pct": 0.010074797740802931,
+      "eval_flagged_pct": 0.0019342359767891683,
+      "extreme_move_sanity_check": {
+        "agreement_rate": 1.0,
+        "both_flagged_days": 1,
+        "statistical_flagged_days": 1,
+        "model_flagged_days": 1
+      }
+    },
+    "GBP": {
+      "n_fit_rows": 13855,
+      "n_eval_rows": 517,
+      "fit_flagged_pct": 0.010032479249368459,
+      "eval_flagged_pct": 0.0,
+      "extreme_move_sanity_check": {
+        "agreement_rate": 1.0,
+        "both_flagged_days": 0,
+        "statistical_flagged_days": 0,
+        "model_flagged_days": 0
+      }
+    },
+    "JPY": {
+      "n_fit_rows": 13846,
+      "n_eval_rows": 517,
+      "fit_flagged_pct": 0.010039000433338148,
+      "eval_flagged_pct": 0.005802707930367505,
+      "extreme_move_sanity_check": {
+        "agreement_rate": 0.9961315280464217,
+        "both_flagged_days": 3,
+        "statistical_flagged_days": 5,
+        "model_flagged_days": 3
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Sinhala:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== BASE STYLES ===== */
+@layer base {
+  body {
+    @apply font-sans;
+    background-color: #F8FAFC;
+    color: #1E293B;
+  }
+}
+
+/* ===== CUSTOM UTILITIES ===== */
+@layer components {
+
+  .glow-btn {
+    transition: all 0.3s ease;
+  }
+
+  .glow-btn:hover {
+    box-shadow: 0 0 15px rgba(0, 168, 107, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-md p-4;
+  }
+
+  .btn-primary {
+    @apply bg-blue-800 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition;
+  }
+}
+
+/* ===== 3D EFFECTS (optional) ===== */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.group:hover .group-hover\:rotate-y-180 {
+  transform: rotateY(180deg);
+}

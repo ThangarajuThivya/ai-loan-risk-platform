@@ -1,0 +1,20 @@
+{
+  "feature_columns": [
+    "trail_ret_10",
+    "trail_ret_20",
+    "trail_ret_30",
+    "trail_ret_45",
+    "trail_ret_90",
+    "price_vs_ma_10",
+    "price_vs_ma_20",
+    "price_vs_ma_50",
+    "price_vs_ma_100",
+    "price_vs_ma_200",
+    "ma_cross_20_50",
+    "ma_cross_50_200",
+    "ma50_slope",
+    "vol_20",
+    "vol_60",
+    "zscore_60"
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "version": "v3",
+  "trained_at": "2026-07-28T14:22:09.557828+00:00",
+  "model_type": "xgboost_long_horizon_trend_classifier",
+  "horizon_days": 90,
+  "currencies": [
+    "LKR",
+    "INR",
+    "EUR",
+    "GBP",
+    "JPY"
+  ],
+  "class_map": {
+    "-1.0": 0,
+    "1.0": 1
+  },
+  "class_names": [
+    "down",
+    "up"
+  ],
+  "flat_threshold": 0.0,
+  "train_end": "2022-12-31",
+  "val_end": "2024-06-30",
+  "seed": 42,
+  "artifact_pattern": {
+    "model": "xgb_trend_{ccy}_h90_v3.json",
+    "features": "xgb_trend_features_h90_v3.json"
+  },
+  "results": {
+    "LKR": {
+      "n_train_rows": 12437,
+      "n_val_rows": 372,
+      "n_test_rows": 427,
+      "model_accuracy": 0.8477751756440282,
+      "model_f1_macro": 0.458808618504436,
+      "majority_baseline": {
+        "majority_class": 1,
+        "accuracy": 0.8477751756440282,
+        "f1_macro": 0.458808618504436
+      },
+      "trend_continuation_baseline": {
+        "accuracy": 0.7213114754098361,
+        "f1_macro": 0.5987380856490804
+      },
+      "best_iteration": 28
+    },
+    "INR": {
+      "n_train_rows": 12630,
+      "n_val_rows": 373,
+      "n_test_rows": 427,
+      "model_accuracy": 0.8618266978922716,
+      "model_f1_macro": 0.4628930817610063,
+      "majority_baseline": {
+        "majority_class": 1,
+        "accuracy": 0.8618266978922716,
+        "f1_macro": 0.4628930817610063
+      },
+      "trend_continuation_baseline": {
+        "accuracy": 0.7236533957845434,
+        "f1_macro": 0.41983695652173914
+      },
+      "best_iteration": 24
+    },
+    "EUR": {
+      "n_train_rows": 5998,
+      "n_val_rows": 373,
+      "n_test_rows": 427,
+      "model_accuracy": 0.5714285714285714,
+      "model_f1_macro": 0.36363636363636365,
+      "majority_baseline": {
+        "majority_class": 0,
+        "accuracy": 0.5714285714285714,
+        "f1_macro": 0.36363636363636365
+      },
+      "trend_continuation_baseline": {
+        "accuracy": 0.4379391100702576,
+        "f1_macro": 0.40321453529000695
+      },
+      "best_iteration": 0
+    },
+    "GBP": {
+      "n_train_rows": 13294,
+      "n_val_rows": 374,
+      "n_test_rows": 426,
+      "model_accuracy": 0.5610328638497653,
+      "model_f1_macro": 0.378199274089685,
+      "majority_baseline": {
+        "majority_class": 0,
+        "accuracy": 0.5516431924882629,
+        "f1_macro": 0.3555219364599092
+      },
+      "trend_continuation_baseline": {
+        "accuracy": 0.24413145539906103,
+        "f1_macro": 0.2165002627430373
+      },
+      "best_iteration": 0
+    },
+    "JPY": {
+      "n_train_rows": 13279,
+      "n_val_rows": 374,
+      "n_test_rows": 427,
+      "model_accuracy": 0.3185011709601874,
+      "model_f1_macro": 0.24156305506216696,
+      "majority_baseline": {
+        "majority_class": 0,
+        "accuracy": 0.3185011709601874,
+        "f1_macro": 0.24156305506216696
+      },
+      "trend_continuation_baseline": {
+        "accuracy": 0.48009367681498827,
+        "f1_macro": 0.4564813540663272
+      },
+      "best_iteration": 0
+    }
+  }
+}

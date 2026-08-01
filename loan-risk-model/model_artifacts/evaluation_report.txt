@@ -1,0 +1,27 @@
+Sri Lanka Credit Risk Model - Evaluation Report
+============================================================
+Generated on: 2026-07-03 11:28:50
+Dataset Size  : 150000 rows
+Test Set Size : 30000 rows
+
+Accuracy          : 0.8810 (88.10%)
+Weighted F1 Score : 0.8805
+
+Classification Report:
+              precision    recall  f1-score   support
+
+    Low Risk       0.90      0.89      0.89     12278
+ Medium Risk       0.87      0.90      0.89     15320
+   High Risk       0.86      0.74      0.80      2402
+
+    accuracy                           0.88     30000
+   macro avg       0.87      0.84      0.86     30000
+weighted avg       0.88      0.88      0.88     30000
+
+
+Confusion Matrix:
+[[10871  1407     0]
+ [ 1248 13769   303]
+ [    0   613  1789]]
+
+Note: Rows = Actual, Columns = Predicted

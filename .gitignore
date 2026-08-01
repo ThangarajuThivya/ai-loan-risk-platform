@@ -1,0 +1,103 @@
+# =====================================================================
+# Monorepo .gitignore — AI-Powered Loan Risk & Recommendation System
+# Covers four modules (see ARCHITECTURE.md, CURRENCY_FEATURE.md):
+#   finance-frontend/         React + Vite
+#   finance-backend/          Node + Express + MySQL
+#   loan-risk-model/          Python + FastAPI + XGBoost
+#   currency-forecast-model/  Python + FastAPI (LSTM/XGBoost/GARCH/IsoForest)
+# =====================================================================
+
+# ---------- Secrets / environment ----------
+.env
+.env.*
+!.env.example
+*.env
+
+# ---------- OS / editor ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.code-workspace
+.idea/
+*.swp
+*.swo
+
+# ---------- Logs ----------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =====================================================================
+# Node  (finance-frontend + finance-backend)
+# =====================================================================
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+*.local
+coverage/
+
+# Uploaded user files — keep the folder in git, ignore uploaded content
+finance-backend/uploads/profile/*
+!finance-backend/uploads/profile/.gitkeep
+
+# FX compliance documents. Deliberately NOT under uploads/, which src/app.js
+# serves as unauthenticated static — these are identity/purpose evidence and
+# are only readable via the ownership-checked download route.
+finance-backend/secure-uploads/fx-documents/*
+!finance-backend/secure-uploads/fx-documents/.gitkeep
+
+# =====================================================================
+# Python  (loan-risk-model)
+# =====================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+loan-risk-model/env/
+.ipynb_checkpoints/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+
+# ---------- ML data & artifacts (large + reproducible) ----------
+# Dataset is regenerated with:  python -m src.data_generator
+loan-risk-model/data/*.csv
+loan-risk-model/data/*.parquet
+# Model + preprocessor are retrained with:  python -m src.model_utils
+# NOTE: while these are ignored, a fresh clone must retrain before the API
+# will start. To ship a ready-to-run model instead, comment out the next
+# two lines (the .joblib files are only ~8 MB).
+loan-risk-model/model_artifacts/*.joblib
+loan-risk-model/model_artifacts/*.pkl
+# evaluation_report.txt stays tracked (small, useful for history).
+
+# =====================================================================
+# Python  (currency-forecast-model)
+# =====================================================================
+# Raw H.10 pulls and processed feature sets are reproducible from
+# src/data_fetcher.py / src/feature_engineering.py — keep folders via
+# .gitkeep, ignore their contents.
+currency-forecast-model/data/raw/*
+!currency-forecast-model/data/raw/.gitkeep
+currency-forecast-model/data/processed/*
+!currency-forecast-model/data/processed/.gitkeep
+# Side-by-side builds from prepare_data.py --processed-dir (e.g. the
+# FRED-refreshed dataset) are equally reproducible.
+currency-forecast-model/data/processed_*/
+# Trained artifacts are reproducible via training/train_*.py.
+#currency-forecast-model/models/*
+!currency-forecast-model/models/.gitkeep
+
+# ---------- Local working doc (not committed) ----------
+GUIDANCE.md

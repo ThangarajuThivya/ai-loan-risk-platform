@@ -1,0 +1,44 @@
+GARCH(1,1) Volatility Model - Evaluation Report
+============================================================
+Generated on: 2026-07-28T14:22:07.983917+00:00
+Version: v3
+Currencies: LKR, INR, EUR, GBP, JPY
+Distribution: t | Return scale: 100
+Train end: 2022-12-31 | Val end: 2024-06-30
+Data range: 1971-01-04 to 2026-07-24
+
+--- LKR (train returns: 12980, dist=t) ---
+  convergence: OK
+  omega=0.0106  alpha[1]=0.0500  beta[1]=0.9300  persistence=0.9800 (stable)
+  log-likelihood=-1872.0  AIC=3753.9  BIC=3791.3
+  sanity check corr(fitted conditional vol, realized vol) = 0.8427
+
+--- INR (train returns: 12980, dist=t) ---
+  convergence: OK
+  omega=0.0018  alpha[1]=0.1657  beta[1]=0.8336  persistence=0.9993 (stable)
+  log-likelihood=-1830.7  AIC=3671.4  BIC=3708.8
+  sanity check corr(fitted conditional vol, realized vol) = 0.8952
+
+--- EUR (train returns: 6196, dist=t) ---
+  convergence: OK
+  omega=0.0007  alpha[1]=0.0323  beta[1]=0.9668  persistence=0.9991 (stable)
+  log-likelihood=-4921.2  AIC=9852.4  BIC=9886.0
+  sanity check corr(fitted conditional vol, realized vol) = 0.9270
+
+--- GBP (train returns: 13501, dist=normal) ---
+  convergence: OK
+  omega=0.0028  alpha[1]=0.0732  beta[1]=0.9231  persistence=0.9964 (stable)
+  log-likelihood=-10453.9  AIC=20915.7  BIC=20945.8
+  sanity check corr(fitted conditional vol, realized vol) = 0.9621
+
+--- JPY (train returns: 13501, dist=t) ---
+  convergence: OK
+  omega=0.0001  alpha[1]=0.0614  beta[1]=0.9384  persistence=0.9999 (stable)
+  log-likelihood=-9925.1  AIC=19860.2  BIC=19897.7
+  sanity check corr(fitted conditional vol, realized vol) = 0.9480
+
+Note: GARCH has no ground-truth volatility to score accuracy against --
+'sanity check' correlates the fitted conditional volatility against
+realized (rolling 20-day std) volatility on the same window. There is
+no baseline model here by design -- out-of-sample scoring against a
+rolling-realized-variance baseline lives in evaluate_garch_volatility.py.
