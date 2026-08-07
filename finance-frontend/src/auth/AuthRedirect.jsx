@@ -23,6 +23,9 @@ export default function AuthRedirect({ children }) {
         break;
 
       case "staff":
+        navigate("/staff", { replace: true });
+        break;
+
       case "customer":
         navigate("/dashboard", { replace: true });
         break;

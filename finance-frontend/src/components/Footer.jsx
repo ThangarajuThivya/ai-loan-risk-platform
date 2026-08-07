@@ -51,7 +51,7 @@ export default function Footer() {
                 <Link to="/emi-calculator" className="hover:text-brand-accent transition-colors">{t('footer.emiCalculator')}</Link>
               </li>
               <li>
-                <Link to="/ai-features" className="hover:text-brand-accent transition-colors">{t('footer.aiUnderwriting')}</Link>
+                <Link to="/services" className="hover:text-brand-accent transition-colors">{t('footer.services')}</Link>
               </li>
             </ul>
           </div>

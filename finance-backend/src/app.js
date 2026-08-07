@@ -27,6 +27,21 @@ app.use(
 );
 
 
+// Payment gateway webhooks (040) — MOUNTED BEFORE express.json() ON PURPOSE.
+//
+// Stripe signs the raw request bytes. express.json() would consume the stream
+// and hand the route a parsed object, and re-serialising that never reproduces
+// the original bytes (key order, whitespace), so every signature check would
+// fail. express.raw here keeps req.body as the untouched Buffer that
+// stripe.service.constructWebhookEvent needs.
+//
+// Scoped to this one path, so every other route still parses JSON as before.
+app.use(
+  "/api/payments",
+  express.raw({ type: "application/json" }),
+  require("./routes/paymentWebhook.routes")
+);
+
 app.use(express.json());
 
 app.use(morgan("dev"));
@@ -75,6 +90,7 @@ app.use("/api/currency", require("./routes/currency.routes"));
 app.use("/api/currency/exchange", require("./routes/fxExchange.routes"));
 app.use("/api/contact-messages", require("./routes/contactMessage.routes"));
 app.use("/api/faqs", require("./routes/faq.routes"));
+app.use("/api/consents", require("./routes/consent.routes"));
 
 
 module.exports = app;

@@ -2,6 +2,7 @@
 
 import sys
 import os
+import hashlib
 
 # Robust import fix so `src` package resolves when running from project root
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,17 +27,36 @@ app = FastAPI(
 model = None
 preprocessor = None
 
+# Identifies exactly which trained model produced a prediction, for the
+# gateway's adverse-action/audit records (finance-backend D4 —
+# risk_assessments.model_version). Derived from the artifact FILE's own
+# content rather than the app's own version string above: the app version is
+# a human-maintained label that can drift out of sync with which model is
+# actually loaded, while a content hash cannot — retraining and redeploying
+# the .joblib file changes this automatically, with no extra step to forget.
+# Not a secret; truncated to 12 hex chars purely for a shorter audit value.
+MODEL_VERSION = None
+
+
+def _artifact_hash(path: str, length: int = 12) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()[:length]
+
 
 @app.on_event("startup")
 def load_artifacts():
-    global model, preprocessor
+    global model, preprocessor, MODEL_VERSION
     if not os.path.exists(MODEL_PATH) or not os.path.exists(PREPROCESSOR_PATH):
         raise RuntimeError(
             f"Model artifacts not found. Run 'python -m src.model_utils' first to train and save the model."
         )
     model = joblib.load(MODEL_PATH)
     preprocessor = joblib.load(PREPROCESSOR_PATH)
-    print("✅ Model and preprocessor loaded successfully.")
+    MODEL_VERSION = _artifact_hash(MODEL_PATH)
+    print(f"✅ Model and preprocessor loaded successfully. model_version={MODEL_VERSION}")
 
 
 RISK_LABELS = {0: "Low Risk", 1: "Medium Risk", 2: "High Risk"}
@@ -97,6 +117,7 @@ class PredictionResponse(BaseModel):
     risk_label: int
     risk_category: str
     probabilities: dict
+    model_version: str
 
 
 @app.get("/")
@@ -107,6 +128,14 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok", "model_loaded": model is not None}
+
+
+@app.get("/model-info")
+def model_info():
+    """Which trained model is currently loaded — for ops/debugging and for
+    manually cross-checking an audit record's model_version against what the
+    service is running right now."""
+    return {"model_version": MODEL_VERSION, "model_path": MODEL_PATH}
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -131,7 +160,8 @@ def predict(applicant: LoanApplicant):
         return PredictionResponse(
             risk_label=predicted_class,
             risk_category=RISK_LABELS[predicted_class],
-            probabilities=class_probabilities
+            probabilities=class_probabilities,
+            model_version=MODEL_VERSION
         )
 
     except Exception as e:

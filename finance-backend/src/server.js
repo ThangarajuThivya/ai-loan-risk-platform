@@ -4,6 +4,8 @@ const app = require("./app");
 const seedAdmin = require("./seeds/seedAdmin");
 const rateFeed = require("./services/rateFeed.service");
 const fxExpirySweep = require("./services/fxExpirySweep.service");
+const offerExpiry = require("./services/offerExpiry.service");
+const lateFeeSweep = require("./services/lateFeeSweep.service");
 const PORT = process.env.PORT || 5000;
 (async() =>{
     await seedAdmin();
@@ -21,4 +23,10 @@ const PORT = process.env.PORT || 5000;
     // 'pending_review' requests no staff member has actioned within the
     // review SLA. See fxExpirySweep.service.js.
     fxExpirySweep.scheduleExpirySweep();
+    // Loan-offer expiry sweep (C1) — lapses offers past their expires_at so
+    // dead offers stop showing an Accept button. See offerExpiry.service.js.
+    offerExpiry.scheduleOfferExpirySweep();
+    // Late-fee sweep (C5) — charges a one-time penalty on installments
+    // overdue past their grace period. See lateFeeSweep.service.js.
+    lateFeeSweep.scheduleLateFeeSweep();
 })()

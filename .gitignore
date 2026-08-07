@@ -52,6 +52,12 @@ finance-backend/uploads/profile/*
 finance-backend/secure-uploads/fx-documents/*
 !finance-backend/secure-uploads/fx-documents/.gitkeep
 
+# Loan-supporting documents (identity, payslip, bank statement) — same
+# reasoning as fx-documents above: only readable via the ownership-checked
+# download route in loan.controller.js, never served statically.
+finance-backend/secure-uploads/loan-documents/*
+!finance-backend/secure-uploads/loan-documents/.gitkeep
+
 # =====================================================================
 # Python  (loan-risk-model)
 # =====================================================================

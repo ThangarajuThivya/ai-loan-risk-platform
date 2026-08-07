@@ -7,13 +7,15 @@ import About from "./pages/About";
 import Loans from "./pages/Loans";
 import Eligibility from "./pages/Eligibility";
 import EmiCalculator from "./pages/EmiCalculator";
-import AiFeatures from "./pages/AiFeatures";
+import Services from "./pages/Services";
 import Faq from "./pages/Faq";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import StaffDashboard from "./pages/staff/StaffDashboard";
+import Unauthorized from "./pages/Unauthorized";
 import DashboardRouter from "./auth/DashboardRouter";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
@@ -29,6 +31,7 @@ function AppContent() {
   // can still reach Home/Loans/Contact/etc. without leaving their dashboard.
   const isFullShellPortal =
     location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/staff") ||
     (location.pathname.startsWith("/dashboard") && user?.role === "staff");
   // The customer portal keeps the public Navbar but owns its own Footer
   // placement (inside CustomerLayout's padded content column) so it isn't
@@ -46,7 +49,7 @@ function AppContent() {
           <Route path="/loans" element={<Loans />} />
           <Route path="/eligibility" element={<Eligibility />} />
           <Route path="/emi-calculator" element={<EmiCalculator />} />
-          <Route path="/ai-features" element={<AiFeatures />} />
+          <Route path="/services" element={<Services />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
@@ -68,6 +71,15 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/staff/*"
+            element={
+              <ProtectedRoute roles={["staff"]}>
+                <StaffDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/unauthorized" element={<Unauthorized />} />
         </Routes>
       </main>
       {/* Footer info panel (hidden on admin/staff/customer portals — customer

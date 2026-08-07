@@ -61,6 +61,22 @@ const formatRateType = (rateType, t) => {
   return rateType;
 };
 
+// D3: a product with a configured risk-pricing range (031) shows that range
+// instead of one flat figure — the actual rate an applicant lands on
+// depends on their risk assessment, so quoting only the base rate would
+// understate what a higher-risk applicant could be offered. A product with
+// no range keeps showing its single flat rate, unchanged from before D3.
+const hasRateRange = (loan) =>
+  loan.min_interest_rate !== null &&
+  loan.min_interest_rate !== undefined &&
+  loan.max_interest_rate !== null &&
+  loan.max_interest_rate !== undefined;
+
+const formatRate = (loan) =>
+  hasRateRange(loan)
+    ? `${Number(loan.min_interest_rate).toFixed(2)}% – ${Number(loan.max_interest_rate).toFixed(2)}%`
+    : `${Number(loan.interest_rate).toFixed(2)}%`;
+
 export default function Loans() {
   const { t } = useTranslation();
   const [products, setProducts] = useState([]);
@@ -160,7 +176,7 @@ export default function Loans() {
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-500 font-medium uppercase tracking-wider">{t('loans.interestRateLabel')}</span>
                         <span className="font-mono font-bold text-slate-800">
-                          {Number(loan.interest_rate).toFixed(2)}% ({formatRateType(loan.rate_type, t)})
+                          {formatRate(loan)} ({formatRateType(loan.rate_type, t)})
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
@@ -229,7 +245,7 @@ export default function Loans() {
                       <span className="text-xs font-semibold uppercase tracking-wider">{t('loans.interestAprLabel')}</span>
                     </div>
                     <span className="font-mono text-base font-bold text-slate-800">
-                      {Number(selectedLoan.interest_rate).toFixed(2)}% ({formatRateType(selectedLoan.rate_type, t)})
+                      {formatRate(selectedLoan)} ({formatRateType(selectedLoan.rate_type, t)})
                     </span>
                   </div>
 

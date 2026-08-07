@@ -336,11 +336,11 @@ export default function Home() {
           </div>
 
           <div className="text-center mt-12">
-            <Link 
-              to="/ai-features" 
+            <Link
+              to="/services"
               className="inline-flex items-center space-x-1.5 text-brand-primary font-semibold hover:text-brand-secondary transition-colors text-sm"
             >
-              <span>{t('home.exploreAllCapabilities')}</span>
+              <span>{t('home.exploreAllServices')}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -401,7 +401,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCounter target={12450} suffix="+" label={t('home.statProcessedDecisions')} />
-            <StatCounter target={98.4} suffix="%" label={t('home.statOcrAccuracy')} />
+            <StatCounter target={3} suffix="" label={t('home.statSupportedLanguages')} />
             <StatCounter target={140} suffix="M+" label={t('home.statVolumeEvaluated')} />
             <StatCounter target={5} suffix="s" label={t('home.statAvgLatency')} />
           </div>

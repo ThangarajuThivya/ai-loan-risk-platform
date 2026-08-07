@@ -12,5 +12,13 @@ verifyToken,
 notification.getNotifications
 );
 
+// PATCH /api/notifications/read-all (K4) — mark all of the caller's own
+// notifications as read. See controllers/notifications.js markAllRead.
+router.patch(
+"/read-all",
+verifyToken,
+notification.markAllRead
+);
+
 
 module.exports = router;

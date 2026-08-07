@@ -2,11 +2,35 @@ const express = require("express");
 
 const router = express.Router();
 
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 const loanController = require("../controllers/loan.controller");
+const { loanDocumentUpload } = require("../config/multer");
 const { verifyToken } = require("../middleware/auth.middleware");
 const { allowRoles } = require("../middleware/role.middleware");
 const { CATEGORY_VALUES } = require("../services/mlClient.service");
+const {
+  COLLATERAL_TYPES,
+  isValidNic,
+} = require("../services/collateralGuarantor.service");
+const { DOCUMENT_TYPES } = require("../services/loanDocument.service");
+const repaymentController = require("../controllers/repayment.controller");
+const { PAYMENT_KINDS } = require("../services/repaymentQuote.service");
+
+// Multer reports a rejected file (too large, wrong type) by calling next()
+// with an error, which would otherwise fall through to Express's default
+// HTML error page as a 500. Wrapping the middleware turns those into the
+// 400 + JSON shape every other endpoint in this router returns. Mirrors
+// fxExchange.routes.js's uploadSupportingDocument.
+function uploadLoanDocument(req, res, next) {
+  loanDocumentUpload.single("document")(req, res, (err) => {
+    if (!err) return next();
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "The file is too large — supporting documents must be 5 MB or smaller."
+        : err.message || "Failed to read the uploaded file.";
+    return res.status(400).json({ message });
+  });
+}
 
 // Optional applicant-declared fields (mlClient.service.js DECLARABLE_FIELDS)
 // — improve model input fidelity beyond the neutral defaults. Every field
@@ -67,6 +91,90 @@ const DECLARABLE_VALIDATORS = [
     .toInt(),
 ];
 
+// D5 — real guarantor(s)/collateral nominated FOR this application
+// (migration 033), distinct from the self-declared guarantor_* fields
+// above (the applicant's OWN liability elsewhere — see
+// creditPolicy.service.js GUARANTOR_RELIABILITY vs GUARANTOR_DEFAULTS).
+// Shape only here; NIC-lookup-based exposure, the guaranteed_amount ≤
+// requested_amount cross-check, and persistence all happen in
+// loan.controller.js#assess, which has requested_amount to compare against
+// and the DB access this module deliberately doesn't.
+const SECURITY_VALIDATORS = [
+  body("guarantors")
+    .optional({ nullable: true })
+    .isArray({ max: 5 })
+    .withMessage("guarantors must be an array of at most 5 entries"),
+  body("guarantors.*.nic")
+    .exists({ checkFalsy: true })
+    .withMessage("each guarantor's nic is required")
+    .custom((value) => isValidNic(value))
+    .withMessage(
+      "each guarantor's nic must be a valid Sri Lankan NIC (9 digits + V/X, or 12 digits)"
+    ),
+  body("guarantors.*.full_name")
+    .exists({ checkFalsy: true })
+    .withMessage("each guarantor's full_name is required")
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 150 })
+    .withMessage("each guarantor's full_name must be between 2 and 150 characters"),
+  body("guarantors.*.phone")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage("each guarantor's phone must be 20 characters or fewer"),
+  body("guarantors.*.address")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("each guarantor's address must be 500 characters or fewer"),
+  body("guarantors.*.relationship_to_applicant")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("each guarantor's relationship_to_applicant must be 50 characters or fewer"),
+  body("guarantors.*.guaranteed_amount")
+    .exists({ checkFalsy: true })
+    .withMessage("each guarantor's guaranteed_amount is required")
+    .isFloat({ gt: 0 })
+    .withMessage("each guarantor's guaranteed_amount must be a positive number")
+    .toFloat(),
+  body("collateral")
+    .optional({ nullable: true })
+    .isArray({ max: 10 })
+    .withMessage("collateral must be an array of at most 10 entries"),
+  body("collateral.*.collateral_type")
+    .exists({ checkFalsy: true })
+    .withMessage("each collateral item's collateral_type is required")
+    .isIn(COLLATERAL_TYPES)
+    .withMessage(`each collateral item's collateral_type must be one of: ${COLLATERAL_TYPES.join(", ")}`),
+  body("collateral.*.description")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("each collateral item's description must be 1000 characters or fewer"),
+  body("collateral.*.estimated_value")
+    .exists({ checkFalsy: true })
+    .withMessage("each collateral item's estimated_value is required")
+    .isFloat({ gt: 0 })
+    .withMessage("each collateral item's estimated_value must be a positive number")
+    .toFloat(),
+  body("collateral.*.valuation_date")
+    .optional({ nullable: true, checkFalsy: true })
+    .isISO8601()
+    .withMessage("each collateral item's valuation_date must be a valid date (YYYY-MM-DD)"),
+  body("collateral.*.ownership_reference")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("each collateral item's ownership_reference must be 255 characters or fewer"),
+];
+
 // POST /api/loans/assess — score + recommend for the logged-in customer.
 router.post(
   "/assess",
@@ -103,6 +211,7 @@ router.post(
       .isIn(["english", "sinhala", "tamil"])
       .withMessage("language must be one of: english, sinhala, tamil"),
     ...DECLARABLE_VALIDATORS,
+    ...SECURITY_VALIDATORS,
   ],
   loanController.assess
 );
@@ -218,7 +327,247 @@ router.get(
   loanController.getMyApplications
 );
 
+// /api/loans/draft — the logged-in customer's single unsubmitted wizard
+// draft (H3). MUST stay above the "/:id" catch-all below, or "draft" is
+// parsed as an application id. Always scoped to the token's user_id, so
+// there is no id to tamper with.
+router.get("/draft", verifyToken, allowRoles("customer"), loanController.getDraft);
+router.put("/draft", verifyToken, allowRoles("customer"), loanController.saveDraft);
+router.delete("/draft", verifyToken, allowRoles("customer"), loanController.deleteDraft);
+
 // GET /api/loans/:id — one application (owner or admin only).
 router.get("/:id", verifyToken, loanController.getApplicationById);
+
+// GET /api/loans/:id/history — the full transition audit trail (owner,
+// staff, or admin). See loan.controller.js getApplicationHistory.
+router.get("/:id/history", verifyToken, loanController.getApplicationHistory);
+
+// GET /api/loans/:id/adverse-actions — the full adverse-action history
+// (owner, staff, or admin; D4). See loan.controller.js
+// getApplicationAdverseActions.
+router.get(
+  "/:id/adverse-actions",
+  verifyToken,
+  loanController.getApplicationAdverseActions
+);
+
+// GET /api/loans/:id/security — the guarantor(s)/collateral pledged against
+// this application (owner, staff, or admin; D5). See loan.controller.js
+// getApplicationSecurity.
+router.get("/:id/security", verifyToken, loanController.getApplicationSecurity);
+
+// GET /api/loans/:id/schedule — the repayment calendar (owner, staff, or
+// admin). See loan.controller.js getRepaymentSchedule.
+router.get("/:id/schedule", verifyToken, loanController.getRepaymentSchedule);
+
+// GET /api/loans/:id/decision-letter (F3) — a formatted PDF letter
+// confirming an approval or rejection (owner, staff, or admin). See
+// loan.controller.js getDecisionLetter.
+router.get("/:id/decision-letter", verifyToken, loanController.getDecisionLetter);
+
+// GET /api/loans/:id/statement.csv (F3) — the repayment schedule as a CSV
+// statement (owner, staff, or admin). See loan.controller.js
+// getLoanStatementCsv.
+router.get("/:id/statement.csv", verifyToken, loanController.getLoanStatementCsv);
+
+// GET /api/loans/:id/payments — payments recorded against this loan
+// (owner, staff, or admin).
+router.get("/:id/payments", verifyToken, loanController.getPayments);
+
+// --- Customer-initiated repayments (040) -----------------------------------
+// All borrower-only: paying is something only the borrower does, so these are
+// role-gated to 'customer' AND ownership-checked in the controller, unlike the
+// read endpoints above which also admit staff. Staff record payments through
+// POST /api/admin/applications/:id/payments instead.
+
+// GET /api/loans/:id/repayment-options — every amount payable right now.
+router.get(
+  "/:id/repayment-options",
+  verifyToken,
+  allowRoles("customer"),
+  [param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt()],
+  repaymentController.getRepaymentOptions
+);
+
+// POST /api/loans/:id/payments/checkout — open a gateway session.
+//
+// `amount` is validated only for shape. It is IGNORED unless kind is
+// 'custom', and even then repaymentQuote.service.js bounds it against the
+// real outstanding balance — the server, not this body, decides the charge.
+router.post(
+  "/:id/payments/checkout",
+  verifyToken,
+  allowRoles("customer"),
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    body("kind")
+      .exists({ checkFalsy: true })
+      .withMessage("kind is required")
+      .isIn(PAYMENT_KINDS)
+      .withMessage(`kind must be one of: ${PAYMENT_KINDS.join(", ")}`),
+    body("amount")
+      .optional({ nullable: true })
+      .isFloat({ gt: 0 })
+      .withMessage("amount must be a positive number")
+      .toFloat(),
+    body("amount").custom((value, { req }) => {
+      if (req.body.kind === "custom" && (value === undefined || value === null || value === "")) {
+        throw new Error("amount is required when kind is 'custom'");
+      }
+      return true;
+    }),
+  ],
+  repaymentController.createCheckout
+);
+
+// GET /api/loans/:id/payments/intents/:sessionId — poll an attempt, and
+// reconcile it against the gateway if the webhook has not landed.
+router.get(
+  "/:id/payments/intents/:sessionId",
+  verifyToken,
+  allowRoles("customer"),
+  [param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt()],
+  repaymentController.getIntentStatus
+);
+
+// GET /api/loans/:id/payments/:paymentId/receipt.pdf — owner, staff or admin.
+// Declared AFTER the /payments/intents route so 'intents' is never captured
+// as a :paymentId.
+router.get(
+  "/:id/payments/:paymentId/receipt.pdf",
+  verifyToken,
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    param("paymentId").isInt({ gt: 0 }).withMessage("paymentId must be a positive integer").toInt(),
+  ],
+  repaymentController.getPaymentReceipt
+);
+
+// PATCH /api/loans/:id/withdraw — a customer pulls back their own
+// application. See loan.controller.js withdrawApplication for why a
+// missing application and someone else's application both come back 404.
+router.patch(
+  "/:id/withdraw",
+  verifyToken,
+  allowRoles("customer"),
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    body("note")
+      .optional({ nullable: true })
+      .isString()
+      .withMessage("note must be a string")
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage("note must be 500 characters or fewer"),
+  ],
+  loanController.withdrawApplication
+);
+
+// PATCH /api/loans/:id/respond — a customer answers a staff "more
+// information required" request. Unlike withdraw's note, this one is
+// required: the whole point of the endpoint is to record what the
+// applicant said, so an empty response would defeat it.
+router.patch(
+  "/:id/respond",
+  verifyToken,
+  allowRoles("customer"),
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    body("note")
+      .exists({ checkFalsy: true })
+      .withMessage("note is required — describe what you're providing")
+      .isString()
+      .withMessage("note must be a string")
+      .trim()
+      .isLength({ min: 1, max: 1000 })
+      .withMessage("note must be between 1 and 1000 characters"),
+  ],
+  loanController.respondToInfoRequest
+);
+
+// Applicant's two possible answers to an outstanding offer (migration 023).
+// The note is optional on both — unlike /respond, the meaning of the action
+// is carried by which endpoint was called, not by what was typed.
+const OFFER_RESPONSE_VALIDATORS = [
+  param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+  body("note")
+    .optional({ nullable: true })
+    .isString()
+    .withMessage("note must be a string")
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("note must be 500 characters or fewer"),
+];
+
+// PATCH /api/loans/:id/offer/accept — accept the offer; application → accepted.
+router.patch(
+  "/:id/offer/accept",
+  verifyToken,
+  allowRoles("customer"),
+  OFFER_RESPONSE_VALIDATORS,
+  loanController.acceptOffer
+);
+
+// PATCH /api/loans/:id/offer/decline — decline the offer; application → withdrawn.
+router.patch(
+  "/:id/offer/decline",
+  verifyToken,
+  allowRoles("customer"),
+  OFFER_RESPONSE_VALIDATORS,
+  loanController.declineOffer
+);
+
+// POST /api/loans/:id/documents (customer, own) — upload one supporting
+// document (E1). Multipart — the file field is named "document". auth runs
+// before multer so an unauthenticated request never triggers a disk write;
+// mirrors fxExchange.routes.js's document upload route ordering.
+router.post(
+  "/:id/documents",
+  verifyToken,
+  allowRoles("customer"),
+  uploadLoanDocument,
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    body("document_type")
+      .exists({ checkFalsy: true })
+      .withMessage("document_type is required")
+      .isIn(DOCUMENT_TYPES)
+      .withMessage(`document_type must be one of: ${DOCUMENT_TYPES.join(", ")}`),
+  ],
+  loanController.uploadDocument
+);
+
+// GET /api/loans/:id/documents — metadata only (owner, staff, or admin; E1).
+router.get(
+  "/:id/documents",
+  verifyToken,
+  [param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt()],
+  loanController.listDocuments
+);
+
+// GET /api/loans/:id/documents/:docId/download (owner, staff, or admin; E1).
+router.get(
+  "/:id/documents/:docId/download",
+  verifyToken,
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    param("docId").isInt({ gt: 0 }).withMessage("docId must be a positive integer").toInt(),
+  ],
+  loanController.downloadDocument
+);
+
+// DELETE /api/loans/:id/documents/:docId (customer, own; E1) — only while
+// the document is still pending review. See loan.controller.js
+// deleteDocument for why an already-reviewed document 409s instead.
+router.delete(
+  "/:id/documents/:docId",
+  verifyToken,
+  allowRoles("customer"),
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    param("docId").isInt({ gt: 0 }).withMessage("docId must be a positive integer").toInt(),
+  ],
+  loanController.deleteDocument
+);
 
 module.exports = router;
