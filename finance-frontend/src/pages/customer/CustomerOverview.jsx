@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
-import { ApplicationCard, NotificationsPanel, StatCard } from "./dashboardWidgets";
+import { ApplicationSummaryCard, NotificationsPanel, StatCard } from "./dashboardWidgets";
+import PaymentReturnHandler from "../../components/loans/PaymentReturnHandler";
 
 const QUICK_ACTIONS = [
   {
@@ -47,7 +48,6 @@ function CustomerOverview() {
   const [applications, setApplications] = useState([]);
   const [appsLoading, setAppsLoading] = useState(true);
   const [appsError, setAppsError] = useState("");
-  const [expandedId, setExpandedId] = useState(null);
 
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(true);
@@ -93,11 +93,19 @@ function CustomerOverview() {
     };
   }, [t]);
 
+  // Grouped by lifecycle outcome rather than by literal status, so states
+  // added to the machine land in the right tile instead of silently
+  // counting as zero: anything still with the bank or the applicant is
+  // "in review", and a disbursed loan is still an approved one.
   const stats = useMemo(() => {
-    const pending = applications.filter((a) => a.status === "pending").length;
-    const approved = applications.filter((a) => a.status === "approved").length;
-    const rejected = applications.filter((a) => a.status === "rejected").length;
-    return { total: applications.length, pending, approved, rejected };
+    const countIn = (...statuses) =>
+      applications.filter((a) => statuses.includes(a.status)).length;
+    return {
+      total: applications.length,
+      pending: countIn("pending", "under_review", "more_info_required"),
+      approved: countIn("approved", "disbursed", "closed"),
+      rejected: countIn("rejected", "withdrawn"),
+    };
   }, [applications]);
 
   const recentApplications = useMemo(
@@ -107,6 +115,12 @@ function CustomerOverview() {
 
   return (
     <div className="pb-16 px-4 sm:px-6 lg:px-8 pt-6 bg-brand-bg min-h-screen">
+      {/* The gateway always redirects back here after a card payment (040),
+          regardless of which application's detail page the payment was
+          started from. Renders nothing; just confirms with the server what
+          actually happened — the repayment tab re-fetches fresh whenever a
+          customer opens it, so there is nothing here left to refresh. */}
+      <PaymentReturnHandler />
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center space-x-3 mb-6">
           <div className="bg-brand-primary/10 text-brand-primary p-2.5 rounded-xl shrink-0">
@@ -201,17 +215,9 @@ function CustomerOverview() {
             {!appsLoading && !appsError && recentApplications.length > 0 && (
               <div className="space-y-3">
                 {recentApplications.map((application) => (
-                  <ApplicationCard
+                  <ApplicationSummaryCard
                     key={application.application_id}
                     application={application}
-                    expanded={expandedId === application.application_id}
-                    onToggle={() =>
-                      setExpandedId((prev) =>
-                        prev === application.application_id
-                          ? null
-                          : application.application_id
-                      )
-                    }
                   />
                 ))}
               </div>

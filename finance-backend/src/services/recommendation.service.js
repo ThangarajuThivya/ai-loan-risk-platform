@@ -19,6 +19,53 @@ const AFFORDABILITY_BY_RISK = {
 };
 
 /**
+ * Flat-rate EMI. Interest is charged on the ORIGINAL principal for the whole
+ * term, not on the reducing balance:
+ *   totalInterest = P · (annualRatePct/100) · (n/12)
+ *   EMI           = (P + totalInterest) / n
+ *
+ * Two of the six seeded loan_products carry rate_type='flat' (see
+ * db/migrations/003_seed_loan_products.sql), so quoting them with the
+ * reducing-balance formula would understate the instalment — for the same
+ * headline rate a flat loan always costs more per month. Use
+ * computeEmiForRateType rather than picking a formula by hand.
+ *
+ * @param {number} principal      loan principal (P)
+ * @param {number} annualRatePct  annual interest rate as a percentage
+ * @param {number} tenureMonths   number of monthly instalments (n)
+ * @returns {number} monthly instalment
+ */
+function computeFlatEmi(principal, annualRatePct, tenureMonths) {
+  if (tenureMonths <= 0) {
+    throw new Error("tenureMonths must be greater than 0");
+  }
+  if (principal <= 0) {
+    return 0;
+  }
+  const totalInterest = principal * (annualRatePct / 100) * (tenureMonths / 12);
+  return (principal + totalInterest) / tenureMonths;
+}
+
+/**
+ * EMI for a product's actual rate convention. `rate_type` is a column on
+ * loan_products and is snapshotted onto every issued offer, so the offer's
+ * instalment never silently changes if the product is later re-priced.
+ * Anything other than 'flat' is treated as reducing-balance, which is the
+ * loan_products default.
+ *
+ * @param {number} principal
+ * @param {number} annualRatePct
+ * @param {number} tenureMonths
+ * @param {string} [rateType] 'flat' | 'reducing'
+ * @returns {number} monthly instalment
+ */
+function computeEmiForRateType(principal, annualRatePct, tenureMonths, rateType) {
+  return rateType === "flat"
+    ? computeFlatEmi(principal, annualRatePct, tenureMonths)
+    : computeEmi(principal, annualRatePct, tenureMonths);
+}
+
+/**
  * Reducing-balance EMI.
  *   EMI = P·r·(1+r)^n / ((1+r)^n − 1),  r = annualRatePct / 12 / 100
  *
@@ -201,6 +248,8 @@ function buildRecommendation({
 
 module.exports = {
   computeEmi,
+  computeFlatEmi,
+  computeEmiForRateType,
   maxAffordableAmount,
   affordabilityFactor,
   pickLoanType,

@@ -25,4 +25,16 @@ async function create({ userId, title, message }) {
   ]);
 }
 
-module.exports = { create };
+/**
+ * Mark every one of a user's own notifications as read (K4). Scoped to
+ * `user_id = ?` so a caller can only ever mark their own notifications,
+ * regardless of what a client sends — there is no per-id variant because
+ * nothing in the UI offers marking a single notification read, only "mark
+ * all read".
+ * @param {number} userId
+ */
+async function markAllRead(userId) {
+  await pool.query(`UPDATE notifications SET is_read = 1 WHERE user_id = ?`, [userId]);
+}
+
+module.exports = { create, markAllRead };

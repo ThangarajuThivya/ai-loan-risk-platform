@@ -87,7 +87,47 @@ const fxDocumentUpload = multer({
   },
 });
 
+// --- Loan application documents (E1) ------------------------------------
+//
+// Same reasoning as the FX block above, applied to loan application
+// evidence (NIC, payslips, bank statements): its own directory, never
+// mounted under express.static, random filenames, MIME-derived extensions,
+// PDF/JPEG/JPG/PNG only, 5MB cap.
+const LOAN_DOCUMENT_DIR = path.join(__dirname, "..", "..", "secure-uploads", "loan-documents");
+
+const loanDocumentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    fs.mkdir(LOAN_DOCUMENT_DIR, { recursive: true }, (err) => cb(err, LOAN_DOCUMENT_DIR));
+  },
+
+  filename: (req, file, cb) => {
+    const ext = file.mimetype === "application/pdf" ? ".pdf" : file.mimetype === "image/png" ? ".png" : ".jpg";
+    cb(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`);
+  },
+});
+
+const LOAN_DOCUMENT_ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+
+const loanDocumentUpload = multer({
+  storage: loanDocumentStorage,
+
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+
+  fileFilter: (req, file, cb) => {
+    if (LOAN_DOCUMENT_ALLOWED_MIME.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF, JPG or PNG files are accepted as supporting documents."));
+    }
+  },
+});
+
 module.exports = upload;
 module.exports.fxDocumentUpload = fxDocumentUpload;
 module.exports.FX_DOCUMENT_DIR = FX_DOCUMENT_DIR;
 module.exports.FX_DOCUMENT_ALLOWED_MIME = FX_DOCUMENT_ALLOWED_MIME;
+module.exports.loanDocumentUpload = loanDocumentUpload;
+module.exports.LOAN_DOCUMENT_DIR = LOAN_DOCUMENT_DIR;
+module.exports.LOAN_DOCUMENT_ALLOWED_MIME = LOAN_DOCUMENT_ALLOWED_MIME;

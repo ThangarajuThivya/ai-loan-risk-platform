@@ -47,9 +47,7 @@ export default function Navbar() {
     { name: t('navbar.home'), path: '/' },
     { name: t('navbar.about'), path: '/about' },
     { name: t('navbar.loans'), path: '/loans' },
-    { name: t('navbar.eligibilityChecker'), path: '/eligibility' },
-    { name: t('navbar.emiCalculator'), path: '/emi-calculator' },
-    { name: t('navbar.aiFeatures'), path: '/ai-features' },
+    { name: t('navbar.services'), path: '/services' },
     { name: t('navbar.faq'), path: '/faq' },
     { name: t('navbar.contact'), path: '/contact' },
   ];

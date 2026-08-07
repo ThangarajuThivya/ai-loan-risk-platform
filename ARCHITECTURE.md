@@ -15,8 +15,10 @@ instructions, see **[README.md](README.md)**.
 
 The system is a modular, service-oriented web application that classifies loan
 applicants into **Low / Medium / High** risk, produces loan recommendations,
-and surfaces currency exchange-rate analytics plus a bank-style FX exchange
-workflow. It is composed of five cooperating parts:
+carries a loan through its full lifecycle from application to offer,
+disbursement, and repayment (including online card repayment), and surfaces
+currency exchange-rate analytics plus a bank-style FX exchange workflow. It
+is composed of five cooperating parts:
 
 1. A **Single-Page Application** (React) — the presentation layer for customers, staff, and admins, in English, Sinhala, and Tamil.
 2. An **API gateway** (Node/Express) — authentication, business logic, orchestration, and persistence.
@@ -24,9 +26,13 @@ workflow. It is composed of five cooperating parts:
 4. A second **machine-learning microservice** (Python/FastAPI) — currency exchange-rate forecasting only (`currency-forecast-model/`; LSTM, XGBoost, GARCH, Isolation Forest).
 5. A **relational database** (MySQL) — the system of record.
 
-One external service is consumed by the gateway: a **generative-AI API**
+Two external services are consumed by the gateway: a **generative-AI API**
 (Gemini) for natural-language risk explanations, called with a graceful
-deterministic fallback when no key is configured or the call fails.
+deterministic fallback when no key is configured or the call fails; and a
+**payment gateway** (Stripe) for customer-initiated online card repayments,
+which the system likewise runs correctly without — a missing configuration
+there simply disables the online-payment button rather than affecting
+anything else (§9.15).
 
 **Architectural style:** layered gateway architecture. The browser talks only to
 the gateway; the gateway fans out to the ML services, the database, and Gemini.
@@ -55,11 +61,14 @@ flowchart TB
     Admin(["Admin"])
     System["AI-Powered Loan Risk &amp;<br/>Recommendation System"]
     Gemini["Gemini API<br/>(risk explanations)"]
+    Stripe["Stripe<br/>(card repayments)"]
 
-    Customer -->|applies for loans,<br/>views results, FX &amp; currency outlook| System
-    Staff -->|reviews/decides applications,<br/>runs risk calculator,<br/>reviews FX requests,<br/>views currency analytics| System
+    Customer -->|applies for loans, tracks &amp; repays them,<br/>views results, FX &amp; currency outlook| System
+    Staff -->|reviews/decides applications,<br/>verifies documents/KYC, disburses loans,<br/>records repayments, runs risk calculator,<br/>reviews FX requests,<br/>views currency analytics| System
     Admin -->|manages products, staff,<br/>customers, applications,<br/>currency &amp; FX settings| System
     System -->|prompt / explanation| Gemini
+    System -->|create checkout session| Stripe
+    Stripe -->|payment confirmation, webhook| System
 ```
 
 ---
@@ -79,6 +88,7 @@ flowchart LR
     end
     Gemini["Gemini API"]
     Ext["Live FX rate provider<br/>(open.er-api.com)"]
+    Stripe["Stripe API"]
 
     R <-->|REST / JSON<br/>Bearer JWT| N
     N <-->|REST / JSON| P
@@ -86,12 +96,13 @@ flowchart LR
     N <-->|SQL| DB
     N -->|HTTPS| Gemini
     N -->|HTTPS, hourly poll| Ext
+    N <-->|HTTPS out, signed webhook in| Stripe
 ```
 
 | Container | Module | Runtime | Port | Responsibility |
 |---|---|---|---|---|
 | Frontend SPA | `finance-frontend/` | React 19 / Vite | 5173 | Presentation, routing, i18n, auth session, forms, dashboards |
-| API Gateway | `finance-backend/` | Node / Express 5 | 5000 | Auth, application lifecycle, orchestration, recommendation & explanation, FX workflow, persistence |
+| API Gateway | `finance-backend/` | Node / Express 5 | 5000 | Auth, loan lifecycle (application → offer → disbursement → repayment), orchestration, recommendation & explanation, FX workflow, persistence |
 | Loan-Risk ML Service | `loan-risk-model/` | Python / FastAPI | 8000 | Feature engineering + loan risk inference (XGBoost) |
 | Currency ML Service | `currency-forecast-model/` | Python / FastAPI | 8100 | Exchange-rate forecast / trend / volatility / anomaly inference (LSTM, XGBoost, GARCH, Isolation Forest) |
 | Database | (managed by backend) | MySQL 8 | 3306 | System of record |
@@ -111,8 +122,10 @@ flowchart LR
 | ML | — | — | XGBoost, scikit-learn, pandas, numpy | LSTM (`tensorflow-cpu`/Keras), XGBoost, GARCH (`arch`), Isolation Forest (scikit-learn), pandas, numpy, pyarrow |
 | Auth | JWT (in-memory access token) | jsonwebtoken, bcrypt, httpOnly cookie | — | — |
 | Security | — | helmet, cors, express-validator | — | — |
-| Uploads | — | multer — two separate instances: profile images (public `uploads/`) and FX compliance documents (non-public `secure-uploads/`, see §9.7/§11) | — | — |
-| Email | — | nodemailer (forgot-password OTP) | — | — |
+| Uploads | — | multer — three separate instances: profile images (public `uploads/`), FX compliance documents, and loan application documents (both non-public `secure-uploads/`, see §9.7/§9.11/§11) | — | — |
+| Email | — | nodemailer (forgot-password OTP, major loan-status-change emails) | — | — |
+| Payments | Stripe Checkout (hosted redirect) | `stripe` SDK — Checkout session creation, webhook signature verification (see §9.15) | — | — |
+| PDF generation | — | `pdfkit` — decision letters, payment receipts (see §9.11/§9.15) | — | — |
 | Charts | Recharts (currency rate/forecast charts) | — | — | — |
 | Serialization | — | — | joblib | joblib |
 
@@ -125,16 +138,24 @@ flowchart LR
 - Auth session handling: in-memory access token + silent refresh via the gateway.
 - Role-based routing (`customer` / `staff` / `admin`), each with its own dashboard shell.
 - Full trilingual UI (English / Sinhala / Tamil) via `react-i18next`, headline-level translation — admin/staff tooling and database-sourced content (loan products, FAQ entries, etc.) stay English.
-- **Customer portal** — apply for a loan (wizard form with optional applicant-declared fields), view application history and risk/recommendation results, edit profile; a Currency tab (simplified quarterly exchange-rate outlook, live rate board, rate-history chart); a full FX exchange-request flow — quote in either the foreign currency or a target LKR amount (server inverts the rate either way), live per-transaction/daily limit headroom shown before committing, supporting-document upload when the exchange is over the admin-configured compliance threshold, submit, history, cancel, audit timeline, and a printable settlement slip once a request is approved or settled; read-only FAQ.
-- **Staff portal** — review and decide (approve/reject) loan applications, read-only customer/product views, standalone risk calculator, a Currency tab with the full forecast/trend/volatility breakdown and anomaly-alert log, an FX Exchange review queue (approve/reject/counter-quote/settle, with per-request compliance-document status and inventory-availability status, each with its own approval gate — see §9.7/§9.9), FAQ management (CRUD).
-- **Admin portal** — everything staff has, plus loan-product CRUD, staff account management, a Currency Analytics tab (model/cache status, currency activate/deactivate, cache refresh), FX configuration (spreads, limits, documentation threshold, bank-wide inventory, net position, live-feed refresh), an FX Reports tab (status-rate/volume/spread-revenue aggregates over a date range, plus CSV export of the underlying request rows), FAQ management (CRUD), and a Messages/contact-support inbox.
+- **Customer portal** — apply for a loan via a multi-step wizard that pre-fills stable personal details from the customer's profile and their most recent application for confirmation rather than re-entry (§9.12), auto-saves an in-progress application as a resumable draft, collects an optional guarantor/collateral declaration and supporting documents, and requires granting any still-missing data-processing/credit-bureau-check consent before submission (§9.18); view application history, status, and the full decision/event timeline; download a decision letter (PDF) once decided; view and accept/decline a loan offer, including its fee breakdown, net amount actually receivable, and effective APR alongside the nominal rate (§9.17); view the bank account(s) opened automatically in the customer's name (§9.13); once disbursed, view the live repayment schedule, outstanding balance, arrears, and early-settlement quote, pay online by card or view/download past payment receipts (§9.15), and download a full loan statement (CSV); submit/track NIC identity verification and edit profile (§9.11); a Currency tab (simplified quarterly exchange-rate outlook, live rate board, rate-history chart); a full FX exchange-request flow — quote in either the foreign currency or a target LKR amount (server inverts the rate either way), live per-transaction/daily limit headroom shown before committing, supporting-document upload when the exchange is over the admin-configured compliance threshold, submit, history, cancel, audit timeline, and a printable settlement slip once a request is approved or settled; a contact-support message thread; read-only FAQ.
+- **Staff portal** — a review queue of loan applications with processing-age/SLA badges (§9.16); review and decide (approve/reject/request more information) applications, issue and re-issue loan offers — waiving an individual fee on an offer with a mandatory recorded reason (§9.17) — and mark an accepted offer as disbursed; verify uploaded documents, NIC/KYC submissions, and pledged collateral (§9.11); look up a guarantor's total exposure across the system before relying on them again; record an offline repayment (cash/transfer/cheque/standing order) against a disbursed loan and waive a late fee, with a downloadable receipt for any payment (§9.14/§9.15); register a pre-existing bank account for a customer who already banks with this institution (§9.13); read-only customer/product views, standalone risk calculator, a Currency tab with the full forecast/trend/volatility breakdown and anomaly-alert log, an FX Exchange review queue (approve/reject/counter-quote/settle, with per-request compliance-document status and inventory-availability status, each with its own approval gate — see §9.7/§9.9), FAQ management (CRUD). Staff sign in to their own dedicated portal at `/staff` (a customer or admin account is redirected to `/unauthorized` if it reaches that route).
+- **Admin portal** — everything staff has, plus loan-product CRUD including per-product fee configuration (§9.17), staff account management, a bank-wide Portfolio Dashboard (approval rate, disbursement volume, portfolio-at-risk, product/risk distribution — §9.16), a Currency Analytics tab (model/cache status, currency activate/deactivate, cache refresh), FX configuration (spreads, limits, documentation threshold, bank-wide inventory, net position, live-feed refresh), an FX Reports tab (status-rate/volume/spread-revenue aggregates over a date range, plus CSV export of the underlying request rows), FAQ management (CRUD), and a Messages/contact-support inbox.
 
 ### 6.2 Backend (API gateway)
 - **Authentication & authorization** — registration, login, JWT issuance/refresh, OTP-based forgot-password, RBAC.
-- **Application lifecycle** — create, store, and transition loan applications (pending → approved/rejected), with a notification on decision.
+- **Loan application lifecycle** — a full status machine (nine states: `pending` → … → `disbursed` → `closed`, plus `more_info_required`, `rejected`, `withdrawn`), with the legal next-states and the roles allowed to make each move defined in one place and reused by validation, persistence, and the API's own `allowed_transitions` hint to the frontend; every transition is written to an append-only audit trail (see §9.10).
 - **Model orchestration** — map applicant profile + optional self-declared fields to model inputs, call the loan-risk ML service, persist results.
 - **Recommendation engine** — deterministic rules: loan type, recommended amount, EMI (see §9.2).
 - **Explanation service** — call Gemini with structured risk factors, return/store a natural-language explanation (with a deterministic fallback if Gemini is unavailable), optionally localized (Sinhala/Tamil).
+- **Applicant experience** — pre-fills a new application from the customer's profile and their most recent application; promotes stable personal attributes (marital status, education, occupation, employer type, years employed) onto the customer's profile so they persist across applications instead of being re-declared each time; auto-saves an abandoned application as a resumable draft (see §9.12).
+- **Document management & KYC** — secure upload/verification of loan-supporting documents (identity, payslip, bank statement) and of a customer's declared NIC, both advisory (visible to staff, not a hard gate on the credit decision) — see §9.11.
+- **Loan offers & disbursement** — a binding offer (amount, tenure, rate, EMI, expiry) the applicant must explicitly accept before funds move; on acceptance, an account at this bank is opened automatically in the customer's name (or an existing one reused/registered by staff) to receive the disbursed funds — see §9.10/§9.13.
+- **Fees, net disbursement & effective APR** — admin-configured product fees (processing, documentation, credit-life insurance) resolved and snapshotted onto each offer, waivable by staff with a mandatory reason, deducted from disbursement rather than capitalised onto the loan, with an IRR-based effective APR disclosed alongside the nominal rate — see §9.17.
+- **Consent management** — an append-only, versioned audit log of data-processing and credit-bureau-check consent; the loan assessment endpoint is gated on it server-side before any personal data is processed — see §9.18.
+- **Loan servicing** — the repayment schedule (amortization), running balance, arrears, one-time late fees on overdue instalments, and an early-settlement quote with interest waiver, all derived deterministically from the schedule rather than stored as a separately-maintained figure — see §9.14.
+- **Repayments** — staff-recorded offline payments, and customer-initiated online card payments via Stripe Checkout, both posting through the same allocation engine (oldest instalment first, fees → interest → principal) and the same append-only payment ledger, so the two channels can never disagree about a loan's balance — see §9.14/§9.15.
+- **Staff/admin reporting** — a staff work queue with processing-age SLA badges, a bank-wide portfolio dashboard (approval rate, disbursement volume, portfolio-at-risk, product/risk mix), and downloadable decision letters (PDF) and loan statements (CSV) — see §9.16.
 - **Currency analytics orchestration** — proxy the currency ML service's `/analyze` per currency, role-shape the response (simplified for customers, full detail for staff/admin), cache results in MySQL for 24h, log flagged anomalies, expose admin currency management (see §9.4/§9.5).
 - **Live FX rate feed & board** — polls a free public FX API hourly for a customer-facing LKR buy/sell board, kept as a separate, clearly-labelled data plane from the trained-model output (§9.5).
 - **FX exchange-request workflow** — customer requests a locked quote (in either the foreign currency or a target LKR amount), submits, staff review (approve/reject/counter-offer)/settle, admin configures spreads/limits/documentation threshold, all persisted with a full audit trail (see §9.6). Requests over the configured LKR threshold require an uploaded supporting document before staff can approve them (see §9.7). An admin-only reports endpoint aggregates status rates, settled volume, and spread revenue over a date range, with a matching CSV export (see §9.8).
@@ -529,20 +550,325 @@ sequenceDiagram
 
     U->>N: POST /api/loans/assess (Bearer JWT)
     N->>DB: load customer profile
-    N->>N: map profile + declared fields + request → 35 model fields
+    N->>N: validate request against product limits + customer exposure
+    N->>DB: look up each nominated guarantor's OTHER exposure, by NIC
+    N->>N: map profile + declared fields + request → 35 model fields (base rate)
     N->>P: POST /predict
-    P-->>N: risk_label + probabilities
-    N->>N: compute recommendation (type, amount, EMI)
-    N->>DB: insert loan_applications + risk_assessments + recommendations
+    P-->>N: risk_label + probabilities + model_version
+    N->>N: price interest rate (risk band × product's min/max range)
+    N->>N: evaluate credit policy at the PRICED instalment + guarantor/collateral summaries (no model score used)
+    N->>N: compute recommendation (type, amount, EMI) at the priced rate
+    N->>N: decision matrix (policy verdict x risk band)
+    N->>DB: insert loan_applications (+priced_interest_rate) + risk_assessments (+model_version) + recommendations + credit_policy_evaluations + decision_matrix_evaluations + guarantors/loan_guarantors + collateral_items
+    N->>DB: auto-reject decides the application + adverse_action_records, if that is the verdict
     N->>G: prompt(risk factors)
     G-->>N: natural-language explanation
     N->>DB: update recommendation with explanation
-    N-->>U: { risk, recommendation, explanation }
+    N-->>U: { status, risk, pricing, policy, decision_matrix, adverse_action, recommendation, explanation }
 ```
 
 Admin/staff can also call `POST /api/loans/manual-assess` for a standalone
-what-if risk check (same model + recommendation pipeline, no `customer_profiles`
-row involved, nothing persisted).
+what-if risk check (same model + policy + recommendation pipeline, no
+`customer_profiles` row involved, nothing persisted).
+
+### 9.1.1 Credit policy engine (deterministic, in Node)
+
+The mandatory lending criteria, evaluated **independently of the ML model** —
+nothing in `creditPolicy.service.js` reads a risk label or probability. The
+model ranks applicants; policy states who the institution will not lend to
+regardless of rank, in fixed thresholds a reviewer can check by hand and a
+declined applicant can be given as a reason.
+
+Policy is judged from the applicant's own figures and the instalment for the
+terms they requested — never from a risk score. It runs *after* the model
+call, though, because since D3 the instalment it judges is priced at the
+applicant's actual risk-based rate (§9.1.3), not the product's flat one:
+the DTI and residual-income rules must be judged against what the applicant
+would actually pay, or a low-risk applicant's genuinely lower instalment
+would be judged against a rate nobody offered them.
+
+| Rule | Refer | Decline |
+|---|---|---|
+| `AGE_MIN` | — | under 18 |
+| `AGE_AT_MATURITY` | — | over 65 at the final instalment (term rounded up to whole years) |
+| `MIN_MONTHLY_INCOME` | — | gross below LKR 30,000 |
+| `NET_INCOME_POSITIVE` | — | expenses ≥ income |
+| `DTI_LIMIT` (instalment / gross income) | above 40% | above 55% |
+| `RESIDUAL_INCOME` (net income − instalment) | below LKR 15,000 | negative |
+| `LOAN_TO_INCOME` (principal / annual gross) | above 5× | above 8× |
+| `EMPLOYMENT_TENURE` | under 1 year (2 for Contract / Self-Employed) | — |
+| `EXISTING_FACILITIES` | 4 or more | — |
+| `PREVIOUS_DEFAULTS` | 1 | 2 or more |
+| `CRIB_SCORE` | below 600 | below 500 |
+| `GUARANTOR_DEFAULTS` | 1 or more | — |
+
+Each rule returns `pass` / `refer` / `fail` / **`skipped`**, and the overall
+outcome (`pass` / `refer` / `decline`) is the worst status any single rule
+returned. `skipped` is the important one: the credit-history inputs are
+self-declared with no bureau integration, so a rule whose input was never
+supplied records that fact instead of scoring the neutral default
+`mlClient.service.js` would otherwise substitute — an applicant is never
+declined on, nor cleared by, a CRIB score they didn't claim.
+
+A `decline` does **not** change the application's status. D1 records and
+surfaces the verdict; combining it with the risk score into an automated
+approve/review/reject is D2's decision matrix, which sits above both.
+
+Every evaluation is stored in `credit_policy_evaluations` inside the same
+transaction as the application itself, with `policy_version` and the full
+per-rule JSON, so a past decision stays reproducible after the thresholds
+move. Implementation: `finance-backend/src/services/creditPolicy.service.js`;
+tests: `src/services/__tests__/creditPolicy.test.js`.
+
+### 9.1.2 Decision policy matrix (deterministic, in Node)
+
+The single place the model's risk band and the policy verdict are combined
+into a recommended action. It runs at the end of the assess flow, after both
+inputs exist.
+
+| policy \ risk | Low (0) | Medium (1) | High (2) |
+|---|---|---|---|
+| **pass** | `auto_approve` | `manual_review` | `manual_review` |
+| **refer** | `manual_review` | `manual_review` | `manual_review` |
+| **decline** | `auto_reject` | `auto_reject` | `auto_reject` |
+
+Two properties of that table are deliberate:
+
+- The **decline row ignores the risk band**. A mandatory policy criterion is
+  one the institution does not lend against; a flattering model score cannot
+  buy an exception, and if it could, the criterion was never mandatory.
+- **Only one cell auto-approves.** Everything the model is unsure about goes
+  to a human — the interesting middle is exactly where automation is worst
+  and a reviewer is cheapest.
+
+**What the actions do at runtime:**
+
+- `auto_reject` — **the system acts.** The application is written straight to
+  `rejected` inside the assess transaction, with `decision_source='system'`,
+  `decided_by` NULL, an audit event whose `actor_role` is `system`, and a
+  customer notification. `system` is a real role in the status machine
+  (§9.1.1's sibling, `applicationStatus.service.js`), not a bypass around it,
+  so an automatic move is validated by the same machine as a human one.
+- `auto_approve` — **the system recommends.** Status is untouched; staff get
+  a pre-cleared application flagged for one-click approval. Approving issues
+  a binding offer with real money behind it (`loan_offers`, 023), so a human
+  stays on that path.
+- `manual_review` — no recommendation; normal review applies.
+
+An unrecognised input (missing policy verdict, unknown risk label) always
+falls to `manual_review`. A matrix that guesses when it doesn't recognise its
+own inputs is worse than no matrix.
+
+**Overrides.** A reviewer may always decide against the matrix — they are the
+authority, not the table. What they may not do is leave no trace. Any
+decision deviating from the recommendation, in either direction, requires a
+standardized code from `OVERRIDE_REASONS` **plus** a written note; the server
+returns `422` with the codes valid for that direction until both arrive.
+Codes are directional, so an approval is never offered "adverse information"
+as its justification. Approving over a policy `decline` is gated regardless
+of which cell fired.
+
+Because the matrix can reject with no human involved, `rejected` is no longer
+absolutely terminal: an **admin** (not staff) may reopen a rejection back to
+`under_review`, which is itself an override requiring a reason code.
+Reopening vacates the decision fields — the rejection survives in
+`loan_application_events`. An application still cannot leap from `rejected`
+straight to `approved`; it re-enters the normal review path.
+
+Implementation: `finance-backend/src/services/decisionMatrix.service.js`;
+storage: `decision_matrix_evaluations` (030) plus
+`loan_applications.override_reason_code` / `decision_source` and
+`loan_application_events.override_reason_code`; tests:
+`src/services/__tests__/decisionMatrix.test.js`.
+
+### 9.1.3 Risk-based interest pricing (deterministic, in Node)
+
+Every `loan_products` row carries one `interest_rate` — the STANDARD rate. A
+product MAY also carry `min_interest_rate`/`max_interest_rate` (031), and
+when it does, an applicant is actually assessed and quoted at whichever of
+the three the ML model's risk band selects:
+
+| Risk band | Priced at |
+|---|---|
+| Low (0) | `min_interest_rate` — preferential |
+| Medium (1) | `interest_rate` — standard, unchanged from before D3 |
+| High (2) | `max_interest_rate` — premium |
+
+A product with no configured range prices every applicant at `interest_rate`
+— the range is **opt-in per product**, set by an admin in the product
+catalog UI, not a forced repricing of the whole catalogue. An unrecognised
+risk label always resolves to the base rate, the same "never guess" default
+as the credit policy engine and the decision matrix.
+
+**Why this runs where it runs.** The rate fed to the ML model as one of its
+35 input features is always the product's BASE rate — the same way a real
+underwriter assesses against a product's headline terms before a risk-based
+price is set. The priced rate is an *output* of that assessment, computed
+immediately after `predictRisk()` returns, and it is what everything
+downstream is computed from: the credit policy engine's DTI/residual-income
+rules (§9.1.1) and the recommended EMI shown to the applicant. Both would
+otherwise be judging an instalment nobody was actually offered.
+
+**Persistence and the offer.** The resolved rate is snapshotted onto
+`loan_applications.priced_interest_rate` inside the assess transaction — the
+same reasoning as `loan_offers.offered_interest_rate` (023): a later change
+to the product's rate or range must not silently rewrite what an existing
+application was assessed against. When staff approve, `buildOfferTerms`
+(`loanOffer.service.js`) reads this column as its rate fallback — ahead of
+the product's base rate — so the offer quotes the rate the applicant's own
+assessment priced them at, not a fresh read of a product that may have been
+re-priced since. NULL for applications assessed before D3, or on a product
+with no configured range; those fall through to the product's base rate
+exactly as the system behaved before D3.
+
+Implementation: `finance-backend/src/services/interestPricing.service.js`;
+migration: `031_risk_based_interest_pricing.sql`; tests:
+`src/services/__tests__/interestPricing.test.js`.
+
+### 9.1.4 Adverse-action documentation (deterministic, in Node)
+
+Before D4, the only structured "why" a rejection carried was inconsistent:
+
+- an auto-reject's `credit_policy_evaluations.reason_codes` (D1) — real, but
+  written in rule-engineer language (`PREVIOUS_DEFAULTS`, `DTI_LIMIT`), never
+  meant to be shown to the applicant it describes;
+- a manual reject's `override_reason_code` (D2) — but **only** when that
+  rejection deviated from the decision matrix's own recommendation. A
+  manual reject that followed the matrix's own `manual_review` verdict —
+  the single most common way a human actually rejects someone — needed no
+  code at all.
+
+D4 closes both gaps with two pieces:
+
+**A standardized, applicant-facing reason catalog** (`REASONS` in
+`adverseAction.service.js`) — `INSUFFICIENT_INCOME`, `EXCESSIVE_OBLIGATIONS`,
+`INSUFFICIENT_CREDIT_HISTORY`, `DELINQUENT_CREDIT_HISTORY`,
+`INSUFFICIENT_EMPLOYMENT_HISTORY`, `AGE_INELIGIBLE`, `UNABLE_TO_VERIFY`,
+`ADVERSE_INFORMATION`, `HIGH_RISK_ASSESSMENT`, `OTHER`. Most map from one or
+more of D1's policy rule codes (`deriveReasonCodesFromPolicy` —
+`EXCESSIVE_OBLIGATIONS` alone collapses four separate affordability rules
+into one sentence an applicant is actually owed); the rest
+(`UNABLE_TO_VERIFY`, `ADVERSE_INFORMATION`, `HIGH_RISK_ASSESSMENT`, `OTHER`)
+have no policy mapping at all and exist purely for a reviewer to select, for
+cases the deterministic engine could never have caught on its own.
+Deliberately a **separate catalog** from D2's `OVERRIDE_REASONS`: those
+answer "why did a reviewer decide against the system" (an internal
+governance question, asked of the reviewer); these answer "why is this
+applicant not getting the loan" (asked of, and owed to, the applicant).
+Conflating them would mean a matrix-consistent rejection — which needs no
+override — could still carry no adverse-action reason at all, exactly the
+gap being closed.
+
+**A rejection reason is now required, unconditionally, on EVERY
+rejection** — auto or manual, matrix-consistent or not. An auto-reject
+derives its reasons entirely from the policy verdict that triggered it,
+with no human input. A manual reject to `rejected` returns `422` with the
+suggested codes (from the application's own policy verdict, if any) and the
+full catalog until the reviewer supplies ≥1 real code plus a note — this
+check is independent of, and can compose with, D2's override gate: a
+reviewer rejecting an `auto_approve`-recommended application needs BOTH an
+override code (why they went against the system) and an adverse-action
+reason (why the applicant is declined).
+
+**Every record is immutable and independent of `loan_applications`' own
+decision columns.** D2's reopen flow (`rejected → under_review`)
+deliberately clears `decided_by`/`decision_note`/etc. — correct for a live
+application, but wrong for history. `adverse_action_records` is append-only:
+a reject → reopen → reject-again cycle produces two full records, each a
+frozen snapshot — reason codes, the model's `risk_label`/probabilities/
+`model_version`, the policy's `policy_version`/outcome, the matrix's
+`matrix_version`/action, and the priced rate — taken at the exact moment of
+that decision, not reconstructed later from four other tables that may have
+moved on. `GET /api/loans/:id/adverse-actions` returns the full history;
+`adverse_action` on the application itself is always just the latest.
+
+**Closing the model-version gap this depended on.** `risk_assessments.model_version`
+existed as a column since the original schema but was never populated — the
+Python `/predict` response carried no version field. It now does: the
+service hashes its loaded `.joblib` artifact at startup (`_artifact_hash` in
+`loan-risk-model/api/main.py`) and returns that hash as `model_version` on
+every prediction, automatically correct for whichever model is actually
+loaded — no training-pipeline step to remember, and no drift between a
+human-maintained label and the file in use.
+
+Implementation: `finance-backend/src/services/adverseAction.service.js`;
+storage: `adverse_action_records` (032); tests:
+`src/services/__tests__/adverseAction.test.js`.
+
+### 9.1.5 Collateral and guarantor management (D5)
+
+Before this, `loan_applications.guarantor_exposure`/`guarantor_defaults`
+(005) were the only trace of a guarantor anywhere in the system — and they
+describe the OPPOSITE relationship to what "guarantor management" usually
+means. Those two columns are the applicant's OWN self-declared liability as
+guarantor for someone ELSE's loan (genuinely unverifiable, outside this
+system — self-declaration is the only option there, same as CRIB score, and
+those columns are untouched by D5). What didn't exist at all was the real
+feature: letting an applicant nominate a real person to back THEIR OWN loan,
+and any collateral pledged against it.
+
+**Guarantors are a shared person entity, keyed by National Identity Card
+number** (`guarantors.nic`, UNIQUE) — not a `users` foreign key, because a
+guarantor is very often not a registered customer at all. Keying by NIC is
+what makes "exposure tracking" a real, computable fact rather than a
+per-application number: the same person guaranteeing three different
+applications lands on the SAME row, so their combined outstanding exposure
+and the reliability of their other guarantees can be summed and checked. The
+junction table `loan_guarantors` links guarantor ↔ application (many-to-many
+in principle; the customer-facing apply form currently offers one per
+application). NIC is normalised (trimmed, uppercased) before either the
+lookup or the write, so `"851234567v"` and `"851234567V"` are always the
+same guarantor.
+
+**Collateral** (`collateral_items`, application-scoped) always starts
+`'self_declared'` — a claimed value proves nothing on its own, the same
+reasoning D1 already applies to a self-declared CRIB score. Staff sign off
+(`verified`) or reject it via `PATCH
+/admin/applications/:id/collateral/:collateralId/verify`; only `verified`
+value counts toward coverage. `ownership_reference` is a free-text pointer
+(deed number, vehicle registration, FD account number) — **not** a document
+upload; actual file evidence is E1's scope (secure document management),
+deliberately left out here.
+
+**Two new, additive credit-policy rules** consume this data
+(`creditPolicy.service.js`), both refer-only (no decline tier) and both
+`pass` — not `skipped` — when nothing was pledged, since "no guarantor/no
+collateral" is a confirmed, evaluated fact for an application that asked:
+
+- `GUARANTOR_RELIABILITY` — refers if any linked guarantor has another
+  ACTIVE guarantee elsewhere with an overdue instalment right now
+  (`repayment_schedule.status = 'due' AND due_date < CURDATE()`, the same
+  definition `repayment.service.js`'s own arrears logic uses). Independent
+  of `GUARANTOR_DEFAULTS` above — different question, different input,
+  reported separately.
+- `COLLATERAL_COVERAGE` — refers while any pledged item is still
+  unverified, regardless of stated value; once fully verified, refers only
+  if verified value covers less than 80% of the requested amount.
+
+Both feed D4's adverse-action catalog too
+(`GUARANTOR_RELIABILITY_CONCERN`, `INSUFFICIENT_COLLATERAL`), so a
+rejection driven by either reason is documented in the same applicant-facing
+language as every other policy-driven decline.
+
+**Exposure lookup happens BEFORE persistence, not after**: each nominated
+guarantor's existing exposure is queried by NIC first (their loan_guarantors
+row for THIS application doesn't exist yet, so the query can't double-count
+it), summarized, fed into `evaluateCreditPolicy`, and only then is
+everything — application, guarantor upsert, junction row, collateral rows —
+written atomically inside `runAssessmentTransaction`.
+
+`GET /api/loans/:id/security` returns the guarantor(s)/collateral on one
+application (NIC/phone/address redacted for the customer, visible to
+staff); `GET /api/admin/guarantors/:nic/exposure` returns one guarantor's
+full standing — every facility they back, its status, and whether any is
+currently overdue — the detail behind what `GUARANTOR_RELIABILITY` computes
+as a verdict.
+
+Implementation: `finance-backend/src/services/collateralGuarantor.service.js`;
+migration: `033_guarantors_and_collateral.sql`; tests:
+`src/services/__tests__/collateralGuarantor.test.js` (module) and the
+`creditPolicy.test.js`/`adverseAction.test.js` sections covering the two
+new rules and their reason mappings.
 
 ### 9.2 Recommendation engine (deterministic, in Node)
 - **EMI (reducing balance):** `EMI = P·r·(1+r)^n / ((1+r)^n − 1)`, `r = annual% / 12 / 100`, `n = tenure_months`. Zero-interest is a straight-line special case.
@@ -824,6 +1150,466 @@ Implementation: `finance-backend/src/models/fxInventoryModel.js`,
 availability), `finance-frontend/src/pages/customer/CurrencyExchange.jsx`
 (customer advisory).
 
+### 9.10 Loan offer & disbursement lifecycle
+
+`loan_applications.status` (020, 024) is a nine-state machine, not a flag.
+The legal next-state(s) from any status, and which role may make each move,
+live in one table (`applicationStatus.service.js`'s `TRANSITIONS`) reused by
+route validation, the model's in-transaction guard, and the
+`allowed_transitions` array the API hands the frontend — so the UI never has
+to duplicate the rule set to decide which buttons to show.
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending
+    pending --> under_review: staff/admin
+    pending --> approved: staff/admin
+    pending --> rejected: staff/admin/system
+    pending --> withdrawn: customer
+    under_review --> more_info_required: staff/admin
+    under_review --> approved: staff/admin
+    under_review --> rejected: staff/admin
+    under_review --> withdrawn: customer
+    more_info_required --> under_review: staff/admin/customer
+    more_info_required --> rejected: staff/admin
+    more_info_required --> withdrawn: customer
+    approved --> accepted: customer
+    approved --> withdrawn: customer
+    accepted --> disbursed: staff/admin
+    accepted --> withdrawn: customer
+    disbursed --> closed: staff/admin
+    rejected --> under_review: admin (authorised override only)
+```
+
+Three design points carried through from the migrations that built this:
+
+- **There is deliberately no `approved → disbursed` edge.** `approved`
+  means a credit decision was made and an offer issued; it does not mean
+  the applicant has agreed to the terms. A binding **offer**
+  (`loan_offers`: amount, tenure, rate, EMI, an expiry, and a status of its
+  own — `pending`/`accepted`/`declined`/`expired`/`superseded`) is issued
+  against every approval, and only the applicant's explicit
+  accept/decline moves the application past `approved`. Money can only
+  ever be released against terms the customer actually signed off on.
+- **A rejection is not always final.** The automatic decision-policy
+  engine (§9.1.2) can reject an application entirely on its own; a verdict
+  a machine can reach unattended must be one a human can reconsider. An
+  **admin** (not staff) can reopen a rejected application back to
+  `under_review`, but only behind a mandatory, recorded override reason —
+  and only back into normal review, never straight to `approved`.
+- **The "more information" loop is a real two-way conversation, not a
+  one-off message.** When staff request more information, what was asked
+  and the applicant's response are both stored (`info_request_note`/
+  `info_response` and their timestamps) and visible to both sides, not
+  just relayed once as a notification that vanishes.
+
+Every transition — including the application's own creation — is written
+to `loan_application_events` as an append-only row (`from_status`,
+`to_status`, who made it, their role, and any note or override reason),
+independent of the "current decision" columns on `loan_applications` itself
+(`decided_by`/`decision_note`/`decision_source`/`decided_at`, added in 019).
+That split matters: the "current decision" columns answer *what is true
+right now*, while the events table answers *everything that ever
+happened*, including operational moves (staff opening a file) that are not
+credit decisions and must never overwrite who actually approved or
+rejected the loan.
+
+Customers are emailed (in addition to the in-app notification) on the major
+transitions — a decision, an offer, disbursement — not on every operational
+step, so the inbox stays meaningful rather than noisy.
+
+Implementation: `finance-backend/src/services/applicationStatus.service.js`,
+`db/migrations/019`–`024_*.sql`, `022_loan_application_events.sql`,
+`loan.controller.js` (`respondToOffer`, `reissueOffer`,
+`respondToInfoRequest`, `withdrawApplication`), `loanModel.js`
+(`updateApplicationStatus`), `utils/mailer.js`
+(`sendApplicationStatusEmail`).
+
+### 9.11 Document management & customer identity verification (KYC)
+
+Two separate, advisory-only verification trails — neither is a hard gate on
+the automated credit decision, both are context a human reviewer sees
+before deciding.
+
+**Loan-supporting documents** (`loan_application_documents`) — a customer
+attaches evidence (national ID, payslip, bank statement, or other) to a
+specific application. Metadata only is stored in MySQL; the file itself
+lives under a non-public `secure-uploads/loan-documents/` directory that is
+never mounted as static content (unlike public profile-picture uploads) —
+the only way to read a file back is an authenticated,
+ownership-or-staff-checked download route. Staff mark each document
+`verified` or `rejected` (with a note); a customer may delete and re-upload
+a document only while it is still `pending` — once reviewed, the record is
+kept rather than allowed to disappear.
+
+**Customer KYC** (`customer_profiles.national_id` + `kyc_status`) — a
+customer submits their National Identity Card number from their profile;
+it starts `pending` and is reviewed the same way as a document
+(`verified`/`rejected`, with a reviewer, timestamp, and note). Once
+`verified`, the NIC is locked: a further change from the customer
+re-opens review rather than silently overwriting a confirmed identity.
+
+Implementation: `db/migrations/034_loan_application_documents.sql`,
+`035_customer_kyc_verification.sql`, `services/loanDocument.service.js`,
+`user.controller.js#updateProfile`, `admin.controller.js#verifyCustomerKyc`,
+`loan.controller.js` (document upload/list/download/delete, `verifyDocument`).
+
+### 9.12 Applicant experience: pre-fill, stable attributes, and drafts
+
+Three related conveniences, all aimed at the same problem — a repeat
+applicant should not have to re-type what the bank already knows about
+them:
+
+- **Stable personal attributes** (marital status, education level,
+  occupation, employer category, years employed) were originally
+  re-declared on every single application (005). They are now also stored
+  on `customer_profiles` (036): editable from the profile page, prefilled
+  into every new application, and refreshed there whenever an application
+  confirms or changes them. Attributes that are genuinely per-application
+  facts rather than durable customer attributes (additional income,
+  existing loan count, previous defaults, self-declared CRIB score,
+  guarantor exposure) deliberately stay application-only.
+- **New-application pre-fill** carries those stable attributes plus
+  answers from the customer's most recent application into a new one as
+  starting values the customer confirms or edits, rather than a blank
+  form.
+- **Save-and-resume drafts** (`loan_application_drafts`) — a customer
+  interrupted partway through the multi-step wizard has their progress
+  (current step + full form payload, as JSON) saved automatically and can
+  resume exactly where they left off. Kept in its own table rather than as
+  an incomplete `loan_applications` row, because a real application row
+  has several `NOT NULL` columns (product, amount, tenure) an
+  abandoned-at-step-1 draft does not yet have, and because a draft must
+  never count toward the customer's active credit exposure the way a real
+  submitted application does. Exactly one draft per customer
+  (`UNIQUE(user_id)`) — starting a new application overwrites any earlier
+  abandoned one rather than accumulating stale drafts.
+
+Implementation: `db/migrations/036_customer_profile_declared_fields.sql`,
+`037_loan_application_drafts.sql`, `services/loanDraft.service.js`,
+`loan.controller.js` (`getDraft`/`saveDraft`/`deleteDraft`),
+`finance-frontend/src/pages/customer/LoanApplication.jsx`.
+
+### 9.13 Disbursement & bank accounts
+
+This is a **single-bank platform** — every customer's disbursement account
+is necessarily an account *at this same bank*, so there is deliberately no
+"which bank" field anywhere in this feature, unlike a general payments
+platform.
+
+An account number is **issued by the bank**, never typed in by a customer:
+a self-declared number could not be verified and would be exactly the kind
+of unauditable input the rest of this system avoids. Instead, the moment a
+customer **accepts a loan offer**, the system resolves their disbursement
+account with one idempotent rule, covering both real-world cases in a
+single step:
+
+- the customer already has an account here → it is reused, nothing new is
+  created;
+- the customer has no account yet → one is opened automatically, in their
+  name, at the bank's configured main branch, with a number the bank
+  itself derives — the customer does nothing and types nothing.
+
+A customer who already banks at a physical branch but is unknown to this
+platform would otherwise look "new" and receive a duplicate account; staff
+close that gap from the customer's record by registering the
+already-existing account directly (this is the one place an account
+number is entered by a person rather than issued, and it is staff-only
+because staff can check it against core banking first).
+
+```mermaid
+sequenceDiagram
+    participant U as Customer (SPA)
+    participant N as API Gateway (Node)
+    participant DB as MySQL
+
+    U->>N: PATCH /api/loans/:id/offer/accept
+    N->>DB: mark the offer accepted (same transaction)
+    N->>DB: find an active account for this customer, or open one
+    N->>DB: commit — application status, offer, and account all move together
+    N-->>U: { status: "accepted", disbursement_account }
+    N--)U: notification: "we opened/are using account ..."
+```
+
+When staff later mark the loan **disbursed**, the account, interest rate,
+tenure and EMI are copied from the *accepted offer* (never recomputed, and
+never taken from what the applicant originally asked for) into a new
+`loan_accounts` row, and the full repayment calendar (§9.14) is generated
+from those exact terms in the same transaction. The beneficiary account
+details are **snapshotted** onto `loan_accounts` at that instant — if the
+customer's account is later closed or changed, an already-disbursed loan's
+record of where its money went does not retroactively change.
+
+Implementation: `db/migrations/025_loan_accounts.sql`,
+`039_bank_accounts.sql`, `services/bankAccount.service.js`,
+`models/bankAccountModel.js` (`findOrOpenWithin`, `registerExisting`),
+`loan.controller.js#respondToOffer`, `loanModel.js#createAccountWithin`.
+
+### 9.14 Loan servicing: repayment schedule, arrears, and settlement
+
+Once disbursed, a loan is serviced from two tables designed to always
+agree with each other: `repayment_schedule` (what is owed, one row per
+instalment, plus running "paid so far" totals per instalment) and an
+append-only ledger, `loan_payments` + `loan_payment_allocations` (how
+every payment ever received was actually split). The running totals exist
+purely so "what is outstanding right now" is a plain read instead of an
+aggregate over every payment ever made; the ledger exists so that split
+can always be independently reconstructed and proven correct — the two are
+never allowed to drift apart.
+
+**Every payment is allocated the same way, everywhere it is accepted**:
+oldest unpaid instalment first, and within an instalment, fees before
+interest before principal. This rule is fixed, not configurable — a split
+that depended on a setting nobody can see later would be unauditable.
+
+**Arrears, outstanding balance, and an early-settlement quote are all
+computed on read, never stored** — they change with the passage of a
+single day even with no transaction occurring, so storing them would need
+a nightly job just to stay true, and a stale stored figure would be worse
+than none. **Early settlement** is quoted as: everything already due,
+minus interest on instalments not yet due (waived), so a customer who
+settles early is not charged interest for time that never passed.
+
+**Late fees** are a one-time penalty added to a specific instalment once
+it has been overdue past a grace period — a property of that instalment
+(alongside its principal/interest), not a separate transaction — and staff
+can waive a fee, recording why.
+
+Implementation: `db/migrations/026_repayment_schedule.sql`,
+`027_loan_repayments.sql`, `028_loan_late_fees.sql`,
+`services/amortization.service.js`, `services/repayment.service.js`
+(`allocatePayment`, `computeOutstanding`, `computeArrears`,
+`computeSettlement`, `computeLateFeeAssessments`),
+`services/lateFeeSweep.service.js` (background sweep),
+`loanModel.js#recordPaymentWithin`.
+
+### 9.15 Customer-initiated repayments (Stripe)
+
+Every repayment used to be a fact staff typed in on the customer's behalf.
+That rule — *a repayment is a fact the system observes, not one the
+borrower merely asserts* — is preserved here, not relaxed: a card payment
+confirmed by Stripe is still the bank **observing** money arrive, via a
+cryptographically signed notification, rather than the customer simply
+claiming they paid. What changes is only who is allowed to **start** a
+payment; confirmation is never taken on trust from the browser.
+
+The amount charged is decided **entirely by the server**, from the live
+repayment schedule — a customer chooses only *which kind* of payment they
+want (next instalment / full early settlement / a custom amount), never
+the figure itself. A custom amount is bounded against the real outstanding
+balance before Stripe is ever contacted, so it is not possible to
+under-pay by manipulating the request.
+
+```mermaid
+sequenceDiagram
+    participant U as Customer (SPA)
+    participant N as API Gateway (Node)
+    participant S as Stripe
+    participant DB as MySQL
+
+    U->>N: POST /payments/checkout {kind}
+    N->>DB: quote the amount from the schedule (server decides, not the client)
+    N->>DB: create a payment-intent record (status: created)
+    N->>S: create a Checkout session for that exact amount
+    S-->>N: session URL
+    N-->>U: redirect to Stripe's hosted payment page
+    U->>S: pays with card (Stripe — card details never reach this system)
+    S--)N: webhook: checkout.session.completed (signed)
+    N->>N: verify the webhook signature
+    N->>DB: settle the payment-intent EXACTLY ONCE, post to the repayment ledger
+    N--)U: notification: payment received / loan fully repaid
+    U->>N: (in parallel) return-page polls the intent's status
+    N->>S: if still unsettled, ask Stripe directly what happened
+    N-->>U: confirmed once settled, either way
+```
+
+**Settling a payment happens exactly once**, however many times
+confirmation arrives — Stripe retries a webhook delivery for days on any
+failure, and the browser's own return-from-payment redirect routinely
+arrives before the webhook does. Both paths funnel through one locked
+gate keyed on the Stripe session id: whichever arrives first posts the
+payment and flips the attempt's status from `created` to `succeeded`;
+every later arrival for that same session finds it already settled and
+does nothing further. A database-level uniqueness constraint (one payment
+per payment-intent) backs this even if that gate were ever bypassed.
+
+**The return-page reconciliation is not just a UI nicety — it is what
+makes the feature work with no webhook configured at all** (the normal
+state of a local development machine, with no public URL for Stripe to
+call back to): if the customer's browser returns and the payment intent
+is still open, the system asks Stripe directly whether the session was
+paid and settles it through the exact same gate a webhook would have
+used.
+
+The system can run with **no Stripe account configured at all** — the
+repayment panel simply reports card payment as unavailable, and staff can
+still record any payment manually. No card number, expiry date, or CVC is
+ever transmitted to, or stored by, this system's own servers; Stripe's
+hosted Checkout page handles that entirely (see §11).
+
+A **payment receipt (PDF)**, generated the same way for an online or a
+staff-recorded payment, shows not just the amount but exactly which
+instalment(s) it cleared and how it split across fees, interest, and
+principal — read directly from the payment ledger, not recalculated.
+
+Implementation: `db/migrations/040_loan_payment_intents.sql`,
+`services/stripe.service.js`, `services/repaymentQuote.service.js`,
+`models/paymentIntentModel.js` (`settleWithin` — the idempotency gate),
+`controllers/repayment.controller.js`, `services/paymentReceipt.service.js`,
+`routes/paymentWebhook.routes.js`, `finance-frontend/src/components/loans/RepaymentPanel.jsx`,
+`PaymentReturnHandler.jsx`.
+
+### 9.16 Staff & admin reporting
+
+**Staff work queue** — every application needing attention shows how long
+it has sat in its current status, colour-coded against a configurable SLA
+(on track / due soon / overdue), calculated from the same
+`loan_application_events` audit trail §9.10 writes — not a separately
+maintained "last touched" timestamp that could drift out of sync with
+reality.
+
+**Portfolio dashboard** (admin) — aggregates across the *entire* loan
+book: approval rate, total amount disbursed, the proportion of accounts
+in arrears at 30/60/90+ days (portfolio-at-risk), and how the book is
+distributed across products and AI risk categories. Computed from bulk
+reads plus the same `repayment.service.js` arrears/outstanding functions
+used everywhere else in the system (§9.14), rather than a second,
+independently-maintained arrears calculation that could silently
+disagree with the customer-facing figures.
+
+**Decision letters & statements** — a formatted PDF decision letter
+(approval terms, or the standardised decline reasons) for any decided
+application, and a full repayment-schedule statement as a downloadable
+CSV, available to the applicant themselves as well as staff/admin.
+
+Implementation: `services/loanReports.service.js`,
+`controllers/loanReports.controller.js`,
+`applicationStatus.service.js#computeProcessingAge`,
+`services/decisionLetter.service.js`,
+`loan.controller.js` (`getDecisionLetter`, `getLoanStatementCsv`),
+`finance-frontend/src/components/admin/AdminPortfolioDashboard.jsx`.
+
+### 9.17 Fees, charges, net disbursement & effective APR (I1)
+
+Before this, a loan cost the borrower exactly `principal + interest` —
+no processing fee, documentation fee, or credit-life insurance premium
+existed anywhere in the schema or the offer, which understated both the
+"total repayable" figure and the amount actually credited at
+disbursement. This adds fees as a real, configurable, auditable part of
+the product and the offer, then does the one thing that makes fee
+disclosure meaningful rather than decorative: states the **effective
+APR** — the rate the borrower is genuinely paying once fees are
+accounted for.
+
+**Fees are deducted from the disbursement, not capitalised onto the
+loan.** The borrower still repays against the full approved amount; they
+simply *receive* that amount minus fees. This is a deliberate design
+choice with one important consequence: `principal`, the EMI, the
+amortization schedule, the repayment ledger, and the affordability/DTI
+check (§9.1.1) are **completely untouched** — `amortization.service.js`,
+`repayment.service.js`, and `creditPolicy.service.js` needed no changes
+at all. Fees change what is *paid out* and what the loan *truly costs*,
+never what is *owed back*.
+
+**Config vs. snapshot**, the same split this codebase already uses for
+`loan_products` → `loan_offers` → `loan_accounts`: `loan_product_fees` is
+what a product currently charges (admin-editable — percentage-of-amount
+or a fixed LKR figure, with an optional min/max clamp on a percentage
+fee); `loan_offer_fees` is what a *specific offer* actually charged,
+resolved and copied at offer-issuance time and never recomputed even if
+the product's fee configuration later changes. A staff member issuing or
+re-issuing an offer can waive an individual fee, but only with a
+mandatory recorded reason — the same rule this system already applies to
+a rejection reason or a late-fee waiver.
+
+**Effective APR** is the one genuinely new piece of maths: the borrower
+receives `net_disbursed` today and pays a fixed EMI for the tenure: the
+APR is the rate that makes those cash flows balance, an IRR with no
+closed form. Solved by **bisection** over a bracketed monthly rate
+(0–100%/month, ~60 iterations) rather than Newton-Raphson —
+deliberately, since Newton can diverge on a degenerate input and this is
+money, not a demo. Where no rate can be determined (e.g. `net_disbursed`
+would already exceed total repayments), it returns `null`, never `0` —
+"we couldn't work this out" and "this loan is free" are different claims
+and only one is safe to show a borrower. The identity that proves the
+solver correct: a **zero-fee loan's effective APR must equal its nominal
+rate**, verified in the test suite to within a cent across several
+rate/tenure combinations.
+
+At disbursement, `loan_accounts.total_fees_charged` and
+`net_disbursed_amount` snapshot the accepted offer's fee total and net
+payout — mirroring how the beneficiary account is snapshotted there
+(§9.13) — while `principal` keeps its exact existing meaning and value.
+The decision letter (§9.16) and the customer's offer view both show the
+fee breakdown, the net amount actually received, and the effective APR
+beside the nominal rate.
+
+Admin fee configuration: `GET`/`PUT /api/admin/products/:id/fees`
+(whole-set replace, the same convention product CRUD already uses).
+
+Implementation: `db/migrations/041_loan_fees.sql`,
+`services/loanFees.service.js` (`resolveFee`, `resolveFees`,
+`applyWaivers`, `computeEffectiveApr`),
+`services/__tests__/loanFees.test.js`, `models/loanModel.js`
+(`findProductFees`, `replaceProductFees`, `findOfferFees`, fee rows
+written inside `createOfferWithin`; totals read inside
+`createAccountWithin`), `loan.controller.js` (`serializeOffer`'s
+`fees[]`/`total_fees`/`net_disbursed`/`effective_apr`, `getProductFees`,
+`replaceProductFees`), `services/decisionLetter.service.js`,
+`finance-frontend/src/components/admin/ProductFeesModal.jsx`,
+`finance-frontend/src/pages/customer/dashboardWidgets.jsx`.
+
+### 9.18 Consent management (J1)
+
+Two things this system does to a customer's personal data require their
+explicit, provable agreement first: pulling their CRIB/credit-bureau
+record, and processing their personal data at all (KYC documents,
+income, employment, guarantor details — everything the application
+wizard and profile collect). Previously neither was gated on anything;
+registering an account was treated as sufficient.
+
+**`user_consents` is an append-only audit log, never a mutable settings
+row.** A grant is always a fresh `INSERT`, never an `UPDATE` — a policy
+accepted under version 1.0 must still read exactly that way after the
+policy text moves to version 1.1, because "what did they agree to AT THE
+TIME" has to survive the policy being edited later. Each row records
+the consent type, the policy version actually shown, whether it was
+granted, and the IP address/user agent/timestamp — the specific facts a
+compliance review would ask for, not just "yes, some consent exists."
+
+**The gate is server-side, and it runs first.** `loan.controller.js#assess`
+checks `findMissingConsents` (`services/consent.service.js`) before it
+even loads the applicant's profile — before any personal data is
+touched and before the ML/CRIB-aware risk assessment (§9.1) runs. A
+frontend checkbox is UX; this check is the actual control, and it
+returns `403` with the specific missing consent types if it fails.
+Consent types and their current required version live in one place
+(`CONSENT_POLICIES`), so bumping a version does not retroactively
+invalidate anything already granted — every past grant simply keeps the
+version it was actually given under, immutably. Bumping a version only
+means the NEXT assessment for that user requires a fresh grant.
+
+Endpoints: `GET /api/consents/policies` (current policy text/version per
+type), `GET /api/consents/status` (the caller's own granted vs. missing,
+against the current version), `POST /api/consents` (grant one or more —
+rejects a stale `policy_version` with `400` rather than silently
+accepting agreement to text the caller was never shown), `GET
+/api/consents/history` (full audit trail — self, or any user for
+staff/admin).
+
+On the customer side, the loan application wizard's review step (§9.12)
+shows only the consents actually missing or outdated — a returning,
+already-consented applicant sees nothing extra and submits with zero
+added friction.
+
+Implementation: `db/migrations/042_consents.sql`,
+`services/consent.service.js` (`CONSENT_POLICIES`,
+`findMissingConsents`, `isConsentCurrent`),
+`services/__tests__/consent.test.js`, `models/consentModel.js`
+(`recordConsent`, `getLatestConsentsByUser` — append-only, no update
+path), `controllers/consent.controller.js`, `routes/consent.routes.js`,
+`finance-frontend/src/pages/customer/LoanApplication.jsx`.
+
 ---
 
 ## 10. Data model
@@ -835,8 +1621,29 @@ erDiagram
     users ||--o{ loan_applications : submits
     users ||--o| password_resets : "resets via"
     loan_products ||--o{ loan_applications : "applied for"
+    loan_products ||--o{ loan_product_fees : "charges"
+    loan_offers ||--o{ loan_offer_fees : "charged"
+    users ||--o{ user_consents : "granted"
     loan_applications ||--o| risk_assessments : "scored by"
     loan_applications ||--o| recommendations : "produces"
+    loan_applications ||--o{ credit_policy_evaluations : "screened by"
+    loan_applications ||--o{ decision_matrix_evaluations : "decided by"
+    loan_applications ||--o{ adverse_action_records : "declined for"
+    loan_applications ||--o{ loan_guarantors : "backed by"
+    guarantors ||--o{ loan_guarantors : "guarantees"
+    loan_applications ||--o{ collateral_items : "secured by"
+    loan_applications ||--o{ loan_offers : "offered via"
+    loan_applications ||--o{ loan_application_documents : "supported by"
+    loan_applications ||--o{ loan_application_events : "audited by"
+    users ||--o| loan_application_drafts : "drafts"
+    loan_applications ||--o| loan_accounts : "disbursed as"
+    loan_accounts ||--o{ repayment_schedule : "scheduled as"
+    loan_accounts ||--o{ loan_payments : "paid via"
+    loan_payments ||--o{ loan_payment_allocations : "allocated across"
+    repayment_schedule ||--o{ loan_payment_allocations : "cleared by"
+    loan_accounts ||--o{ loan_payment_intents : "attempted via"
+    loan_payment_intents ||--o| loan_payments : "settles as"
+    users ||--o{ bank_accounts : "holds"
 
     users {
         int user_id PK
@@ -854,11 +1661,21 @@ erDiagram
         int user_id FK
         date date_of_birth
         string gender
+        string national_id "nullable — customer-submitted NIC (E2)"
+        enum kyc_status "pending, verified, rejected — nullable until an NIC is submitted (E2)"
+        int kyc_verified_by FK "nullable"
+        timestamp kyc_verified_at "nullable"
+        string kyc_notes "nullable"
         text address
         string employment_type
         string company_name
         decimal monthly_income
         decimal monthly_expense
+        string marital_status "nullable — promoted from per-application to durable (H2)"
+        string education_level "nullable (H2)"
+        string occupation "nullable (H2)"
+        string employer_category "nullable (H2)"
+        int years_employed "nullable (H2)"
     }
     notifications {
         int id PK
@@ -885,6 +1702,8 @@ erDiagram
         int min_tenure_months
         int max_tenure_months
         decimal interest_rate
+        decimal min_interest_rate "nullable — risk-based pricing floor (D3)"
+        decimal max_interest_rate "nullable — risk-based pricing ceiling (D3)"
         enum rate_type "reducing, flat"
         text description
     }
@@ -895,10 +1714,20 @@ erDiagram
         decimal requested_amount
         int tenure_months
         string purpose
-        enum status "pending, approved, rejected"
-        string marital_status "nullable, applicant-declared"
+        enum status "pending, under_review, more_info_required, approved, accepted, rejected, withdrawn, disbursed, closed (C1/C2)"
+        decimal priced_interest_rate "nullable — the rate this application was assessed/quoted at (D3)"
+        string override_reason_code "nullable, set when a decision overrode the matrix"
+        int decided_by FK "nullable — who made the CURRENT decision (C1)"
+        text decision_note "nullable"
+        enum decision_source "system, manual"
+        timestamp decided_at "nullable"
+        text info_request_note "nullable — what staff asked for (C1)"
+        timestamp info_requested_at "nullable"
+        text info_response "nullable — the applicant's reply (C1)"
+        timestamp info_responded_at "nullable"
+        string marital_status "nullable, applicant-declared per application (H2 promoted the durable copy to customer_profiles)"
         string crib_score "nullable, applicant-declared"
-        string guarantor_exposure "nullable, applicant-declared"
+        string guarantor_exposure "nullable, applicant-declared — APPLICANT's OWN liability elsewhere; see loan_guarantors for who backs THIS loan (D5)"
         timestamp created_at
     }
     risk_assessments {
@@ -909,6 +1738,7 @@ erDiagram
         decimal prob_low
         decimal prob_medium
         decimal prob_high
+        string model_version "hash of the loaded model artifact (D4)"
         timestamp assessed_at
     }
     recommendations {
@@ -918,6 +1748,265 @@ erDiagram
         decimal recommended_emi
         int recommended_product_id FK
         text gemini_explanation
+        timestamp created_at
+    }
+    decision_matrix_evaluations {
+        int id PK
+        int application_id FK
+        string matrix_version
+        enum action "auto_approve, manual_review, auto_reject"
+        enum policy_outcome "pass, refer, decline"
+        int risk_label "nullable"
+        string risk_category "nullable"
+        text rationale
+        tinyint acted "did the system actually move the application"
+        timestamp evaluated_at
+    }
+    adverse_action_records {
+        int id PK
+        int application_id FK
+        string reason_codes "denormalised, standardized catalog codes (D4)"
+        json reasons "full catalog entries used — code, label, description"
+        enum decision_source "system, manual"
+        int decided_by FK "nullable — NULL when decision_source=system"
+        text note "nullable"
+        int risk_label "nullable, snapshot at time of rejection"
+        string risk_category "nullable"
+        decimal prob_low "nullable"
+        decimal prob_medium "nullable"
+        decimal prob_high "nullable"
+        string model_version "nullable, immutable snapshot"
+        string policy_version "nullable"
+        enum policy_outcome "pass, refer, decline — nullable"
+        string matrix_version "nullable"
+        enum matrix_action "auto_approve, manual_review, auto_reject — nullable"
+        decimal priced_interest_rate "nullable"
+        timestamp created_at
+    }
+    guarantors {
+        int id PK
+        string nic UK "Sri Lankan NIC — shared key across applications (D5)"
+        string full_name
+        string phone "nullable"
+        text address "nullable"
+        timestamp created_at
+    }
+    loan_guarantors {
+        int id PK
+        int application_id FK
+        int guarantor_id FK
+        string relationship_to_applicant "nullable"
+        decimal guaranteed_amount
+        enum status "active, released"
+        int added_by FK "nullable"
+        timestamp added_at
+        timestamp released_at "nullable"
+    }
+    collateral_items {
+        int id PK
+        int application_id FK
+        enum collateral_type "property, vehicle, gold_jewellery, fixed_deposit, other"
+        text description "nullable"
+        decimal estimated_value
+        date valuation_date "nullable"
+        string ownership_reference "nullable — free text, not a document (D5, cf. E1)"
+        enum verification_status "self_declared, verified, rejected"
+        int verified_by FK "nullable"
+        timestamp verified_at "nullable"
+        enum status "pledged, released"
+        timestamp created_at
+    }
+    credit_policy_evaluations {
+        int id PK
+        int application_id FK
+        string policy_version
+        enum outcome "pass, refer, decline"
+        string reason_codes "denormalised for querying"
+        decimal dti "nullable"
+        decimal loan_to_income "nullable"
+        decimal residual_income "nullable"
+        int age_at_maturity "nullable"
+        json rules "full per-rule snapshot"
+        timestamp evaluated_at
+    }
+    loan_application_documents {
+        int id PK
+        int application_id FK
+        enum document_type "national_id, payslip, bank_statement, other (E1)"
+        int uploaded_by FK "nullable"
+        string original_name
+        string storage_path "server-side only, never returned to a client"
+        string mime_type
+        int size_bytes
+        enum verification_status "pending, verified, rejected"
+        int verified_by FK "nullable"
+        timestamp verified_at "nullable"
+        string verification_notes "nullable"
+        timestamp created_at
+    }
+    loan_application_events {
+        int id PK
+        int application_id FK
+        string from_status "nullable — NULL on the creation event"
+        string to_status
+        int actor_user_id FK "nullable"
+        string actor_role "customer, staff, admin, system"
+        text note "nullable"
+        string override_reason_code "nullable"
+        timestamp created_at
+    }
+    loan_application_drafts {
+        int id PK
+        int user_id FK "unique — one draft per customer (H3)"
+        int step "which wizard step the draft was saved at"
+        json payload "the full in-progress form"
+        timestamp created_at
+        timestamp updated_at
+    }
+    loan_offers {
+        int id PK
+        int application_id FK
+        decimal offered_amount
+        int offered_tenure_months
+        decimal offered_interest_rate
+        enum rate_type "reducing, flat"
+        decimal offered_emi
+        text offer_note "nullable"
+        enum status "pending, accepted, declined, expired, superseded"
+        int offered_by FK "nullable"
+        timestamp offered_at
+        timestamp expires_at
+        timestamp responded_at "nullable"
+        text response_note "nullable"
+    }
+    loan_accounts {
+        int id PK
+        string account_no "nullable until issued, then unique — e.g. LN-000123"
+        int application_id FK "unique — one account per application"
+        int user_id FK "denormalised borrower"
+        decimal principal "SNAPSHOTTED from the accepted offer, not recomputed"
+        decimal interest_rate
+        enum rate_type "reducing, flat"
+        int tenure_months
+        decimal emi
+        timestamp disbursed_at
+        date first_due_date
+        date maturity_date
+        int disbursed_by FK "nullable"
+        enum status "active, closed, written_off"
+        timestamp closed_at "nullable"
+        string beneficiary_branch "SNAPSHOTTED from bank_accounts at disbursement (H4)"
+        string beneficiary_account_number "snapshot"
+        string beneficiary_account_holder "snapshot"
+        decimal total_fees_charged "SNAPSHOTTED from the accepted offer's loan_offer_fees total (I1)"
+        decimal net_disbursed_amount "nullable — principal minus total_fees_charged; what was actually paid out (I1)"
+    }
+    repayment_schedule {
+        int id PK
+        int account_id FK
+        int installment_no
+        date due_date
+        decimal opening_balance
+        decimal principal_component
+        decimal interest_component
+        decimal emi
+        decimal closing_balance
+        decimal principal_paid "running total"
+        decimal interest_paid "running total"
+        decimal interest_waived "running total — early-settlement waiver"
+        decimal late_fee_amount "running total"
+        decimal late_fee_paid "running total"
+        decimal late_fee_waived "running total"
+        timestamp late_fee_charged_at "nullable"
+        int late_fee_waived_by FK "nullable"
+        timestamp late_fee_waived_at "nullable"
+        text late_fee_waived_note "nullable"
+        timestamp settled_at "nullable"
+        enum rate_type "reducing, flat"
+        enum status "due, partial, paid"
+    }
+    loan_payments {
+        int id PK
+        int account_id FK
+        string reference_no "nullable until issued, then unique — e.g. PMT-000123"
+        decimal amount
+        date paid_on "the VALUE date, not necessarily when it was keyed in"
+        enum method "cash, bank_transfer, cheque, standing_order, card, other"
+        enum payment_type "installment, settlement"
+        string external_ref "nullable"
+        text note "nullable"
+        int recorded_by FK "nullable — NULL for a customer's own online card payment"
+        timestamp recorded_at
+    }
+    loan_payment_allocations {
+        int id PK
+        int payment_id FK
+        int schedule_id FK "which instalment this portion cleared"
+        decimal fee_amount
+        decimal interest_amount
+        decimal principal_amount
+        timestamp created_at
+    }
+    loan_payment_intents {
+        int id PK
+        int account_id FK
+        int user_id FK
+        decimal amount "decided by the SERVER, never the client"
+        string currency "e.g. LKR"
+        enum payment_type "installment, settlement"
+        enum provider "stripe"
+        string provider_session_id "unique — the idempotency key"
+        string provider_payment_ref "nullable"
+        enum status "created, succeeded, failed, expired, cancelled"
+        int payment_id FK "nullable — set only once posted to the ledger; unique"
+        string failure_reason "nullable"
+        timestamp created_at
+        timestamp completed_at "nullable"
+    }
+    bank_accounts {
+        int id PK
+        int user_id FK
+        string account_number "nullable until issued, then unique — bank-derived, never customer-typed (H4)"
+        string branch
+        string account_holder "snapshotted from the customer's registered name"
+        enum account_type "savings, loan_disbursement"
+        enum status "active, closed"
+        enum opened_via "auto_offer_acceptance, staff_registered"
+        int opened_by FK "nullable — staff user, when staff_registered"
+        timestamp opened_at
+    }
+    loan_product_fees {
+        int id PK
+        int product_id FK
+        enum fee_type "processing, documentation, credit_life_insurance, other"
+        string label
+        enum calc_method "percentage, fixed"
+        decimal rate_or_amount "percent of approved amount, or a flat LKR figure, per calc_method (I1)"
+        decimal min_amount "nullable — clamp, percentage fees only"
+        decimal max_amount "nullable — clamp, percentage fees only"
+        tinyint active
+        timestamp created_at
+    }
+    loan_offer_fees {
+        int id PK
+        int offer_id FK
+        enum fee_type "processing, documentation, credit_life_insurance, other"
+        string label
+        enum calc_method "percentage, fixed"
+        decimal rate_or_amount "the config AS IT STOOD at offer time, for audit (I1)"
+        decimal amount "the resolved LKR charge, zeroed (not deleted) if waived"
+        tinyint waived
+        int waived_by FK "nullable"
+        string waived_reason "nullable — mandatory when waived=1"
+    }
+    user_consents {
+        int id PK
+        int user_id FK
+        enum consent_type "data_processing, credit_bureau_check (J1)"
+        string policy_version "the policy text version actually shown/agreed to — never recomputed from current"
+        tinyint granted
+        string ip_address "nullable"
+        string user_agent "nullable"
         timestamp created_at
     }
 ```
@@ -937,6 +2026,18 @@ a server-side `storage_path`, never returned to a client), `fx_limits`
 ledger — see §9.9). Plus `faqs` (staff/admin-managed, optional Sinhala/Tamil
 columns) and `contact_messages` (public contact form → admin inbox).
 
+**Superseded columns, kept rather than dropped:** `customer_profiles`
+still carries `beneficiary_branch`/`beneficiary_account_number`/
+`beneficiary_account_holder` (038) from an earlier design where a customer
+typed in their own disbursement account. That design was replaced by the
+bank-issued `bank_accounts` table (039, §9.13) before it shipped to real
+users; migration 039 backfilled any values already in those three columns
+into `bank_accounts` and nothing reads or writes them anymore. They are
+left in the schema rather than dropped, matching this project's
+"migrations are never edited, only added" rule (see Status below) — dropping
+a column retroactively would mean rewriting migration 038 as if the
+superseded design never existed.
+
 **Status:** all tables above exist and are applied by `npm run migrate`
 (from `finance-backend/`) via numbered, idempotent migrations under
 `finance-backend/db/migrations/` — new tables are always added as a new
@@ -954,10 +2055,15 @@ migration file, never by editing a past one.
 | Authorization | Role-based (`customer` / `admin` / `staff`) via gateway middleware on every non-public route. |
 | Transport / headers | `helmet` security headers; `cors` restricted to the SPA origin with credentials. |
 | Secrets | Held in gateway environment variables; excluded from version control. |
-| File uploads | Profile images: `multer`, 2 MB limit, MIME allow-list (JPG/PNG), public `uploads/`. FX compliance documents: a separate `multer` instance, 5 MB limit, MIME allow-list (PDF/JPG/PNG), randomised filenames, written to **non-public** `secure-uploads/fx-documents/` — nothing serves that directory statically; the only read path is an ownership/role-checked download route (§9.7). |
+| File uploads | Profile images: `multer`, 2 MB limit, MIME allow-list (JPG/PNG), public `uploads/`. FX compliance documents and loan application documents: two separate `multer` instances, size/MIME-limited, randomised filenames, each written to its own **non-public** `secure-uploads/` subdirectory — neither is served statically; the only read path for either is an ownership/role-checked download route (§9.7/§9.11). |
 | Input validation | `express-validator` on gateway endpoints. |
 | FX quote integrity | Locked quotes are signed, short-TTL tokens (`FX_QUOTE_SECRET`) — not stored server-side until redeemed. |
 | FX compliance document access | Every document read/write re-checks that the caller owns the parent request (or is staff/admin, for reads); the download route additionally refuses to serve any resolved path outside the document directory. |
+| Payment card data | Never transmitted to, or stored by, this system's own servers — a customer paying online is redirected to Stripe's own hosted Checkout page, which is entirely out of this system's PCI scope by design (§9.15). |
+| Payment gateway authenticity | Every incoming payment-gateway notification is cryptographically signature-verified (`STRIPE_WEBHOOK_SECRET`) before anything in it is trusted; a delivery with a missing or invalid signature is rejected outright and never touches a loan balance. This is the entire trust boundary of that endpoint, which otherwise has no login of its own — a payment provider cannot present a JWT (§9.15). |
+| Payment idempotency | A payment can be posted to the ledger at most once per attempt, enforced both in application logic (a locked "settle once" gate) and at the database level (a uniqueness constraint), so a retried or duplicated confirmation can never credit a loan twice (§9.15). |
+| Amount integrity | The amount charged for an online repayment is always computed server-side from the live loan balance; a request can choose *which* payment to make, never *how much*, closing off under-payment by request tampering (§9.15). |
+| Identity/decision integrity | A verified NIC is locked against silent customer edits (re-verification is required on any change); every credit decision and status change is written to an append-only audit trail that is never edited retroactively (§9.10/§9.11). |
 
 ---
 
@@ -977,6 +2083,8 @@ flowchart LR
     Nx --> My
     Nx -->|HTTPS| Ext["Gemini API"]
     Nx -->|HTTPS, hourly| Live["open.er-api.com"]
+    Nx -->|HTTPS| Strp["Stripe API"]
+    Strp -.->|webhook, signed| Nx
 ```
 
 Each module runs as an independent process and can be developed, deployed, and
@@ -984,6 +2092,16 @@ scaled separately. The gateway is the only component exposed to the browser;
 both ML services and the database are reachable only from the gateway. See
 [README.md](README.md#running-all-four-services-local-dev) for exact startup
 commands and ordering.
+
+**Stripe is the one external dependency that also calls back IN** (a
+webhook), rather than only being called out to, like Gemini or the FX rate
+feed. On a developer machine with no public URL for Stripe to reach, the
+[Stripe CLI](https://docs.stripe.com/stripe-cli) forwards webhook
+deliveries to `localhost:5000` (`stripe listen --forward-to
+localhost:5000/api/payments/stripe/webhook`); in a real deployment, Stripe
+is configured to call the gateway's own public address directly. Either
+way this is optional — see §9.15 for why the feature still works
+correctly with no webhook configured at all.
 
 ---
 
@@ -993,7 +2111,7 @@ commands and ordering.
 - **Frontend API base URL is hard-coded**, not read from a `VITE_API_URL` env var (`finance-frontend/src/api/axios.js`).
 - **H.10 refresh is manual** — `currency-forecast-model/src/data_fetcher.py` pulls the current FRED series and splices it onto the bundled export, but nothing runs it on a schedule; model forecasts are anchored "as of" the last run (2026-07-24), not "today" (see §8.7).
 - **No retraining trigger** — retraining is a manual Kaggle round-trip (see [README.md](README.md#4-currency-forecast-ml-service-8100)), not an in-app admin action.
-- **Vehicle leasing has no dedicated analytics feature** — "Vehicle Leasing" exists only as a loan product type in the loan catalog.
+- **Pawning and Vehicle Leasing are modelled as plain instalment loans** — both exist only as `loan_products` catalog entries and go through the exact same assessment/offer/disbursement/repayment flow as a personal loan; there is no gold-appraisal/redemption/auction mechanic for pawning, and no asset/down-payment/residual-value mechanic for leasing.
 - **No real CRIB bureau integration** — the loan-risk model's CRIB fields are self-declared or neutral-default, not pulled from a live bureau API.
 - **Loan-risk dataset is synthetic**, not real applicant data (see §7.1).
 - **i18n is headline-level** — admin/staff tooling and DB-sourced content (loan products, most FAQ entries unless translated) stay English by design, not a gap to close.
@@ -1001,3 +2119,14 @@ commands and ordering.
 - **No LKR-side inventory** — `fx_inventory` tracks foreign-currency stock only. The LKR a customer hands over on a `buy` settlement, or receives on a `sell` settlement, is not modeled anywhere; §9.6 already establishes that no money moves inside this system. Adding it would mean a second, LKR-denominated ledger with its own reserve/settle semantics — a materially different feature, not an extension of this one.
 - **No denomination-level inventory** — a vault holds "10,000 USD," not a breakdown by note (e.g. how many $100s vs $20s). Real cash operations care about denomination mix for physical handover; nothing in `fx_inventory` or `fx_inventory_movements` records it, and adding it would mean a denomination dimension on every movement row, not just a new column.
 - **No replenishment/procurement workflow** — restocking is a manual admin action (the opening-balance/adjustment editors in the Inventory tab, §9.9), not a purchase order, supplier relationship, or approval chain. There is no vendor, procurement-request, or purchase-order entity anywhere in the schema; an admin restock is indistinguishable, structurally, from a correction.
+- **Repayment frequency is monthly-only** — there is no weekly or fortnightly instalment option anywhere in the amortization or scheduling logic (§9.14).
+- **No co-borrower / joint applications** — the schema and every workflow assume exactly one applicant per loan throughout.
+- **No loan top-up, restructuring, or refinancing** — an existing disbursed loan cannot be topped up, have its terms renegotiated, or be refinanced; the only paths out of `active` are scheduled repayment, early settlement, or (structurally possible but never triggered — see next point) write-off.
+- **`written_off` exists in the schema but nothing ever sets it** — `loan_accounts.status` includes `written_off` as a legal value, but no workflow, endpoint, or scheduled job currently transitions an account into it; a genuinely uncollectable loan has no formal write-off path today.
+- **Card payment is the only self-service repayment channel** — a customer can pay online by card (§9.15) or have staff record any other method; there is no "I paid by bank transfer, here's my slip" self-reported-and-staff-verified path, distinct from a card payment staff never has to verify.
+- **Guarantor consent is not captured** — an applicant names a guarantor and the system tracks that guarantor's exposure (§9.1.5/D5), but the guarantor themselves is never notified or asked to confirm they agreed to be named.
+- **No maker-checker (dual authorisation)** — a single staff member's approval, offer, or disbursement action is final; there is no second-reviewer sign-off step for high-value decisions.
+- **No document or identity expiry** — a document or NIC verified once (§9.11) stays verified indefinitely; there is no re-verification prompt after a period of time.
+- **Consent covers two types only, and has no withdrawal path** — `user_consents` (J1) gates `data_processing` and `credit_bureau_check` before an assessment can run, but there is no marketing/communications consent, and a grant, once given, cannot be revoked through the product (only a fresh, superseding grant is possible — see §9.18). There is also still no access log recording who viewed a specific customer's KYC/NIC or uploaded documents.
+- **Fees are one-time and non-refundable** (I1) — `loan_offer_fees` is charged once at disbursement and never revisited; an early settlement (§9.14) recomputes the remaining interest but never refunds any portion of a processing/documentation/insurance fee already deducted. There is no discount/promo-code mechanism.
+- **Webhook delivery on a local machine requires the Stripe CLI** to be running (§12); without it, online repayments still complete correctly — the dashboard's own return page reconciles directly with Stripe (§9.15) — but only once the customer's browser returns, not the instant Stripe processes the charge.

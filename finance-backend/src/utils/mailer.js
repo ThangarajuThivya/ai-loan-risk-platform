@@ -33,3 +33,22 @@ exports.sendOtpEmail = async (to, otp) => {
     text,
   });
 };
+
+// G2 — email for the "major" loan application status transitions
+// (applicationStatus.service.js EMAIL_NOTIFIED_STATUSES). Reuses the same
+// {title, message} shape buildNotification() already produces for the
+// in-app notification, as the email subject/body — one copy, two channels.
+exports.sendApplicationStatusEmail = async (to, { title, message }) => {
+  if (!transporter) {
+    // No SMTP configured (local/dev) — log it so the flow stays testable.
+    console.log(`[mailer] SMTP not configured — application status email to ${to}: ${title} — ${message}`);
+    return;
+  }
+
+  await transporter.sendMail({
+    from: SMTP_FROM || SMTP_USER,
+    to,
+    subject: title,
+    text: message,
+  });
+};

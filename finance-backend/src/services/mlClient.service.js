@@ -120,6 +120,21 @@ const DECLARABLE_FIELDS = [
 ];
 
 /**
+ * The subset of DECLARABLE_FIELDS that are ALSO durable customer_profiles
+ * columns (H2/036) — stable attributes (marital status, education,
+ * occupation, employer category, years employed) rather than per-application
+ * facts. Shared by loan.controller.js (profile fallback + write-back) and
+ * user.controller.js (profile page get/update) so both agree on the set.
+ */
+const PROFILE_BACKED_FIELDS = [
+  "marital_status",
+  "education_level",
+  "occupation",
+  "employer_category",
+  "years_employed",
+];
+
+/**
  * Whether a declared-field value was actually supplied (vs. omitted/blank).
  * @param {*} value
  * @returns {boolean}
@@ -265,7 +280,8 @@ function mapProfileToModelFields(profile = {}, loanRequest = {}, declared = {}) 
  * Call the Python model's POST /predict with the 35 raw fields.
  *
  * @param {object} fields the output of mapProfileToModelFields()
- * @returns {Promise<{risk_label:number, risk_category:string, probabilities:object}>}
+ * @returns {Promise<{risk_label:number, risk_category:string, probabilities:object,
+ *                    model_version:string|null}>}
  * @throws {Error} on timeout, connection failure, or non-2xx response — with a
  *                  message that identifies the model service as the cause.
  */
@@ -309,6 +325,13 @@ async function predictRisk(fields) {
     risk_label: data.risk_label,
     risk_category: data.risk_category || RISK_LABELS[data.risk_label],
     probabilities: data.probabilities,
+    // Which trained model produced this prediction — a content hash of the
+    // loaded .joblib artifact (see loan-risk-model/api/main.py), stored
+    // immutably on risk_assessments.model_version for D4's audit trail.
+    // null on an older model service that predates this field, so a
+    // temporarily mismatched deploy degrades gracefully rather than
+    // rejecting an otherwise-valid prediction.
+    model_version: data.model_version || null,
   };
 }
 
@@ -320,5 +343,6 @@ module.exports = {
   NEUTRAL_DEFAULTS,
   CATEGORY_VALUES,
   DECLARABLE_FIELDS,
+  PROFILE_BACKED_FIELDS,
   MODEL_URL,
 };

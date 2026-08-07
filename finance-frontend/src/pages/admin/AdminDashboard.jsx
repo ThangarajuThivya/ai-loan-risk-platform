@@ -24,6 +24,7 @@ import {
   Coins,
   ArrowLeftRight,
   FileBarChart,
+  BarChart3,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 // Modular view imports
@@ -40,7 +41,9 @@ import AdminProfile from "../../components/admin/AdminProfile";
 import AdminCurrency from "../../components/admin/AdminCurrency";
 import AdminFxExchange from "../../components/admin/AdminFxExchange";
 import AdminReports from "../../components/admin/AdminReports";
+import AdminPortfolioDashboard from "../../components/admin/AdminPortfolioDashboard";
 import api from "../../api/axios";
+import { useToast } from "../../components/toast/useToast";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -48,16 +51,21 @@ export default function AdminDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, logout } = useAuth();
+  const { showToast } = useToast();
 
-  
   const [customers, setCustomers] = useState([]);
 
-  const [focusApplication, setFocusApplication] = useState(null);
+  // K2 — the id of an application to auto-open once the Applications tab
+  // mounts, so "view" from the dashboard home actually lands somewhere
+  // instead of just switching tabs. AdminApplications clears this itself
+  // (via onFocusHandled) once it has opened the matching row.
+  const [focusApplicationId, setFocusApplicationId] = useState(null);
 
   // Notification dropdown state
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [openMsgCount, setOpenMsgCount] = useState(0);
+  const [markingRead, setMarkingRead] = useState(false);
 
   // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -105,15 +113,35 @@ export default function AdminDashboard() {
     navigate("/");
   };
 
-  const handleNavigate = (tab) => {
-    setActiveTab(tab);
-    setFocusApplication(null); // Clear focused entity on tab change
+  // K4 — this used to only rewrite local state, so a reload (or the next
+  // getNotifications poll) always showed everything as unread again.
+  const handleMarkAllRead = async () => {
+    if (markingRead) return;
+    setMarkingRead(true);
+    const previous = notifications;
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+    try {
+      await api.patch("/notifications/read-all");
+    } catch (err) {
+      console.error("MARK ALL NOTIFICATIONS READ ERROR:", err);
+      setNotifications(previous);
+      showToast({
+        type: "error",
+        title: "Couldn't Update Notifications",
+        message: "Please try again.",
+      });
+    } finally {
+      setMarkingRead(false);
+    }
   };
 
-  const handleViewApplicationFromHome = (app) => {
-    // Save focused app state
-    setFocusApplication(app);
-    // Switch to loan applications list
+  const handleNavigate = (tab) => {
+    setActiveTab(tab);
+    setFocusApplicationId(null); // Clear focused entity on tab change
+  };
+
+  const handleViewApplicationFromHome = (applicationId) => {
+    setFocusApplicationId(applicationId);
     setActiveTab("applications");
   };
 
@@ -139,6 +167,7 @@ export default function AdminDashboard() {
         { id: "applications", label: "Applications", icon: FileSpreadsheet },
         { id: "products", label: "Products", icon: Layers },
         { id: "risk-analysis", label: "AI Risk Analysis", icon: ShieldAlert },
+        { id: "portfolio-dashboard", label: "Portfolio Dashboard", icon: BarChart3 },
       ],
     },
     {
@@ -199,7 +228,6 @@ export default function AdminDashboard() {
   const views = {
     dashboard: () => (
       <AdminDashboardHome
-        customers={customers}
         onNavigate={handleNavigate}
         onViewApplication={handleViewApplicationFromHome}
       />
@@ -208,11 +236,17 @@ export default function AdminDashboard() {
       <AdminCustomers customers={customers} onUpdateCustomers={setCustomers} />
     ),
     staff: () => <AdminStaff />,
-    applications: () => <AdminApplications />,
+    applications: () => (
+      <AdminApplications
+        focusApplicationId={focusApplicationId}
+        onFocusHandled={() => setFocusApplicationId(null)}
+      />
+    ),
     products: () => <AdminProducts />,
     "risk-analysis": () => (
       <AdminRiskAnalysis onViewApplication={handleViewApplicationFromHome} />
     ),
+    "portfolio-dashboard": () => <AdminPortfolioDashboard />,
     currency: () => <AdminCurrency />,
     "fx-exchange": () => <AdminFxExchange customers={customers} />,
     "fx-reports": () => <AdminReports />,
@@ -424,15 +458,9 @@ console.log(user)
                           System Alerts
                         </span>
                         <button
-                          onClick={() =>
-                            setNotifications((prev) =>
-                              prev.map((n) => ({
-                                ...n,
-                                is_read: 1,
-                              })),
-                            )
-                          }
-                          className="text-[10px] text-indigo-700 hover:text-indigo-900 font-bold"
+                          onClick={handleMarkAllRead}
+                          disabled={markingRead}
+                          className="text-[10px] text-indigo-700 hover:text-indigo-900 font-bold disabled:opacity-50"
                         >
                           Mark all read
                         </button>
@@ -441,7 +469,7 @@ console.log(user)
                       <div className="divide-y divide-slate-100 text-xs">
                         {notifications.map((n) => (
                           <div
-                            key={n.notification_id}
+                            key={n.id}
                             className={`p-3.5 hover:bg-slate-50 transition-colors ${n.is_read === 0 ? "bg-indigo-50/10" : ""}`}
                           >
                             <p className="text-slate-600 leading-snug">

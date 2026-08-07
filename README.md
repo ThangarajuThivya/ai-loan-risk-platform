@@ -137,6 +137,7 @@ Create the schema (`CREATE DATABASE ai_loan;`) before running `npm run migrate`.
 | `GEMINI_API_KEY` | Risk explanations fall back to a deterministic template — assessment still succeeds | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) (free) |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Forgot-password OTPs are printed to the server console instead of emailed | Any SMTP provider — see below for Gmail |
 | `FX_QUOTE_SECRET` | Falls back to `ACCESS_TOKEN_SECRET` | Generate as in Step 1 — set it only if FX quote tokens should rotate independently of login tokens |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_CURRENCY` / `APP_PUBLIC_URL` | Customers see "online card payment is temporarily unavailable"; staff can still record payments manually | [dashboard.stripe.com](https://dashboard.stripe.com) (free, test mode) — see below |
 
 No other external account is needed. The live FX rate feed
 (`open.er-api.com`) and the Fed H.10 data source (FRED) are both **free and
@@ -185,6 +186,48 @@ flag automated mail from it. Fine for a viva; not a substitute for a real
 transactional-email provider in production. Leaving `SMTP_*` blank is not a
 lesser option — the console-logged OTP path is simpler to demo and has zero
 external dependency to explain if something breaks.
+
+#### Accepting card repayments via Stripe
+
+Customers can pay their loan instalments (or settle early) online by card
+through Stripe Checkout — a hosted, redirect-based payment page, so card
+details never touch this app's servers. **There is no "project" or project ID
+in Stripe** — just an account and one secret key.
+
+1. **Create an account** at [dashboard.stripe.com](https://dashboard.stripe.com)
+   and keep the **Test mode** toggle ON (top right). No business details or
+   bank account are required for test mode.
+2. **Copy the secret key**: **Developers → API keys** → copy the **Secret
+   key** (starts `sk_test_...`).
+3. **Fill in `finance-backend/.env`**:
+   ```ini
+   STRIPE_SECRET_KEY=sk_test_your_key_here
+   STRIPE_WEBHOOK_SECRET=
+   STRIPE_CURRENCY=lkr
+   APP_PUBLIC_URL=http://localhost:5173
+   ```
+   - `STRIPE_CURRENCY` is what Stripe actually charges — amounts stored in
+     this system's own tables are always LKR regardless. Stripe accounts are
+     country-bound and a test account may reject `lkr` as a presentment
+     currency; if Checkout errors on it, set `STRIPE_CURRENCY=usd` instead.
+   - `APP_PUBLIC_URL` is the frontend origin Stripe redirects the customer
+     back to after paying.
+4. **(Optional) Webhooks for local dev.** A payment can complete even with
+   `STRIPE_WEBHOOK_SECRET` left blank — the dashboard's return page
+   reconciles directly with Stripe if the webhook hasn't arrived. To receive
+   real webhook events on localhost instead:
+   ```bash
+   stripe listen --forward-to localhost:5000/api/payments/stripe/webhook
+   ```
+   (requires the [Stripe CLI](https://docs.stripe.com/stripe-cli)). It prints
+   a `whsec_...` value — paste that into `STRIPE_WEBHOOK_SECRET`.
+5. **Test the flow**: card number `4242 4242 4242 4242`, any future expiry
+   date, any 3-digit CVC.
+
+**Never commit a real `sk_live_...` key.** Leaving all four variables blank is
+a fully supported configuration — the backend boots normally and the customer
+portal shows card payment as unavailable, with staff-recorded payments
+unaffected.
 
 ### Full variable reference
 

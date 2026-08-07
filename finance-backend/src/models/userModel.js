@@ -92,6 +92,81 @@ exports.deleteStaff = async (userId) => {
   return result.affectedRows > 0;
 };
 
+// E2 — customer KYC verification. Only a 'pending' review may be resolved
+// this way, same reasoning as loanModel.verifyCollateralItem /
+// verifyApplicationDocument: re-deciding an already-verified/rejected
+// record isn't offered — a rejected customer edits their NIC (which
+// re-opens review, see user.controller.js#updateProfile) instead.
+exports.getCustomerKycStatus = async (userId) => {
+  const [rows] = await db.promise().query(
+    `SELECT national_id, kyc_status FROM customer_profiles WHERE user_id = ?`,
+    [userId],
+  );
+  return rows[0];
+};
+
+exports.verifyCustomerKyc = async (userId, { kycStatus, verifiedBy, notes }) => {
+  const [result] = await db.promise().query(
+    `UPDATE customer_profiles
+        SET kyc_status = ?, kyc_verified_by = ?, kyc_verified_at = CURRENT_TIMESTAMP, kyc_notes = ?
+      WHERE user_id = ? AND kyc_status = 'pending'`,
+    [kycStatus, verifiedBy, notes || null, userId],
+  );
+  if (result.affectedRows === 0) return null;
+  const [rows] = await db.promise().query(
+    `SELECT national_id, kyc_status, kyc_verified_at, kyc_notes FROM customer_profiles WHERE user_id = ?`,
+    [userId],
+  );
+  return rows[0] || null;
+};
+
+// Admin-on-behalf-of-customer management. Same `AND role = 'customer'` guard
+// as the staff-management functions above, for the same reason — it keeps
+// these endpoints from being usable (via a guessed id) to edit or suspend a
+// staff or admin account.
+exports.findCustomerById = async (userId) => {
+  const [rows] = await db.promise().query(
+    `SELECT u.user_id, u.first_name, u.last_name, u.email, u.phone, u.profile_image,
+            u.status, u.created_at,
+            cp.employment_type, cp.monthly_income, cp.monthly_expense,
+            cp.national_id, cp.kyc_status, cp.kyc_verified_at, cp.kyc_notes
+       FROM users u
+       LEFT JOIN customer_profiles cp ON cp.user_id = u.user_id
+      WHERE u.user_id = ? AND u.role = 'customer'`,
+    [userId],
+  );
+  return rows[0];
+};
+
+exports.updateCustomer = async (userId, { firstName, lastName, email, phone, monthlyIncome }) => {
+  const [result] = await db.promise().query(
+    `UPDATE users
+        SET first_name = ?, last_name = ?, email = ?, phone = ?
+      WHERE user_id = ? AND role = 'customer'`,
+    [firstName, lastName || null, email, phone || null, userId],
+  );
+  if (result.affectedRows === 0) return false;
+  // monthly_income lives on customer_profiles, not users — a second
+  // statement rather than a JOIN'd UPDATE, since a customer_profiles row is
+  // guaranteed to exist for every real customer (created at registration)
+  // but this keeps the two tables' ownership of their own columns clear.
+  if (monthlyIncome !== undefined) {
+    await db.promise().query(
+      `UPDATE customer_profiles SET monthly_income = ? WHERE user_id = ?`,
+      [monthlyIncome, userId],
+    );
+  }
+  return true;
+};
+
+exports.updateCustomerStatus = async (userId, status) => {
+  const [result] = await db.promise().query(
+    `UPDATE users SET status = ? WHERE user_id = ? AND role = 'customer'`,
+    [status, userId],
+  );
+  return result.affectedRows > 0;
+};
+
 exports.updateUserPassword = (user_id, hashedPassword) => {
   return new Promise((resolve, reject) => {
     db.query(

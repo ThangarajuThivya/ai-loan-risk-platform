@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import api from "../api/axios";
+import CreditPolicyPanel from "./CreditPolicyPanel";
 import {
   GENDER_OPTIONS,
   MARITAL_STATUS_OPTIONS,
@@ -656,6 +657,12 @@ export default function RiskCalculator() {
                   <span className="font-semibold text-slate-700">{result.recommendation.loan_type}</span>
                 </div>
               )}
+
+              {/* The what-if check runs the same policy engine as a real
+                  application, so staff see whether the prospect would clear
+                  the mandatory criteria and not just how the model scores
+                  them. Nothing here is persisted. */}
+              <CreditPolicyPanel policy={result.policy} detailed />
 
               {result.explanation && (
                 <div className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4 flex items-start space-x-3">

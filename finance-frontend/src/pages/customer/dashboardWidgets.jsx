@@ -1,173 +1,113 @@
-import { motion, AnimatePresence } from "motion/react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  ChevronDown,
   Bell,
-  Sparkles,
-  Wallet,
-  Percent,
   Loader2,
   AlertTriangle,
   FilePlus2,
+  ArrowRight,
+  Sparkles,
+  FileSignature,
 } from "lucide-react";
-import { RISK_STYLES, STATUS_STYLES, formatCurrency, formatPercent, formatDate } from "./dashboardFormat";
+import {
+  RISK_STYLES,
+  STATUS_STYLES,
+  formatStatus,
+  formatCurrency,
+  formatDate,
+  getAttention,
+} from "./dashboardFormat";
 
-export function ApplicationCard({ application, expanded, onToggle }) {
+/**
+ * A compact, single-row summary — everything this used to expand into
+ * inline (risk breakdown, offer, repayment schedule, documents, history...)
+ * now lives on its own page (LoanApplicationDetail.jsx). Cramming all of
+ * that into an accordion inside a list meant a customer with more than one
+ * or two applications had to scroll past everything else just to find one
+ * thing; this card's only job is to be scannable, and to say clearly
+ * whether it needs the customer's attention right now.
+ */
+export function ApplicationSummaryCard({ application }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const riskStyle = RISK_STYLES[application.risk?.label];
   const RiskIcon = riskStyle?.icon;
+  const attention = getAttention(application);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-slate-50/60 transition-colors"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className={`p-2 rounded-xl shrink-0 ${
-              riskStyle
-                ? riskStyle.badge.replace("border-", "border ")
-                : "bg-slate-50 text-slate-400 border border-slate-100"
-            }`}
-          >
-            {RiskIcon ? (
-              <RiskIcon className="w-5 h-5" />
-            ) : (
-              <FilePlus2 className="w-5 h-5" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-800 truncate">
-              {application.product_name || t("customer.widgets.loanApplicationFallback")} · #
-              {application.application_id}
-            </p>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {formatCurrency(application.requested_amount)} ·{" "}
-              {application.tenure_months} mo · {formatDate(application.created_at)}
-            </p>
-          </div>
+    <button
+      type="button"
+      onClick={() => navigate(`/dashboard/applications/${application.application_id}`)}
+      className="w-full flex items-center justify-between gap-4 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-brand-primary/30 hover:shadow-md transition-all text-left"
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <div
+          className={`p-2 rounded-xl shrink-0 ${
+            riskStyle
+              ? riskStyle.badge.replace("border-", "border ")
+              : "bg-slate-50 text-slate-400 border border-slate-100"
+          }`}
+        >
+          {RiskIcon ? (
+            <RiskIcon className="w-5 h-5" />
+          ) : (
+            <FilePlus2 className="w-5 h-5" />
+          )}
         </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          {application.risk?.category && (
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-800 truncate">
+            {application.product_name || t("customer.widgets.loanApplicationFallback")} · #
+            {application.application_id}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {formatCurrency(application.requested_amount)} ·{" "}
+            {application.tenure_months} mo · {formatDate(application.created_at)}
+          </p>
+          {attention && (
             <span
-              className={`hidden sm:inline-block px-2.5 py-1 rounded-full text-[11px] font-bold uppercase border ${riskStyle?.badge}`}
+              className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                attention.type === "offer"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-sky-50 text-sky-700 border border-sky-200"
+              }`}
             >
-              {application.risk.category}
+              {attention.type === "offer" ? (
+                <FileSignature className="w-3 h-3" />
+              ) : (
+                <Sparkles className="w-3 h-3" />
+              )}
+              {t(
+                attention.type === "offer"
+                  ? "customer.widgets.chipOfferReady"
+                  : "customer.widgets.chipResponseNeeded"
+              )}
             </span>
           )}
-          <span
-            className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase border ${
-              STATUS_STYLES[application.status] ||
-              "bg-slate-50 text-slate-600 border-slate-100"
-            }`}
-          >
-            {application.status}
-          </span>
-          <ChevronDown
-            className={`w-4 h-4 text-slate-400 transition-transform ${
-              expanded ? "rotate-180" : ""
-            }`}
-          />
         </div>
-      </button>
+      </div>
 
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-slate-100"
+      <div className="flex items-center gap-3 shrink-0">
+        {application.risk?.category && (
+          <span
+            className={`hidden sm:inline-block px-2.5 py-1 rounded-full text-[11px] font-bold uppercase border ${riskStyle?.badge}`}
           >
-            <div className="p-5 space-y-5">
-              {application.risk?.probabilities && (
-                <div className="space-y-3">
-                  <span className="text-[10px] text-slate-400 block uppercase font-semibold tracking-wider">
-                    {t("customer.widgets.riskProbabilities")}
-                  </span>
-                  {Object.entries(application.risk.probabilities).map(
-                    ([label, prob]) => {
-                      const idx =
-                        label === "Low Risk" ? 0 : label === "Medium Risk" ? 1 : 2;
-                      return (
-                        <div key={label}>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-slate-600">{label}</span>
-                            <span className="font-mono font-semibold text-slate-800">
-                              {formatPercent(prob)}
-                            </span>
-                          </div>
-                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                              style={{ width: `${Math.round(Number(prob || 0) * 100)}%` }}
-                              className={`h-full ${RISK_STYLES[idx].bar}`}
-                            />
-                          </div>
-                        </div>
-                      );
-                    }
-                  )}
-                </div>
-              )}
-
-              {application.recommendation && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center space-x-1.5 text-slate-400 mb-1.5">
-                      <Wallet className="w-3.5 h-3.5" />
-                      <span className="text-[10px] uppercase font-semibold tracking-wider">
-                        {t("customer.widgets.recommendedAmount")}
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-800 font-mono">
-                      {formatCurrency(application.recommendation.recommended_amount)}
-                    </span>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div className="flex items-center space-x-1.5 text-slate-400 mb-1.5">
-                      <Percent className="w-3.5 h-3.5" />
-                      <span className="text-[10px] uppercase font-semibold tracking-wider">
-                        {t("customer.widgets.recommendedEmi")}
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-800 font-mono">
-                      {formatCurrency(application.recommendation.recommended_emi)} {t("customer.widgets.perMonth")}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {application.purpose && (
-                <div className="text-xs text-slate-500">
-                  {t("customer.widgets.purposeLabel")}{" "}
-                  <span className="font-semibold text-slate-700">
-                    {application.purpose}
-                  </span>
-                </div>
-              )}
-
-              {application.explanation && (
-                <div className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4 flex items-start space-x-3">
-                  <Sparkles className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-brand-primary uppercase tracking-wider">
-                      {t("customer.widgets.aiExplanation")}
-                    </h4>
-                    <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-                      {application.explanation}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
+            {application.risk.category}
+          </span>
         )}
-      </AnimatePresence>
-    </div>
+        <span
+          className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase border ${
+            STATUS_STYLES[application.status] ||
+            "bg-slate-50 text-slate-600 border-slate-100"
+          }`}
+        >
+          {formatStatus(application.status)}
+        </span>
+        <span className="hidden sm:flex items-center gap-1 text-xs font-semibold text-brand-primary">
+          {t("customer.widgets.viewDetails")}
+          <ArrowRight className="w-3.5 h-3.5" />
+        </span>
+      </div>
+    </button>
   );
 }
 

@@ -6,6 +6,7 @@ import StaffDashboard from "../pages/staff/StaffDashboard";
 import CustomerLayout from "../pages/customer/CustomerLayout";
 import CustomerOverview from "../pages/customer/CustomerOverview";
 import MyApplications from "../pages/customer/MyApplications";
+import LoanApplicationDetail from "../pages/customer/LoanApplicationDetail";
 import LoanApplication from "../pages/customer/LoanApplication";
 import CustomerProfile from "../pages/customer/CustomerProfile";
 import CustomerCurrency from "../pages/customer/CustomerCurrency";
@@ -33,6 +34,7 @@ export default function DashboardRouter() {
           <Route element={<CustomerLayout />}>
             <Route index element={<CustomerOverview />} />
             <Route path="applications" element={<MyApplications />} />
+            <Route path="applications/:id" element={<LoanApplicationDetail />} />
             <Route path="apply" element={<LoanApplication />} />
             <Route path="currency" element={<CustomerCurrency />} />
             <Route path="currency/exchange" element={<CurrencyExchange />} />

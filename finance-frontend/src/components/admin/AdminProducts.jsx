@@ -11,9 +11,11 @@ import {
   AlertTriangle,
   Inbox,
   Layers,
+  Receipt,
 } from "lucide-react";
 import api from "../../api/axios";
 import { useToast } from "../toast/useToast";
+import ProductFeesModal from "./ProductFeesModal";
 
 const emptyForm = {
   name: "",
@@ -23,6 +25,11 @@ const emptyForm = {
   min_tenure_months: "",
   max_tenure_months: "",
   interest_rate: "",
+  // D3 risk-based pricing — both blank means "flat rate for everyone",
+  // exactly the pre-D3 behaviour. Filling both in opts this product into
+  // pricing by risk band (interestPricing.service.js).
+  min_interest_rate: "",
+  max_interest_rate: "",
   rate_type: "reducing",
   description: "",
 };
@@ -62,6 +69,8 @@ export default function AdminProducts({ readOnly = false }) {
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  // The product whose fee schedule (I1) is being edited, or null.
+  const [feesProduct, setFeesProduct] = useState(null);
 
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -141,6 +150,12 @@ export default function AdminProducts({ readOnly = false }) {
       min_tenure_months: String(product.min_tenure_months ?? ""),
       max_tenure_months: String(product.max_tenure_months ?? ""),
       interest_rate: String(product.interest_rate ?? ""),
+      min_interest_rate: product.min_interest_rate === null || product.min_interest_rate === undefined
+        ? ""
+        : String(product.min_interest_rate),
+      max_interest_rate: product.max_interest_rate === null || product.max_interest_rate === undefined
+        ? ""
+        : String(product.max_interest_rate),
       rate_type: product.rate_type || "reducing",
       description: product.description || "",
     });
@@ -170,6 +185,10 @@ export default function AdminProducts({ readOnly = false }) {
       min_tenure_months: Number(form.min_tenure_months),
       max_tenure_months: Number(form.max_tenure_months),
       interest_rate: Number(form.interest_rate),
+      // Blank stays blank (not 0) so the server's both-or-neither validator
+      // sees "not provided" rather than a bogus 0% bound.
+      min_interest_rate: form.min_interest_rate.trim() === "" ? null : Number(form.min_interest_rate),
+      max_interest_rate: form.max_interest_rate.trim() === "" ? null : Number(form.max_interest_rate),
       rate_type: form.rate_type,
       description: form.description.trim() || null,
     };
@@ -353,14 +372,39 @@ export default function AdminProducts({ readOnly = false }) {
                           {formatTenure(product.min_tenure_months, product.max_tenure_months)}
                         </td>
                         <td className="px-6 py-4 text-xs">
-                          <span className="font-mono font-bold text-slate-800">
-                            {Number(product.interest_rate).toFixed(2)}%
-                          </span>
+                          {product.min_interest_rate !== null &&
+                          product.min_interest_rate !== undefined &&
+                          product.max_interest_rate !== null &&
+                          product.max_interest_rate !== undefined ? (
+                            <>
+                              <span className="font-mono font-bold text-slate-800">
+                                {Number(product.min_interest_rate).toFixed(2)}% –{" "}
+                                {Number(product.max_interest_rate).toFixed(2)}%
+                              </span>
+                              <span
+                                className="ml-1.5 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded text-[10px] font-semibold uppercase tracking-wide"
+                                title={`Priced by risk band around a standard rate of ${Number(product.interest_rate).toFixed(2)}%`}
+                              >
+                                risk-based
+                              </span>
+                            </>
+                          ) : (
+                            <span className="font-mono font-bold text-slate-800">
+                              {Number(product.interest_rate).toFixed(2)}%
+                            </span>
+                          )}
                           <span className="text-slate-400 ml-1">({product.rate_type})</span>
                         </td>
                         {!readOnly && (
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setFeesProduct(product)}
+                                className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-indigo-700 rounded-lg transition-colors"
+                                title="Fees & charges"
+                              >
+                                <Receipt className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => openEditModal(product)}
                                 className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-indigo-700 rounded-lg transition-colors"
@@ -566,6 +610,66 @@ export default function AdminProducts({ readOnly = false }) {
                     )}
                   </div>
 
+                  {/* D3 risk-based pricing — optional. Leaving both blank
+                      keeps this product flat-rate for every applicant,
+                      exactly as before D3; filling both in opts it into
+                      pricing by the applicant's ML risk band
+                      (interestPricing.service.js): Low risk prices to the
+                      minimum here, High risk to the maximum, Medium stays
+                      at the Interest Rate above. */}
+                  <div className="sm:col-span-2 p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl">
+                    <p className="text-[10px] uppercase font-semibold tracking-wider text-indigo-700 mb-2">
+                      Risk-Based Pricing (optional)
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                          Min Rate (Low risk)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="60"
+                          step="0.01"
+                          placeholder="Leave blank for flat rate"
+                          value={form.min_interest_rate}
+                          onChange={handleField("min_interest_rate")}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-800 focus:ring-1 focus:ring-indigo-800"
+                        />
+                        {formErrors.min_interest_rate && (
+                          <p className="text-[11px] text-rose-600 mt-1">
+                            {formErrors.min_interest_rate}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                          Max Rate (High risk)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="60"
+                          step="0.01"
+                          placeholder="Leave blank for flat rate"
+                          value={form.max_interest_rate}
+                          onChange={handleField("max_interest_rate")}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-800 focus:ring-1 focus:ring-indigo-800"
+                        />
+                        {formErrors.max_interest_rate && (
+                          <p className="text-[11px] text-rose-600 mt-1">
+                            {formErrors.max_interest_rate}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-indigo-700/70 mt-2 leading-relaxed">
+                      Both fields must be set together, and must bracket the Interest
+                      Rate above (min ≤ rate ≤ max). Medium-risk applicants are always
+                      priced at the Interest Rate itself.
+                    </p>
+                  </div>
+
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                       Description
@@ -655,6 +759,15 @@ export default function AdminProducts({ readOnly = false }) {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Fee configuration (I1) — its own modal rather than more fields on the
+          product form, since a product has MANY fees and they are edited far
+          less often than the headline terms. */}
+      <AnimatePresence>
+        {feesProduct && (
+          <ProductFeesModal product={feesProduct} onClose={() => setFeesProduct(null)} />
         )}
       </AnimatePresence>
     </div>
