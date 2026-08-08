@@ -457,11 +457,15 @@ create a staff account from Admin → Staff.
 ```bash
 cd finance-backend && npm test    # plain Node scripts under src/services/__tests__/
 cd finance-frontend && npm run lint
+cd loan-risk-model && venv/bin/python -m pytest tests/ -q   # EMI maths, derived
+                                                             # features, PD banding,
+                                                             # dataset invariants
 ```
 
 For the ML services, reproduce the loan-risk evaluation report by re-running
-`python -m src.model_utils` from `loan-risk-model/` (with its venv activated —
-see [Loan-risk ML service setup](#3-loan-risk-ml-service-8000)); reproduce the
+`python -m src.data_generator` then `python -m src.model_utils` from
+`loan-risk-model/` (with its venv activated — see
+[Loan-risk ML service setup](#3-loan-risk-ml-service-8000)); reproduce the
 currency model evaluation numbers with the scripts under
 `currency-forecast-model/training/`, run from `currency-forecast-model/` with
 its own venv activated (see

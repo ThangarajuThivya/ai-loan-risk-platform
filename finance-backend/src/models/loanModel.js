@@ -537,8 +537,8 @@ async function runAssessmentTransaction(p) {
     const [assessResult] = await conn.query(
       `INSERT INTO risk_assessments
          (application_id, risk_label, risk_category, prob_low, prob_medium,
-          prob_high, model_version)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          prob_high, model_version, behavioural_snapshot)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         applicationId,
         p.risk.risk_label,
@@ -547,6 +547,12 @@ async function runAssessmentTransaction(p) {
         p.risk.probMedium,
         p.risk.probHigh,
         p.risk.model_version || null,
+        // Frozen at decision time (043). Recomputing this on read would show a
+        // reviewer today's repayment record beside a decision that never saw
+        // it — see the migration header.
+        p.risk.behaviouralSnapshot
+          ? JSON.stringify(p.risk.behaviouralSnapshot)
+          : null,
       ]
     );
 
@@ -888,6 +894,7 @@ const APPLICATION_DETAIL_SELECT = `
     lp.max_interest_rate AS product_max_interest_rate,
     lp.rate_type AS product_rate_type,
     ra.risk_label, ra.risk_category, ra.prob_low, ra.prob_medium, ra.prob_high, ra.model_version,
+       ra.behavioural_snapshot,
     ra.assessed_at,
     rec.recommended_amount, rec.recommended_emi, rec.recommended_product_id,
     rec.gemini_explanation,
@@ -969,6 +976,7 @@ async function findAllApplications(status) {
        lp.max_interest_rate AS product_max_interest_rate,
        lp.rate_type AS product_rate_type,
        ra.risk_label, ra.risk_category, ra.prob_low, ra.prob_medium, ra.prob_high, ra.model_version,
+       ra.behavioural_snapshot,
        rec.recommended_amount, rec.recommended_emi,
        ${LATEST_OFFER_COLUMNS},
        ${ACCOUNT_COLUMNS},
@@ -2555,7 +2563,138 @@ async function waiveLateFee({ applicationId, scheduleId, waivedBy, note }) {
   return { waived: remaining };
 }
 
+// ---------------------------------------------------------------------------
+// Internal behavioural credit history (v2 risk model).
+// ---------------------------------------------------------------------------
+
+/**
+ * Summarise everything this institution already knows about how a customer
+ * repays, from their own accounts with us.
+ *
+ * WHY THIS EXISTS: the risk model's strongest inputs — number_of_defaults,
+ * overdue_installments, credit_utilization — had no data source, so
+ * mlClient.service.js sent hardcoded constants (0, 0, 30) for every applicant.
+ * Measured against the trained model, those three carry ~46% of its total
+ * gain, so nearly half the model's decision power was pinned to a fixed value.
+ * There is no CRIB bureau integration to fix that, but for a returning
+ * customer we hold the same facts first-hand.
+ *
+ * This is the application-scoring vs. behavioural-scoring distinction from the
+ * credit literature: a new applicant is judged on declared attributes, an
+ * existing customer additionally on observed conduct. A thin file is not an
+ * error — it is the normal state of a first-time borrower, and the caller
+ * degrades to neutral defaults for it (behaviouralFeatures.service.js).
+ *
+ * Read-only, and called BEFORE the assess transaction opens, exactly like
+ * findGuarantorExposureByNic: the application being assessed does not exist
+ * yet, so it cannot contaminate its own history.
+ *
+ * "Overdue" matches repayment.service.js computeArrears — an instalment with
+ * anything still outstanding whose due date has passed. Note this is
+ * deliberately broader than the `status = 'due'` test used by the guarantor
+ * distress query, which misses a part-paid instalment that is also overdue.
+ *
+ * @param {number} userId
+ * @returns {Promise<object>} raw counters for behaviouralFeatures.service.js
+ */
+async function findBorrowerCreditHistory(userId) {
+  const pool = db.promise();
+
+  const [[accounts]] = await pool.query(
+    `SELECT
+       COUNT(*)                                       AS total_accounts,
+       COALESCE(SUM(status = 'active'), 0)            AS active_accounts,
+       COALESCE(SUM(status = 'closed'), 0)            AS closed_accounts,
+       COALESCE(SUM(status = 'written_off'), 0)       AS written_off_accounts,
+       COALESCE(MAX(principal), 0)                    AS highest_principal
+     FROM loan_accounts
+     WHERE user_id = ?`,
+    [userId]
+  );
+
+  // Instalment-level conduct across every account they have ever held.
+  // Outstanding is the scheduled component less what has been paid AND less
+  // what was waived — mirroring the "component − paid − waived" rule stated
+  // in migration 027, so an early settlement's waived interest is not
+  // mistaken for an unpaid balance.
+  const [[schedule]] = await pool.query(
+    `SELECT
+       COUNT(*)                                                  AS total_installments,
+       COALESCE(SUM(
+         rs.due_date < CURDATE() AND (
+           GREATEST(rs.principal_component - rs.principal_paid, 0) +
+           GREATEST(rs.interest_component - rs.interest_paid - rs.interest_waived, 0)
+         ) > 0
+       ), 0)                                                     AS overdue_installments,
+       COALESCE(SUM(rs.status = 'paid'), 0)                      AS paid_installments
+     FROM repayment_schedule rs
+     JOIN loan_accounts acc ON acc.id = rs.account_id
+     WHERE acc.user_id = ?`,
+    [userId]
+  );
+
+  // Utilisation across LIVE facilities only: a closed loan consumes no
+  // current capacity, so folding settled accounts in would understate how
+  // much of their available credit is actually drawn right now.
+  const [[utilisation]] = await pool.query(
+    `SELECT
+       COALESCE(SUM(GREATEST(rs.principal_component - rs.principal_paid, 0)), 0)
+                                                     AS outstanding_principal,
+       COALESCE(SUM(rs.principal_component), 0)      AS scheduled_principal
+     FROM repayment_schedule rs
+     JOIN loan_accounts acc ON acc.id = rs.account_id
+     WHERE acc.user_id = ? AND acc.status = 'active'`,
+    [userId]
+  );
+
+  // Instalments settled AFTER their due date, ever. DISTINCT because one
+  // instalment can be cleared by several part-payments, which would otherwise
+  // count as several separate delinquencies.
+  const [[late]] = await pool.query(
+    `SELECT COUNT(DISTINCT rs.id) AS late_installments
+     FROM repayment_schedule rs
+     JOIN loan_accounts acc            ON acc.id = rs.account_id
+     JOIN loan_payment_allocations pa  ON pa.schedule_id = rs.id
+     JOIN loan_payments p              ON p.id = pa.payment_id
+     WHERE acc.user_id = ? AND p.paid_on > rs.due_date`,
+    [userId]
+  );
+
+  // Applications ever submitted — the closest honest analogue to a bureau
+  // "credit inquiry count" available without a CRIB feed. Withdrawn and
+  // rejected ones count: an inquiry happened either way.
+  const [[applications]] = await pool.query(
+    `SELECT COUNT(*) AS application_count
+     FROM loan_applications
+     WHERE user_id = ?`,
+    [userId]
+  );
+
+  // Facilities restructured. The account status enum has no 'restructured'
+  // state and no endpoint sets one, so this is honestly zero rather than
+  // guessed — kept here so the shape is complete and one place changes if a
+  // restructure flow is ever built.
+  const restructured = 0;
+
+  return {
+    total_accounts: Number(accounts.total_accounts) || 0,
+    active_accounts: Number(accounts.active_accounts) || 0,
+    closed_accounts: Number(accounts.closed_accounts) || 0,
+    written_off_accounts: Number(accounts.written_off_accounts) || 0,
+    highest_principal: Number(accounts.highest_principal) || 0,
+    total_installments: Number(schedule.total_installments) || 0,
+    overdue_installments: Number(schedule.overdue_installments) || 0,
+    paid_installments: Number(schedule.paid_installments) || 0,
+    outstanding_principal: Number(utilisation.outstanding_principal) || 0,
+    scheduled_principal: Number(utilisation.scheduled_principal) || 0,
+    late_installments: Number(late.late_installments) || 0,
+    application_count: Number(applications.application_count) || 0,
+    restructured_facilities: restructured,
+  };
+}
+
 module.exports = {
+  findBorrowerCreditHistory,
   findProfileByUserId,
   updateProfileDeclaredFields,
   findDraftByUserId,

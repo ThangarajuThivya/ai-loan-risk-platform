@@ -78,15 +78,23 @@ htmlcov/
 
 # ---------- ML data & artifacts (large + reproducible) ----------
 # Dataset is regenerated with:  python -m src.data_generator
-loan-risk-model/data/*.csv
-loan-risk-model/data/*.parquet
+# Patterns are recursive (**) so the v1_backup/ subfolder is covered too —
+# a plain data/*.csv matches only direct children, which would have let the
+# 54 MB v1 dataset snapshot into the repository.
+loan-risk-model/data/**/*.csv
+loan-risk-model/data/**/*.parquet
 # Model + preprocessor are retrained with:  python -m src.model_utils
 # NOTE: while these are ignored, a fresh clone must retrain before the API
 # will start. To ship a ready-to-run model instead, comment out the next
-# two lines (the .joblib files are only ~8 MB).
-loan-risk-model/model_artifacts/*.joblib
-loan-risk-model/model_artifacts/*.pkl
-# evaluation_report.txt stays tracked (small, useful for history).
+# two lines (the .joblib files are only ~2.6 MB for v2).
+loan-risk-model/model_artifacts/**/*.joblib
+loan-risk-model/model_artifacts/**/*.pkl
+# The pre-rebuild (v1) snapshot kept for before/after comparison. Its source
+# files are already in git history, and its artifacts are large binaries, so
+# the whole folder stays local — see ARCHITECTURE.md 7.8 for what it holds.
+loan-risk-model/model_artifacts/v1_backup/
+# evaluation_report.txt, feature_importance.csv and calibration.csv stay
+# tracked: all small, and they are the record of how the shipped model scored.
 
 # =====================================================================
 # Python  (currency-forecast-model)

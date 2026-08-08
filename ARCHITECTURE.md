@@ -2,7 +2,7 @@
 
 **Project:** AI-Powered Loan Risk & Recommendation System (Sri Lankan banking context)
 **Repository:** `finance-application/` (monorepo — four modules)
-**Last updated:** 2026-08-01
+**Last updated:** 2026-08-08
 
 This document describes the **structural architecture** of the system: its
 components, technology stack, machine-learning models, data model,
@@ -145,7 +145,7 @@ flowchart LR
 ### 6.2 Backend (API gateway)
 - **Authentication & authorization** — registration, login, JWT issuance/refresh, OTP-based forgot-password, RBAC.
 - **Loan application lifecycle** — a full status machine (nine states: `pending` → … → `disbursed` → `closed`, plus `more_info_required`, `rejected`, `withdrawn`), with the legal next-states and the roles allowed to make each move defined in one place and reused by validation, persistence, and the API's own `allowed_transitions` hint to the frontend; every transition is written to an append-only audit trail (see §9.10).
-- **Model orchestration** — map applicant profile + optional self-declared fields to model inputs, call the loan-risk ML service, persist results.
+- **Model orchestration** — map applicant profile, the customer's observed repayment behaviour with this institution (§9.1.6), and optional self-declared fields to model inputs, call the loan-risk ML service, persist results with a frozen snapshot of the evidence behind them.
 - **Recommendation engine** — deterministic rules: loan type, recommended amount, EMI (see §9.2).
 - **Explanation service** — call Gemini with structured risk factors, return/store a natural-language explanation (with a deterministic fallback if Gemini is unavailable), optionally localized (Sinhala/Tamil).
 - **Applicant experience** — pre-fills a new application from the customer's profile and their most recent application; promotes stable personal attributes (marital status, education, occupation, employer type, years employed) onto the customer's profile so they persist across applications instead of being re-declared each time; auto-saves an abandoned application as a resumable draft (see §9.12).
@@ -165,7 +165,7 @@ flowchart LR
 - **Persistence** — all reads/writes to MySQL.
 
 ### 6.3 Loan-Risk ML service
-See §7 for the model itself. Accepts 35 raw applicant fields; computes 6 derived features; runs the trained preprocessor + XGBoost classifier; returns risk label + class probabilities. Stateless; no persistence.
+See §7 for the model itself. Accepts 33 raw applicant fields; computes 7 derived features; runs the trained preprocessor + XGBoost classifier; returns a calibrated probability of default, the Low/Medium/High band thresholded from it, and the three outcome probabilities. Rejects a categorical value it was not trained on, and ignores `gender` — a protected attribute the model deliberately does not accept (§7.2). Stateless; no persistence.
 
 ### 6.4 Currency service
 See §8 for the four models. Loads all four model families once at startup for 5 currencies (LKR, INR, EUR, GBP, JPY); fails fast if any artifact is missing. Supplies its own "recent data" from a bundled historical series (Fed H.10, through 2026-07-24) for `/forecast`, `/trend`, `/volatility`; `/anomaly` takes caller-supplied prices instead. Returns forecast / trend / volatility / anomaly predictions, individually or combined via `/analyze`. Stateless; no persistence, no business logic.
@@ -177,157 +177,444 @@ Authoritative store for users, profiles, applications, assessments, recommendati
 
 ## 7. Loan-risk model (`loan-risk-model/`)
 
-An XGBoost classifier that predicts loan default risk (**0 = Low, 1 = Medium,
-2 = High**) for the Sri Lankan lending context, with a strong emphasis on CRIB
-(Credit Information Bureau) features, including guarantor liability history.
+An XGBoost classifier that predicts the repayment outcome of a loan
+application in the Sri Lankan lending context, with a strong emphasis on CRIB
+(Credit Information Bureau) features including guarantor liability history,
+and on the institution's own record of how the applicant has repaid before.
+
+**This is the v2 model.** v1 was audited in August 2026 and rebuilt; §7.8
+records what the audit found and why almost all of it needed replacing rather
+than tuning. The v1 dataset, artifacts and source are preserved under
+`model_artifacts/v1_backup/` and `data/v1_backup/` so the comparison is
+reproducible.
 
 ### 7.1 Where the dataset comes from, and why it is synthetic
 
 **Source: generated, not collected.** `src/data_generator.py` produces
-**150,000 rows** using `Faker` plus province-weighted NumPy distributions. No
-real applicant data was used at any point.
+**150,000 rows** from a causal data-generating process built on NumPy's
+`default_rng`. No real applicant data is used at any point, and no
+personal-data-bearing third-party library is involved.
 
-This was a deliberate choice, not a fallback, and the reasoning matters more
-than the result:
+This was a deliberate choice, and the reasoning matters more than the result:
 
 - **Real Sri Lankan credit data is not publicly obtainable.** CRIB data is
   regulated and released only to member institutions under a lending
-  relationship. There is no public SL equivalent of the datasets below.
+  relationship.
 - **The public alternatives are the wrong country.** Home Credit, Lending Club
   and the UCI German Credit dataset are the standard open credit-risk corpora,
   but none carries the features this project exists to model: a **CRIB score**,
   **guarantor exposure and guarantor default history**, LKR-denominated income
   bands, or Sri Lankan provinces. Training on them would produce a
   competent-but-generic credit model and discard the entire domain contribution.
-- **Using real data would raise consent and privacy obligations** that a
-  student project cannot discharge.
+- **Using real data would raise consent and privacy obligations** a student
+  project cannot discharge.
 
-So the generator borrows *design patterns* from those three public datasets
-(feature families, plausible value ranges, class balance) and re-expresses them
-in a Sri Lankan frame. The honest trade-off is stated in §7.3.
+The generator borrows *design patterns* from those public datasets (feature
+families, plausible value ranges) and re-expresses them in a Sri Lankan frame.
+The honest trade-off is stated in §7.3.
 
-**Demographic grounding:** 9 provinces at realistic population weights;
-education distribution skewed to O/L / A/L (55% combined) matching national
-attainment; ~30% of applicants carry guarantor exposure, reflecting how common
-third-party guarantees are in SL retail lending.
+**Demographic grounding:** 9 provinces at realistic population weights; income
+varies by province, education, employment type and experience; ~30% of
+applicants carry guarantor exposure, reflecting how common third-party
+guarantees are in Sri Lankan retail lending.
 
-### 7.2 Feature design
+### 7.2 The causal data-generating process
 
-**41 features = 35 raw + 6 derived**, in five families:
+The defining property of v2 is that features are **not drawn independently**.
+A latent creditworthiness variable `z` is sampled per applicant and everything
+observable is generated from it, so the dataset is internally consistent:
+
+```
+z ~ N(0, 1)                      latent creditworthiness (never observed)
+  │
+  ├─> demographics ─> income ─> expenses ─> savings
+  │                     │
+  │                     └─> loan request ─> EMI ─> affordability
+  │
+  ├─> credit behaviour (defaults, overdues, utilisation, punctuality)
+  │        │
+  │        └─> crib_score = f(that behaviour)     <- COMPUTED, not drawn
+  │
+  └─> PD = sigmoid(g(affordability, z, guarantor, stability))
+           │
+           └─> outcome ~ Categorical(clean / delinquent / default)
+```
+
+Three consequences worth stating explicitly:
+
+- **`crib_score` is computed from the credit file**, as a real bureau score is,
+  rather than drawn independently. A file with four defaults can no longer
+  carry an 880 score. It is also on the **real published CRIB scale of
+  250–900**; v1 used 320–890, which matches no real scale.
+- **Affordability is real.** The reducing-balance EMI is computed over the
+  actual tenure at the actual rate, so `debt_to_income_ratio` is
+  instalment/income — the ratio a credit officer actually computes — and
+  tenure and interest rate genuinely affect risk.
+- **Expenses follow Engel's law**: the share of income consumed falls as
+  income rises. v1 generated expenses as `income × U(0.45, 0.82)`, which made
+  `expense_ratio` a uniform draw echoed back.
+
+**Portfolio assumptions are named constants, not magic numbers.**
+`TARGET_DEFAULT_RATE` (7.5%) and `TARGET_DELINQUENCY_RATE` (18.5%) are stated
+in `src/config.py`, and the generator **solves** for the logistic intercept
+that reproduces them by bisection. The assumption can therefore be argued
+with; a hand-tuned intercept could not.
+
+**`gender` is deliberately excluded from the model.** It is a protected
+attribute, and a credit decision must not turn on it. v1 fed it to the model,
+where it was harmless only by accident — the v1 label was generated
+independently of it, so the measured spread in mean risk between men and women
+was 0.0005. Relying on an attribute being accidentally uninformative is not a
+fairness control. The column still exists on `customer_profiles` for
+demographic reporting; it is simply never sent to `/predict`, and the API
+ignores it if an older caller sends it anyway.
+
+### 7.2.1 Feature design
+
+**40 features = 33 raw + 7 derived**, in five families:
 
 | Family | Examples |
 |---|---|
-| Personal | age, province, education level, employment type |
-| Income | monthly income, income stability, savings ratio |
-| Expenses & banking | expenses, credit utilization, avg repayment behaviour |
-| Loan | amount requested, tenure, purpose |
-| CRIB | `crib_score`, `number_of_defaults`, `overdue_installments`, `guarantor_exposure`, `guarantor_defaults` |
+| Personal | age, province, education level, employment type, years employed |
+| Income | monthly salary, additional income, income stability |
+| Expenses & banking | expenses, rent, savings ratio, average balance |
+| Loan | amount requested, tenure, product base interest rate |
+| CRIB & behavioural | `crib_score`, `number_of_defaults`, `overdue_installments`, `credit_utilization`, `guarantor_exposure`, `guarantor_defaults` |
 
-The **6 derived features** are computed *server-side at inference time* and are
-never accepted from the caller — the API takes only the 35 raw fields. This
-matters for integrity: a client cannot hand-craft a favourable
-`financial_stability_score`, and train/serve feature logic cannot drift apart
-because both call the same code.
+The **7 derived features** are computed *server-side at inference time* and are
+never accepted from the caller — the API takes only the raw fields:
 
 ```
-debt_to_income_ratio        expense_ratio            loan_burden_ratio
-repayment_consistency_score guarantor_risk_score     financial_stability_score
+emi                          debt_to_income_ratio      expense_ratio
+disposable_income            repayment_consistency_score
+guarantor_risk_score         financial_stability_score
 ```
+
+This matters for integrity: a client cannot hand-craft a favourable
+`financial_stability_score`. Crucially, `src/feature_engineering.py` is the
+**single implementation** — the generator and the inference path both call it,
+so train/serve logic cannot drift. v1 duplicated these formulas across two
+files.
 
 `guarantor_risk_score` combines guarantor exposure-to-income ratio with
-guarantor default count; `financial_stability_score` blends savings, CRIB score
-and repayment behaviour, then subtracts a guarantor-risk penalty. The design
-intent — a guarantor default is treated as near-equivalent to a personal
-default — is a genuinely Sri Lankan modelling decision and shows up in the
-output: applicants with any guarantor-default history average roughly **2× the
-risk label** of otherwise-identical applicants.
+guarantor default count; `financial_stability_score` blends savings, income
+security and bureau standing, then subtracts a guarantor-risk penalty. Treating
+a guarantor default as near-equivalent to a personal default is a genuinely
+Sri Lankan modelling decision.
 
-### 7.3 How labels are produced — and the limitation this creates
+`interest_rate` is the loan product's **base** rate, never the risk-priced
+rate. The priced rate is an *output* of the assessment (§9.1.3), so feeding it
+back in would be circular — and an earlier v2 draft that priced it off
+`crib_score` in training created a 0.47 correlation with default that does not
+exist at inference time. That train/serve mismatch was caught and removed.
 
-Labels are **not** observed defaults. They come from a deterministic additive
-scoring rule in the generator, thresholded into three bands:
+### 7.3 What the target is — and the limitation that remains
 
-```python
-score += (debt_to_income_ratio > 0.45)      * 2.8
-score += (number_of_defaults   > 0)         * 3.8
-score += (crib_score           < 580)       * 3.2
-score += (credit_utilization   > 78)        * 2.5
-score += (guarantor_defaults   > 0)         * 3.5   # guarantor ≈ personal default
-score -= (savings_ratio        > 0.28)      * 1.8
-...                                                  # then binned to Low/Medium/High
-```
+The label is the **sampled repayment outcome**:
 
-**This must be stated plainly in any write-up:** the model is learning a rule
-that was authored, not a real-world outcome. The reported accuracy therefore
-measures *"can XGBoost recover a known deterministic function from noisy
-features"* — not *"can it predict who will actually default"*. It is an upper
-bound flattered by the absence of real-world noise, unmodelled causes, and
-label error.
+| Class | Outcome | Meaning |
+|---|---|---|
+| 0 | Repaid cleanly | No instalment ever fell overdue |
+| 1 | Delinquent | Repaid, but at least one instalment fell overdue |
+| 2 | Defaulted | The facility was charged off |
 
-What the pipeline **does** legitimately demonstrate: end-to-end feature
-engineering, train/serve consistency, calibrated multi-class output,
-class-imbalance handling, and a deployable inference contract. Those transfer
-to real data unchanged; only the performance number does not.
+All three are states a real lender observes and records, which is what makes
+this a legitimate supervised target. The outcome is **drawn** from the
+applicant's true PD, not computed from a threshold, so two applicants with
+identical paperwork can repay differently — there is irreducible noise, and
+accuracy has a real ceiling below 100%.
+
+**The limitation that remains, and must be stated in any write-up:** the PD
+function is still authored. The model learns the risk *ordering* that function
+implies, observed through noisy sampled outcomes. What transfers to real data
+is the pipeline, the feature engineering, the calibration and the deployment
+contract — **not** the performance number.
+
+This is a materially weaker claim than v1's, which is the point: v1's label was
+a deterministic threshold rule, and its reported 88.10% accuracy measured
+"can XGBoost recover a rule I wrote". A depth-8 decision tree on 9 of its 41
+features scored 88.42% — better than the shipped model.
 
 ### 7.4 Preprocessing
 
 A single scikit-learn `ColumnTransformer` (`src/preprocessing.py`), fitted on
-the training split only and persisted alongside the model so inference applies
-the identical transform:
+the **training split only** and persisted alongside the model so inference
+applies the identical transform:
 
 | Step | Applied to | Why |
 |---|---|---|
-| `StandardScaler` | numerical columns | Zero-mean/unit-variance. Not required by trees, but keeps the artifact reusable if a distance- or gradient-based model is swapped in. |
-| `OneHotEncoder(handle_unknown="ignore")` | categorical columns | `ignore` is the important part: an unseen province or employment type at inference becomes an all-zero block instead of raising, so one unexpected value cannot 500 the endpoint. |
+| **passthrough** (no scaling) | numerical columns | Trees are invariant to monotone rescaling, so scaling never helped — and `StandardScaler` cannot pass a NaN through. Missing values must reach the booster intact (§7.6.1). |
+| `OneHotEncoder(handle_unknown="ignore")` | categorical columns | An unseen category becomes an all-zero block instead of raising. The API *additionally* validates categoricals against the trained vocabulary, so an unknown province fails loudly at the edge rather than silently scoring as a zero vector. |
 
-Split: **80/20 stratified** (`random_state=42`). Stratification preserves the
-Low/Medium/High proportions in both halves — without it the minority High-risk
-class would vary between runs and make evaluation unstable.
+Split: **70 / 15 / 15, stratified** (`random_state=42`). Three ways, not v1's
+two: the validation set drives early stopping, and the test set is touched
+exactly once. With a two-way split there is nowhere to early-stop against that
+is not also the reported score.
 
 ### 7.5 Why XGBoost
 
 | Candidate | Why not chosen |
 |---|---|
-| Logistic regression | Cannot express the threshold interactions the label rule is built from (e.g. *high DTI **and** low CRIB*) without manual interaction terms. |
-| Decision tree | Same representational power, far higher variance — an unstable model on a 41-feature space. |
-| Random forest | Competitive, but bagging averages toward the mean and is weaker on the minority High-risk class; boosting explicitly re-weights the cases it currently gets wrong. |
+| Logistic regression | Cannot express threshold interactions (e.g. *high DTI **and** low CRIB*) without manual interaction terms. |
+| Decision tree | Same representational power, far higher variance. |
+| Random forest | Competitive, but bagging averages toward the mean and is weaker on the minority default class; boosting explicitly re-weights the cases it currently gets wrong. |
 | Neural network | No advantage on tabular, mostly-categorical data of this size, and much harder to explain to a credit officer. |
 
-**Chosen: gradient-boosted trees (XGBoost)** because the task is tabular,
-mixed-type, threshold-driven and moderately imbalanced — the regime where
-boosted trees are the standard strong baseline. Practical reasons too: native
-multi-class via `mlogloss`, `predict_proba` for the confidence the
-recommendation engine and UI both consume, and per-feature importances that
-make a decision defensible to a human reviewer.
+**Chosen: gradient-boosted trees (XGBoost)** — the task is tabular, mixed-type,
+threshold-driven and imbalanced, the regime where boosted trees are the
+standard strong baseline. Native multi-class via `mlogloss`, `predict_proba`
+for the probabilities the pricing engine and UI consume, and per-feature
+importances that make a decision defensible to a human reviewer.
 
-Hyperparameters (`src/model_utils.py`): `n_estimators=400`,
-`learning_rate=0.08`, `max_depth=7`, `subsample=0.85`,
-`colsample_bytree=0.85`. The low learning rate with many trees is the standard
-accuracy-over-speed trade; `subsample`/`colsample_bytree` at 0.85 add row and
-column randomness per tree as regularisation, which matters here because a
-deterministic label rule is easy to overfit.
+Hyperparameters (`src/model_utils.py`): `learning_rate=0.05`, `max_depth=6`,
+`min_child_weight=5`, `subsample=0.85`, `colsample_bytree=0.85`,
+`reg_lambda=1.5`, with `n_estimators` capped at 2000 and **fitted by early
+stopping** (50 rounds on validation mlogloss) rather than fixed. It settles at
+~310 trees, and the artifact is well under v1's 8.5 MB.
 
-### 7.6 Performance
+**Deliberately no class weighting.** Inverse-frequency weighting is the reflex
+for a 7.5% minority class and was tried. It was removed because it inflates
+predicted PD — measured, it pushed the top PD decile to a predicted 0.705
+against an actual 0.595 — and the gateway *prices loans* off these
+probabilities (§9.1.3). It also buys nothing here, because nothing downstream
+consumes argmax: the reported band is a threshold on the probability (§7.6),
+so recall is set by where that threshold sits, not by who wins a three-way
+vote. Ranking quality is essentially unchanged either way; the difference is
+entirely in whether the probabilities can be believed.
 
-**Accuracy 88.10%**, weighted F1 **88.05%** (30,000-row held-out test set,
-evaluated 2026-07-03). Low and Medium risk sit at F1 ≈ 0.89; **High risk gets
-precision 0.86 / recall 0.74** — the minority class, and the gap worth
-discussing: the model misses about a quarter of genuinely high-risk applicants.
-In lending, that direction of error (approving someone who should have been
-declined) is the expensive one, which is why the output feeds a rules layer and
-a human decision rather than an automatic rejection.
+### 7.6 From probability to risk band
 
-`model_utils.py` regenerates `model_artifacts/evaluation_report.txt` on every
-retrain, so the reported numbers cannot drift from the shipped artifact.
+The service reports a Low/Medium/High band derived from the **calibrated
+probability of default**, not from the classifier's argmax:
 
-### 7.7 What it contributes to the system
+| Band | Condition |
+|---|---|
+| Low | PD < 0.08 |
+| Medium | 0.08 ≤ PD < 0.22 |
+| High | PD ≥ 0.22 |
+
+Thresholds live in `src/config.py` and can be re-tuned as policy without
+retraining. This is how a real scorecard works — a score plus a cut-off — and
+it measurably outperforms argmax: banding catches **77.7%** of defaults against
+argmax's 61.9%.
+
+`POST /predict` returns `probability_of_default` explicitly alongside the band.
+The three `probabilities` are *outcome* probabilities (clean / delinquent /
+defaulted), keyed by the historical "Low/Medium/High Risk" names so the
+gateway's existing `splitProbabilities()` and the NOT NULL
+`risk_assessments.prob_low/medium/high` columns keep working unchanged.
+
+The band and the outcome distribution can legitimately disagree: an applicant
+may most likely repay cleanly and still carry a 12% chance of default, which is
+a Medium band. That is a cut-off doing its job.
+
+### 7.6.1 Unverifiable and unknown inputs
+
+Two defects found *after* the v2 rebuild, both the same underlying mistake:
+**training and serving were not seeing the same variable.** They are recorded
+here because each was invisible in every aggregate metric — AUC, accuracy and
+calibration all looked healthy throughout — and only surfaced when specific
+adversarial and thin-file inputs were tried by hand.
+
+#### (a) A self-declared bureau score the model trusted completely
+
+`crib_score` is computed from the credit file in the generator, so training
+contained only *coherent* combinations. But there is no CRIB feed: at
+inference the applicant simply types a number. Training therefore taught the
+model that this field is an almost perfect summary of a credit file — true of
+the training variable, false of the production one. Worse, the v2 rebuild had
+concentrated **37.8% of total model gain** into it, up from 8.6% in v1.
+
+Measured, on an applicant with 3 defaults, 6 overdue instalments and 92%
+utilisation — a file implying a score of ~348:
+
+| Declared CRIB | P(default) | Band |
+|---|---|---|
+| 348 (truthful) | 0.8492 | **HIGH** |
+| 900 | 0.0781 | **Low** |
+
+A 90.8% reduction in PD from an unverifiable claim, on a joint input occurring
+**zero times in 150,000 training rows**.
+
+**Fix — model the declaration, not the truth.** The generator now emits a
+*declared* score: ~40% blank, ~40% honest with recall error, ~20% inflated
+(one-sided, because people over-state a score and never under-state it). The
+outcome is still driven by the true score, so the model learns the field is
+unreliable and discounts it. Its gain fell from 37.8% to **2.9%**, ROC-AUC was
+unchanged (0.9195 → 0.9194), and the band no longer moves at any declared
+value.
+
+**Second layer — a gateway plausibility cap.** A bureau score summarises
+exactly the default history declared alongside it, so "3 defaults and a score
+of 900" is self-contradictory rather than merely unlikely.
+`reconcileDeclaredCribScore` caps the claim at what that history could support
+and records the discrepancy for the reviewer (§9.1.6). It only binds when the
+other credit inputs are themselves adverse; an honest applicant is untouched.
+
+One deliberate consequence: an inflated claim that gets capped scores *worse*
+than declaring nothing at all, because the cap is a genuinely low score
+whereas silence is merely unknown. Lying is penalised.
+
+#### (b) Fabricated averages for a customer nobody had observed
+
+Fixing (a) exposed a larger version of the same fault. For a first-time
+applicant the gateway substituted a population average for every behavioural
+field it could not source. **An average is not a neutral statement:**
+`avg_repayment_behaviour = 0.85` asserts the applicant pays reliably;
+`overdue_installments = 0` asserts they are never late. That block carried
+~40% of the model's gain, so every new applicant was credited with exemplary
+conduct nobody had ever observed.
+
+The result: a thin-file applicant declaring **three defaults** scored
+**PD 0.0065 — "Low Risk"**. Only the credit-policy engine stopped them.
+
+**Fix — send missing as missing.** XGBoost's sparsity-aware split finding
+(Chen & Guestrin, 2016, §3.4) learns a default branch direction per split for
+absent values, so it needs no invented substitute. Three changes make that
+usable:
+
+1. `StandardScaler` was dropped for a passthrough — it cannot carry a NaN, and
+   it never helped a tree ensemble anyway (§7.4).
+2. The generator blanks the whole behavioural block on `THIN_FILE_RATE` (55%)
+   of rows, as a unit, **after** the outcome is sampled. Reality is generated
+   from the full truth; only what the lender cannot see is then redacted.
+3. The gateway sends `null` rather than a neutral default, and the API accepts
+   it (§9.1.6).
+
+Verified afterwards on a realistic marginal applicant, against the empirical
+rates in the data itself:
+
+| Declared defaults | Model PD | Band | Actual rate in data |
+|---|---|---|---|
+| 0 | 0.0319 | Low | 2.71% |
+| 1 | 0.0999 | Medium | 10.68% |
+| 2 | 0.2891 | **HIGH** | 31.93% |
+| 3 | 0.6139 | **HIGH** | 63.58% |
+
+An observed-bad file with 3 defaults scores **PD 0.9375** against an empirical
+92.27%. An unknown file scores ~2.8× the PD of an observed-excellent one,
+where previously the two were indistinguishable.
+
+The cost is honest and small: ROC-AUC 0.9194 → **0.9124**, because information
+was genuinely removed from 55% of rows. That is the correct trade — the model
+had been buying accuracy with assertions it had no basis for.
+
+#### A note on testing models
+
+Both defects passed every aggregate metric. What found them was constructing
+specific inputs and asking whether the answer was defensible. One caution
+learned in the process: an initial "failure" turned out to be a badly built
+test case — an applicant saving 47% of income *while* carrying three defaults,
+a combination the causal DGP makes almost impossible (6 rows at two defaults,
+none at three). Checking model output against the **empirical rate for
+comparable rows in the training data** is the reliable arbiter, not intuition
+about what a number ought to be.
+
+### 7.7 Performance
+
+Measured once on the held-out test set (22,500 rows), evaluated 2026-08-08.
+Reported figures regenerate into `model_artifacts/evaluation_report.txt` on
+every retrain, so they cannot drift from the shipped artifact.
+
+| Metric | Value |
+|---|---|
+| **ROC-AUC (macro, one-vs-rest)** | **0.9124** |
+| ROC-AUC (default vs rest) | 0.9615 |
+| Accuracy | 0.8306 |
+| — majority-class baseline | 0.7395 (+9.11 pp) |
+| Weighted F1 | 0.8225 |
+| Calibration MAE across PD deciles | 0.0021 |
+
+**ROC-AUC is the headline, not accuracy.** Accuracy on a 74%-majority dataset
+is a weak claim, and quoting it bare would repeat v1's mistake in a new form.
+AUC measures whether the model *ranks* risk correctly, which is what a
+scorecard is for, and is unaffected by class balance.
+
+**Calibration is the result that matters most for this system**, because the
+gateway prices loans off these probabilities. The top PD decile predicts 0.589
+against an actual default rate of 0.595:
+
+| PD decile | Mean predicted PD | Actual default rate |
+|---|---|---|
+| 8 | 0.0300 | 0.0302 |
+| 9 | 0.0946 | 0.0987 |
+| 10 | 0.5890 | 0.5947 |
+
+At the production operating point:
+
+| Band | Share of book | Actual default rate |
+|---|---|---|
+| Low | 84.7% | 0.99% |
+| Medium | 6.0% | 13.63% |
+| High | 9.3% | 62.40% |
+
+77.7% of defaults are caught in the High band; 11.3% escape into Low, which is
+the expensive error and the honest weakness to discuss. Top features by gain:
+`number_of_defaults` (27.2%), `savings_ratio` (17.8%), `disposable_income`
+(3.5%), `crib_score` (2.9%).
+
+That ordering is itself a result. The model leans hardest on a hard fact the
+applicant volunteers against their own interest, and on affordability computed
+from their stated income and expenses — not on the one field they could freely
+inflate. §7.6.1 explains how it got there.
+
+`tests/` holds 35 pytest cases covering the EMI maths against hand-computed
+values, train/serve consistency of the derived features, the banding
+thresholds, and every dataset invariant v1 violated — so a future edit to the
+generator cannot quietly reintroduce them. v1 shipped with no tests.
+
+### 7.8 The v1 audit — what was wrong, and what it cost
+
+Recorded because the dissertation reports it, and because several defects are
+the kind that stay invisible without deliberately looking for them.
+
+| # | Defect in v1 | Evidence |
+|---|---|---|
+| 1 | Features drawn independently — no correlation structure | `corr(crib_score, number_of_defaults)` = **+0.0011**; with utilisation +0.0044; with income −0.0053 |
+| 2 | Two features were the same number | `debt_to_income_ratio` ≡ `loan_burden_ratio`, corr **1.0**, max difference 5×10⁻¹⁵ |
+| 3 | DTI mis-specified as `loan_amount/(12×income)` | Tenure had **zero** effect: mean risk 0.67 at every tenure from 12 to 84 months; `corr(interest_rate, label)` = −0.003 |
+| 4 | `expense_ratio` was noise by construction | Expenses generated as `income × U(0.45,0.82)`; corr with income **0.0015** |
+| 5 | Incoherent demographics | **12.6%** of rows worked before age 18, incl. a 25-year-old with 37 years' service |
+| 6 | 16 of 34 numeric features inert | \|corr\| < 0.02 with the target |
+| 7 | Label was a recoverable rule | Depth-8 tree on 9 features: **88.42%** vs the 41-feature model's 88.10% |
+| 8 | `Faker('en_IN')` imported | Never called — and the **Indian** locale in a Sri Lanka project. ARCHITECTURE.md cited it as a data source; it never was |
+| 9 | No validation set, early stopping, tests or calibration check | Single 80/20 split, fixed 400 trees, accuracy the only metric |
+
+**The most consequential defect was at the integration boundary, not in the
+model.** `mlClient.service.js` pinned 20 of 35 fields to constants, three of
+which the trained model relied on most:
+
+| Pinned field | Gateway sent | Share of model gain | PD swing if unpinned |
+|---|---|---|---|
+| `number_of_defaults` | `0` | 37.8% | 0.973 |
+| `overdue_installments` | `0` | 4.6% | 0.168 |
+| `credit_utilization` | `30` | 4.1% | 0.391 |
+
+Roughly **46% of the model's decision power was frozen at a fixed value for
+every applicant**, and no amount of retraining could fix it. Measured at a
+decision boundary, 16 of 22 fields moved the prediction by under one
+percentage point across their entire range.
+
+Worse, the two default fields were **swapped**: the application form let a
+customer declare `previous_defaults`, which the model measurably ignored
+(0.00009 swing), while `number_of_defaults` — its single strongest input — was
+hardcoded to zero. A customer stating "I have defaulted three times" changed
+nothing about their score. §9.1.6 covers the fix.
+
+### 7.9 What it contributes to the system
 
 A pure *features-in → risk-out* function (§6.3): the gateway maps a stored
-customer profile (plus optional applicant-declared fields) to the 35 raw
-fields, calls `POST /predict`, and feeds the result into the recommendation
-engine (§9.2) and the Gemini explanation service (§9.3). No CRIB bureau
-integration exists yet — most CRIB/banking-behaviour fields are self-declared
-or fall back to a documented neutral default.
+customer profile, the applicant's declarations, and their **observed repayment
+behaviour with this institution** (§9.1.6) to the raw fields, calls
+`POST /predict`, and feeds the result into the credit policy engine (§9.1.1),
+the decision matrix (§9.1.2), risk-based pricing (§9.1.3) and the Gemini
+explanation service (§9.3).
+
+No CRIB bureau integration exists. The bureau score remains self-declared, and
+the fields that behavioural data cannot supply (`income_stability`,
+`digital_payment_ratio`, `rent`, `province`) still use documented neutral
+defaults — enumerated in each assessment's stored provenance snapshot so the
+gap is visible rather than implied.
 
 ---
 
@@ -552,19 +839,20 @@ sequenceDiagram
     N->>DB: load customer profile
     N->>N: validate request against product limits + customer exposure
     N->>DB: look up each nominated guarantor's OTHER exposure, by NIC
-    N->>N: map profile + declared fields + request → 35 model fields (base rate)
+    N->>DB: derive behavioural credit features from this customer's own accounts
+    N->>N: map profile + behavioural + declared fields + request → model fields (base rate)
     N->>P: POST /predict
-    P-->>N: risk_label + probabilities + model_version
+    P-->>N: probability_of_default + risk band + probabilities + model_version
     N->>N: price interest rate (risk band × product's min/max range)
     N->>N: evaluate credit policy at the PRICED instalment + guarantor/collateral summaries (no model score used)
     N->>N: compute recommendation (type, amount, EMI) at the priced rate
     N->>N: decision matrix (policy verdict x risk band)
-    N->>DB: insert loan_applications (+priced_interest_rate) + risk_assessments (+model_version) + recommendations + credit_policy_evaluations + decision_matrix_evaluations + guarantors/loan_guarantors + collateral_items
+    N->>DB: insert loan_applications (+priced_interest_rate) + risk_assessments (+model_version, +behavioural_snapshot) + recommendations + credit_policy_evaluations + decision_matrix_evaluations + guarantors/loan_guarantors + collateral_items
     N->>DB: auto-reject decides the application + adverse_action_records, if that is the verdict
     N->>G: prompt(risk factors)
     G-->>N: natural-language explanation
     N->>DB: update recommendation with explanation
-    N-->>U: { status, risk, pricing, policy, decision_matrix, adverse_action, recommendation, explanation }
+    N-->>U: { status, risk (incl. probability_of_default), credit_history, pricing, policy, decision_matrix, adverse_action, recommendation, explanation }
 ```
 
 Admin/staff can also call `POST /api/loans/manual-assess` for a standalone
@@ -869,6 +1157,108 @@ migration: `033_guarantors_and_collateral.sql`; tests:
 `src/services/__tests__/collateralGuarantor.test.js` (module) and the
 `creditPolicy.test.js`/`adverseAction.test.js` sections covering the two
 new rules and their reason mappings.
+
+### 9.1.6 Behavioural credit features (deterministic, in Node)
+
+The risk model's strongest inputs had no data source. Because there is no CRIB
+bureau integration, `mlClient.service.js` sent a documented neutral constant
+for every CRIB field on every application — and three of those constants are
+the model's top drivers, together carrying roughly **46% of its total gain**
+(§7.8). Nearly half the model's decision power was pinned to a fixed value for
+every applicant, which is an input problem no amount of retraining fixes.
+
+There is still no bureau feed. But for a customer who has borrowed from this
+institution before, we hold the same facts first-hand:
+
+| Model field | Derived from |
+|---|---|
+| `number_of_defaults` | `loan_accounts.status = 'written_off'` — see the caveat below |
+| `overdue_installments` | `repayment_schedule` rows past due with anything outstanding |
+| `historical_delinquencies` | instalments ever settled after their `due_date` |
+| `active_facilities` / `settled_loans` / `existing_loans` | `loan_accounts` by status |
+| `credit_utilization` | outstanding ÷ scheduled principal, live facilities only |
+| `avg_repayment_behaviour` | share of concluded instalments settled on time |
+| `credit_inquiry_count` | applications ever submitted |
+| `highest_outstanding_balance` | largest principal ever advanced |
+
+This is the **application-scoring vs. behavioural-scoring** distinction from
+the credit literature: a new applicant is judged on declared attributes, an
+existing customer additionally on observed conduct.
+
+**Caveat on `number_of_defaults`.** It is derived from
+`loan_accounts.status = 'written_off'`, and no workflow in this system
+currently sets that status, so in practice it resolves to 0 and the model's
+strongest input still rests on the applicant's declaration. The wiring is
+correct and starts producing real values the moment a write-off flow exists.
+Every other behavioural feature in the table above fires on real data today.
+
+**A thin file is a normal state, not an error — and it is sent as `null`.**
+A first-time borrower has nothing to observe, and the gateway says exactly
+that rather than substituting a population average. This matters more than it
+sounds: an average is not a neutral statement, and filling the block with one
+previously let an applicant declaring three defaults score "Low Risk" (§7.6.1).
+The model is trained with the same fields absent at the same rate and learns a
+default branch for them, so `null` reads as *unknown*, not as *fine*. The
+assessment is also flagged `is_thin_file`, because "no defaults recorded" and
+"no record" render identically on screen and must not be confused — without
+the flag, *absence of evidence of problems* reads as *evidence of no problems*.
+
+Fields with a genuine real-world zero are **not** nulled: `guarantor_exposure: 0`
+means no guarantee was pledged, which is a fact, not an absence of information.
+
+**Rates are shrunk, counts are not, and nothing is invented.** Where a record
+exists but is short, rate-style measures are blended toward the neutral prior
+in proportion to the evidence behind them (`shrunk = (n·observed + k·prior) /
+(n + k)`, k = 6) — a customer two instalments in is weak evidence, not no
+evidence, and confidence should grow smoothly rather than flip at a cut-off.
+Where *nothing* has concluded, the value is `null`: there is nothing to shrink,
+and a prior would be pure invention. Utilisation is never shrunk at all — it is
+the exact utilisation of the facilities held, not a noisy estimate of some
+underlying rate, and damping a fact toward a prior would understate a genuinely
+maxed-out borrower. A recorded write-off is likewise never softened.
+Punctuality is judged
+against **concluded** instalments only: a loan three months into a five-year
+term has 57 instalments that are neither late nor on time yet, and counting
+them as on-time would manufacture a spotless record out of a loan that has
+barely started.
+
+**Precedence, weakest to strongest:** neutral default → behavioural
+observation → applicant declaration → hard profile fact. A declaration beats an
+observation because the applicant can see facilities at *other* institutions
+that our own record cannot; our history is a lower bound on theirs, never the
+whole picture.
+
+**The `previous_defaults` fix.** v1 let the applicant declare
+`previous_defaults` — a field the model measurably ignored — while
+`number_of_defaults`, its single strongest input, was hardcoded to zero. The
+declared value now maps onto `number_of_defaults`, combined with our own
+written-off facilities by **taking the worse of the two, never the sum**:
+summing would double-count a charge-off the customer had already declared.
+Verified end-to-end, two applicants with an identical loan request and opposite
+credit declarations now score PD 0.0008 against 0.4915 — a 629× difference,
+and the impaired application is auto-rejected by the decision matrix. Under v1
+the declaration moved the score by 0.00009.
+
+**The evidence is snapshotted, not recomputed.** `risk_assessments.behavioural_snapshot`
+(migration 043) freezes what the model was shown at the moment it scored the
+application. Recomputing on read would show a reviewer today's repayment record
+beside a decision that never saw it — the same reasoning `loan_offers` (023)
+and `adverse_action_records` (032) already follow. It is stored as JSON because
+it is diagnostic provenance read as a whole, never filtered or joined on, and
+nothing in the application logic branches on its contents. NULL for assessments
+made before this existed, which is accurate rather than a gap.
+
+The snapshot also names the fields that remain assumptions even for a customer
+with full history — `income_stability`, `digital_payment_ratio`, `rent`,
+`province` — so the remaining gap is explicit rather than implied by absence.
+The staff review panel renders all of this as an "Evidence behind this score"
+note beside the probability of default.
+
+Implementation: `finance-backend/src/services/behaviouralFeatures.service.js`
+and `loanModel.findBorrowerCreditHistory`; migration:
+`043_behavioural_credit_snapshot.sql`; tests:
+`src/services/__tests__/behaviouralFeatures.test.js` (31 assertions, covering
+source precedence, shrinkage, and the `previous_defaults` defect).
 
 ### 9.2 Recommendation engine (deterministic, in Node)
 - **EMI (reducing balance):** `EMI = P·r·(1+r)^n / ((1+r)^n − 1)`, `r = annual% / 12 / 100`, `n = tenure_months`. Zero-interest is a straight-line special case.
@@ -2122,7 +2512,7 @@ correctly with no webhook configured at all.
 - **Repayment frequency is monthly-only** — there is no weekly or fortnightly instalment option anywhere in the amortization or scheduling logic (§9.14).
 - **No co-borrower / joint applications** — the schema and every workflow assume exactly one applicant per loan throughout.
 - **No loan top-up, restructuring, or refinancing** — an existing disbursed loan cannot be topped up, have its terms renegotiated, or be refinanced; the only paths out of `active` are scheduled repayment, early settlement, or (structurally possible but never triggered — see next point) write-off.
-- **`written_off` exists in the schema but nothing ever sets it** — `loan_accounts.status` includes `written_off` as a legal value, but no workflow, endpoint, or scheduled job currently transitions an account into it; a genuinely uncollectable loan has no formal write-off path today.
+- **`written_off` exists in the schema but nothing ever sets it** — `loan_accounts.status` includes `written_off` as a legal value, but no workflow, endpoint, or scheduled job currently transitions an account into it; a genuinely uncollectable loan has no formal write-off path today. **This limits §9.1.6:** behavioural `number_of_defaults` is derived from exactly that status, so in practice it is always 0 and the model's strongest input still relies on the applicant's own declaration. The other behavioural features (arrears, delinquency history, utilisation, punctuality) are unaffected and do fire on real data. Building a write-off flow would activate this one with no further change to the risk pipeline.
 - **Card payment is the only self-service repayment channel** — a customer can pay online by card (§9.15) or have staff record any other method; there is no "I paid by bank transfer, here's my slip" self-reported-and-staff-verified path, distinct from a card payment staff never has to verify.
 - **Guarantor consent is not captured** — an applicant names a guarantor and the system tracks that guarantor's exposure (§9.1.5/D5), but the guarantor themselves is never notified or asked to confirm they agreed to be named.
 - **No maker-checker (dual authorisation)** — a single staff member's approval, offer, or disbursement action is final; there is no second-reviewer sign-off step for high-value decisions.

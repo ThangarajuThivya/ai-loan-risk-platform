@@ -1,0 +1,69 @@
+feature,gain
+number_of_defaults,0.27151012
+savings_ratio,0.17761835
+disposable_income,0.03511703
+crib_score,0.028866393
+guarantor_defaults,0.028473105
+avg_bank_balance,0.023576254
+avg_repayment_behaviour,0.019179337
+repayment_consistency_score,0.018578133
+debt_to_income_ratio,0.016578564
+credit_utilization,0.01607096
+financial_stability_score,0.014612424
+guarantor_risk_score,0.013910157
+loan_tenure_months,0.009602523
+income_stability,0.00944044
+historical_delinquencies,0.0089830775
+years_employed,0.008298539
+marital_status_Married,0.008291499
+loan_amount,0.008010185
+expense_ratio,0.0076841475
+employment_type_Permanent,0.0075428938
+marital_status_Single,0.0074031586
+employment_type_Contract,0.0071569276
+employment_type_Self-Employed,0.007097173
+overdue_installments,0.007074673
+loan_restructuring_history,0.0068105618
+employment_type_Government,0.006652838
+settled_loans,0.006494823
+guarantor_exposure,0.006302791
+emi,0.0059900177
+credit_inquiry_count,0.00596998
+province_Western,0.0058753095
+age,0.0058744783
+interest_rate,0.005737529
+employer_category_Startup,0.005704685
+education_level_Master or Higher,0.005704019
+highest_outstanding_balance,0.005667365
+marital_status_Divorced,0.0056312648
+rent,0.005616934
+monthly_salary,0.0055935825
+province_Uva,0.005576725
+province_Central,0.005558972
+occupation_Driver,0.005555562
+province_Sabaragamuwa,0.005533539
+province_North Central,0.0055041187
+monthly_expenses,0.00548077
+employer_category_Other,0.0054697497
+additional_income,0.005404566
+occupation_Private Sector,0.0053606024
+employer_category_Large Corporate,0.0053125033
+province_North Western,0.005284029
+education_level_O/L,0.0052724304
+occupation_IT/Tech,0.00525438
+province_Southern,0.0052481266
+digital_payment_ratio,0.0052452697
+education_level_Below O/L,0.0052226605
+employer_category_Government,0.0052117766
+existing_loans,0.005163558
+active_facilities,0.005157789
+province_Eastern,0.005111624
+province_Northern,0.0050965743
+occupation_Teacher,0.004926001
+occupation_Government,0.0049082246
+occupation_Other,0.0048022196
+education_level_A/L,0.004797517
+occupation_Business Owner,0.0046330746
+education_level_Bachelor,0.004579668
+employer_category_SME,0.0045795636
+occupation_Garment,0.004446119

@@ -2,9 +2,10 @@ pandas
 numpy
 scikit-learn
 xgboost
-lightgbm
-faker
 joblib
 fastapi
 uvicorn
 python-multipart
+pydantic
+pytest
+httpx
