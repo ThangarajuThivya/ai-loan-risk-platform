@@ -559,6 +559,7 @@
       "accountMaturity": "අවසන් වාරිකය ගෙවිය යුතු දිනය",
       "accountClosedOn": "මෙම ණය {{date}} දින වසා දමන ලදී.",
       "viewSchedule": "ආපසු ගෙවීමේ කාලසටහන බලන්න",
+      "scheduleModalTitle": "සම්පූර්ණ ආපසු ගෙවීමේ කාලසටහන",
       "scheduleLoadError": "ආපසු ගෙවීමේ කාලසටහන පූරණය කළ නොහැකි විය.",
       "scheduleNo": "#",
       "scheduleDueDate": "ගෙවිය යුතු දිනය",

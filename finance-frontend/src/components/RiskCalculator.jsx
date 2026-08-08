@@ -9,10 +9,10 @@ import {
   Sparkles,
   Wallet,
   Percent,
-  HelpCircle,
   Loader2,
   Info,
   RotateCcw,
+  X,
 } from "lucide-react";
 
 import api from "../api/axios";
@@ -50,8 +50,8 @@ const FORM_TABS = [
 function YesNoField({ label, hint, value, onChange, yesLabel = "Yes", noLabel = "No" }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
-      {hint && <p className="text-[11px] text-slate-400 mb-2">{hint}</p>}
+      <label className="block text-xs font-semibold text-slate-700 mb-1">{label}</label>
+      {hint && <p className="text-[11px] text-slate-400 mb-1.5">{hint}</p>}
       <div className="flex gap-2">
         {[
           { key: "yes", label: yesLabel },
@@ -61,7 +61,7 @@ function YesNoField({ label, hint, value, onChange, yesLabel = "Yes", noLabel = 
             key={opt.key}
             type="button"
             onClick={() => onChange(opt.key)}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-colors ${
+            className={`flex-1 px-4 py-2 rounded-xl text-xs font-semibold border transition-colors ${
               value === opt.key
                 ? "bg-brand-primary text-white border-brand-primary"
                 : "bg-white text-slate-600 border-slate-200 hover:border-brand-primary"
@@ -78,14 +78,14 @@ function YesNoField({ label, hint, value, onChange, yesLabel = "Yes", noLabel = 
 function SelectField({ label, value, onChange, options, placeholder, required }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+      <label className="block text-xs font-semibold text-slate-700 mb-1">
         {label} {required && <span className="text-rose-500">*</span>}
       </label>
       <select
         required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-white"
+        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-white"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((o) => (
@@ -98,10 +98,10 @@ function SelectField({ label, value, onChange, options, placeholder, required })
   );
 }
 
-function NumberField({ label, value, onChange, min, max, placeholder, required }) {
+function NumberField({ label, value, onChange, min, max, step, placeholder, required }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+      <label className="block text-xs font-semibold text-slate-700 mb-1">
         {label} {required && <span className="text-rose-500">*</span>}
       </label>
       <input
@@ -109,10 +109,18 @@ function NumberField({ label, value, onChange, min, max, placeholder, required }
         required={required}
         min={min}
         max={max}
+        // A plain <input type="number"> defaults to step="1", so a decimal
+        // like an interest rate of 14.5 silently fails native HTML5
+        // validation on submit — the browser blocks the form's submit event
+        // entirely, with no visible error unless the field happens to be
+        // focused when the browser draws its own validation tooltip. "any"
+        // is the correct default here: none of this form's numeric fields
+        // are meant to be constrained to whole numbers.
+        step={step ?? "any"}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
       />
     </div>
   );
@@ -121,14 +129,14 @@ function NumberField({ label, value, onChange, min, max, placeholder, required }
 function TextField({ label, value, onChange, placeholder, maxLength }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-slate-700 mb-1">{label}</label>
       <input
         type="text"
         maxLength={maxLength}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
       />
     </div>
   );
@@ -261,6 +269,23 @@ export default function RiskCalculator() {
     };
   }, []);
 
+  // Close the result modal WITHOUT touching the form — staff routinely tweak
+  // one figure (e.g. the requested amount) and re-run rather than starting
+  // over, so dismissing the result must not discard what they just typed.
+  // "New Assessment" (resetForm) is the deliberate, explicit way to clear
+  // everything instead.
+  const closeResult = () => setResult(null);
+
+  // Esc closes the result modal the same way the backdrop click does.
+  useEffect(() => {
+    if (!result) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closeResult();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [result]);
+
   const handleSelectProduct = (id) => {
     setProductId(id);
     const product = products.find((p) => String(p.id) === id);
@@ -337,31 +362,39 @@ export default function RiskCalculator() {
   const RiskIcon = riskStyle?.icon;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      {/* Form */}
-      <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
+    <div className="w-full">
+      {/* Form — fills the full content width (sidebar/header untouched by
+          this component; they live in the parent admin/staff shell). The
+          result now renders in a modal instead of a side column, so this no
+          longer needs to share horizontal space with a panel that used to
+          sit empty ("Awaiting Input") for most of a working day — and with
+          that space back, each tab lays its fields out in more columns
+          instead of stacking them, so a tab is a glance, not a scroll. */}
+      <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
         <div className="flex items-start justify-between gap-3 mb-1">
-          <h3 className="font-display font-bold text-lg text-slate-900 flex items-center gap-2">
-            <Calculator className="w-5 h-5 text-brand-primary" />
+          <h3 className="font-display font-bold text-xl text-slate-900 flex items-center gap-2">
+            <Calculator className="w-6 h-6 text-brand-primary" />
             Risk Calculator
           </h3>
           <button
             type="button"
             onClick={resetForm}
-            className="shrink-0 flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 hover:text-brand-primary transition-colors"
+            className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-brand-primary transition-colors"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4" />
             Reset
           </button>
         </div>
-        <p className="text-xs text-slate-500 mb-6">
+        <p className="text-sm text-slate-500 mb-5">
           Enter an applicant's details manually to get an instant, indicative
           risk assessment. Nothing here is saved as a real application.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Tab bar */}
-          <div className="flex gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-xl">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Tab bar — capped to a comfortable reading width even though the
+              form itself now spans the full page, so the three labels don't
+              stretch into three barely-there slivers on a wide monitor. */}
+          <div className="flex gap-1.5 p-1 bg-slate-50 border border-slate-200 rounded-xl max-w-xl">
             {FORM_TABS.map((tab) => {
               const hasData =
                 tab.id === "employment" ? employmentHasData : tab.id === "credit" ? creditHasData : false;
@@ -371,7 +404,7 @@ export default function RiskCalculator() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveFormTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-semibold text-center transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-center transition-colors ${
                     isActive
                       ? "bg-white text-brand-primary shadow-sm"
                       : "text-slate-500 hover:text-slate-700"
@@ -395,50 +428,52 @@ export default function RiskCalculator() {
               transition={{ duration: 0.15 }}
             >
               {activeFormTab === "core" && (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
                       Applicant Profile
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                       <NumberField label="Age" min="18" max="100" placeholder="e.g. 34" value={age} onChange={setAge} required />
                       <SelectField label="Gender" value={gender} onChange={setGender} options={GENDER_OPTIONS} placeholder="Select" required />
-                      <div className="col-span-2">
-                        <SelectField label="Employment Type" value={employmentType} onChange={setEmploymentType} options={EMPLOYMENT_TYPE_OPTIONS} placeholder="Select" required />
-                      </div>
+                      <SelectField label="Employment Type" value={employmentType} onChange={setEmploymentType} options={EMPLOYMENT_TYPE_OPTIONS} placeholder="Select" required />
                       <NumberField label="Monthly Income (LKR)" min="0" placeholder="e.g. 150000" value={monthlyIncome} onChange={setMonthlyIncome} required />
                       <NumberField label="Monthly Expenses (LKR)" min="0" placeholder="e.g. 80000" value={monthlyExpense} onChange={setMonthlyExpense} required />
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-3 mt-4">
+                  <div className="pt-1 border-t border-slate-100">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3 mt-4">
                       Loan Request
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                          Loan Product{" "}
-                          <span className="text-slate-400 font-normal normal-case">
-                            (optional — prefills the rate below)
-                          </span>
-                        </label>
-                        <select
-                          value={productId}
-                          onChange={(e) => handleSelectProduct(e.target.value)}
-                          disabled={productsLoading}
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-white disabled:opacity-60"
-                        >
-                          <option value="">
-                            {productsLoading ? "Loading products…" : "None — enter a rate manually"}
+                    {/* Loan Product gets its own full-width row — product
+                        names plus their rate ranges run long, and truncating
+                        them into a shared column would defeat the point of
+                        listing the rate at all. */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Loan Product{" "}
+                        <span className="text-slate-400 font-normal normal-case">
+                          (optional — prefills the rate below)
+                        </span>
+                      </label>
+                      <select
+                        value={productId}
+                        onChange={(e) => handleSelectProduct(e.target.value)}
+                        disabled={productsLoading}
+                        className="w-full max-w-xl px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary bg-white disabled:opacity-60"
+                      >
+                        <option value="">
+                          {productsLoading ? "Loading products…" : "None — enter a rate manually"}
+                        </option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.interest_rate}% {p.rate_type})
                           </option>
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} ({p.interest_rate}% {p.rate_type})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <NumberField label="Requested Amount (LKR)" min="1" placeholder="e.g. 2500000" value={requestedAmount} onChange={setRequestedAmount} required />
                       <NumberField label="Tenure (months)" min="1" placeholder="e.g. 36" value={tenureMonths} onChange={setTenureMonths} required />
                       <NumberField label="Interest Rate (%)" min="0" max="60" placeholder="e.g. 14.5" value={interestRate} onChange={setInterestRate} required />
@@ -449,56 +484,101 @@ export default function RiskCalculator() {
               )}
 
               {activeFormTab === "employment" && (
-                <div className="space-y-4">
-                  <p className="text-xs text-slate-500">
+                <div className="space-y-6">
+                  <p className="text-sm text-slate-500">
                     Optional — improves the model's accuracy but isn't required to run an assessment.
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <SelectField label="Marital Status" value={maritalStatus} onChange={setMaritalStatus} options={MARITAL_STATUS_OPTIONS} placeholder="Unknown" />
-                    <SelectField label="Education Level" value={educationLevel} onChange={setEducationLevel} options={EDUCATION_LEVEL_OPTIONS} placeholder="Unknown" />
-                    <SelectField label="Occupation" value={occupation} onChange={setOccupation} options={OCCUPATION_OPTIONS} placeholder="Unknown" />
-                    <SelectField label="Employer Category" value={employerCategory} onChange={setEmployerCategory} options={EMPLOYER_CATEGORY_OPTIONS} placeholder="Unknown" />
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
+                      Personal Background
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      <SelectField label="Marital Status" value={maritalStatus} onChange={setMaritalStatus} options={MARITAL_STATUS_OPTIONS} placeholder="Unknown" />
+                      <SelectField label="Education Level" value={educationLevel} onChange={setEducationLevel} options={EDUCATION_LEVEL_OPTIONS} placeholder="Unknown" />
+                      <SelectField label="Occupation" value={occupation} onChange={setOccupation} options={OCCUPATION_OPTIONS} placeholder="Unknown" />
+                    </div>
                   </div>
-                  <NumberField label="Years With Current Employer" min="0" max="50" placeholder="e.g. 5" value={yearsEmployed} onChange={setYearsEmployed} />
+                  <div className="pt-1 border-t border-slate-100">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3 mt-4">
+                      Employment Details
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      <SelectField label="Employer Category" value={employerCategory} onChange={setEmployerCategory} options={EMPLOYER_CATEGORY_OPTIONS} placeholder="Unknown" />
+                      <NumberField label="Years With Current Employer" min="0" max="50" placeholder="e.g. 5" value={yearsEmployed} onChange={setYearsEmployed} />
+                    </div>
+                  </div>
                 </div>
               )}
 
               {activeFormTab === "credit" && (
-                <div className="space-y-4">
-                  <p className="text-xs text-slate-500">
+                <div className="space-y-6">
+                  <p className="text-sm text-slate-500">
                     Optional — self-declared credit history and guarantor exposure.
                   </p>
 
-                  <YesNoField label="Any income besides the main salary?" value={hasAdditionalIncome} onChange={setHasAdditionalIncome} />
-                  {hasAdditionalIncome === "yes" && (
-                    <NumberField label="Additional Monthly Income (LKR)" min="0" placeholder="e.g. 20000" value={additionalIncome} onChange={setAdditionalIncome} />
-                  )}
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
+                      Credit History &amp; Guarantor
+                    </span>
+                    {/* Five independent yes/no questions (including guarantor
+                        status itself, which only grows a third column when
+                        answered "yes") laid out three-per-row on wide screens
+                        instead of stacked one-per-row, so answering every
+                        optional question at once still fits one screen —
+                        verified directly, since this tab's worst case is
+                        exactly that: every question answered and every
+                        cascade, including the guarantor's own nested one,
+                        expanded simultaneously. */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                      <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+                        <YesNoField label="Any income besides the main salary?" value={hasAdditionalIncome} onChange={setHasAdditionalIncome} />
+                        {hasAdditionalIncome === "yes" && (
+                          <NumberField label="Additional Monthly Income (LKR)" min="0" placeholder="e.g. 20000" value={additionalIncome} onChange={setAdditionalIncome} />
+                        )}
+                      </div>
 
-                  <YesNoField label="Any other active loans?" value={hasExistingLoans} onChange={setHasExistingLoans} />
-                  {hasExistingLoans === "yes" && (
-                    <NumberField label="How many?" min="1" max="20" placeholder="e.g. 1" value={existingLoans} onChange={setExistingLoans} />
-                  )}
+                      <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+                        <YesNoField label="Any other active loans?" value={hasExistingLoans} onChange={setHasExistingLoans} />
+                        {hasExistingLoans === "yes" && (
+                          <NumberField label="How many?" min="1" max="20" placeholder="e.g. 1" value={existingLoans} onChange={setExistingLoans} />
+                        )}
+                      </div>
 
-                  <YesNoField label="Any previous loan defaults?" value={hasPreviousDefaults} onChange={setHasPreviousDefaults} />
-                  {hasPreviousDefaults === "yes" && (
-                    <NumberField label="How many times?" min="1" max="20" placeholder="e.g. 1" value={previousDefaults} onChange={setPreviousDefaults} />
-                  )}
+                      <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+                        <YesNoField label="Any previous loan defaults?" value={hasPreviousDefaults} onChange={setHasPreviousDefaults} />
+                        {hasPreviousDefaults === "yes" && (
+                          <NumberField label="How many times?" min="1" max="20" placeholder="e.g. 1" value={previousDefaults} onChange={setPreviousDefaults} />
+                        )}
+                      </div>
 
-                  <YesNoField label="Currently a guarantor for someone else's loan?" value={isGuarantor} onChange={setIsGuarantor} />
-                  {isGuarantor === "yes" && (
-                    <>
-                      <NumberField label="Outstanding Exposure (LKR)" min="0" placeholder="e.g. 500000" value={guarantorExposure} onChange={setGuarantorExposure} />
-                      <YesNoField label="Has that guarantee ever been called on?" value={guarantorCalled} onChange={setGuarantorCalled} />
-                      {guarantorCalled === "yes" && (
-                        <NumberField label="How many times?" min="1" max="10" placeholder="e.g. 1" value={guarantorDefaults} onChange={setGuarantorDefaults} />
+                      <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+                        <YesNoField label="Do you know their CRIB score?" hint="Only if actually known — otherwise leave blank." value={knowsCribScore} onChange={setKnowsCribScore} />
+                        {knowsCribScore === "yes" && (
+                          <NumberField label="CRIB Score" min="300" max="900" placeholder="e.g. 720" value={cribScore} onChange={setCribScore} />
+                        )}
+                      </div>
+
+                      <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+                        <YesNoField label="Currently a guarantor for someone else's loan?" value={isGuarantor} onChange={setIsGuarantor} />
+                        {isGuarantor === "yes" && (
+                          <NumberField label="Outstanding Exposure (LKR)" min="0" placeholder="e.g. 500000" value={guarantorExposure} onChange={setGuarantorExposure} />
+                        )}
+                      </div>
+
+                      {/* Only appears once there IS a guarantee to ask about —
+                          the second half of the same question, kept as its own
+                          cell so the grid can place it wherever there's room
+                          rather than forcing a full-width break. */}
+                      {isGuarantor === "yes" && (
+                        <div className="space-y-3 p-4 bg-slate-50/70 border border-slate-100 rounded-2xl">
+                          <YesNoField label="Has that guarantee ever been called on?" value={guarantorCalled} onChange={setGuarantorCalled} />
+                          {guarantorCalled === "yes" && (
+                            <NumberField label="How many times?" min="1" max="10" placeholder="e.g. 1" value={guarantorDefaults} onChange={setGuarantorDefaults} />
+                          )}
+                        </div>
                       )}
-                    </>
-                  )}
-
-                  <YesNoField label="Do you know their CRIB score?" hint="Only fill this in if it's actually known — otherwise leave it blank." value={knowsCribScore} onChange={setKnowsCribScore} />
-                  {knowsCribScore === "yes" && (
-                    <NumberField label="CRIB Score" min="300" max="900" placeholder="e.g. 720" value={cribScore} onChange={setCribScore} />
-                  )}
+                    </div>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -546,146 +626,164 @@ export default function RiskCalculator() {
         </form>
       </div>
 
-      {/* Result */}
-      <div className="lg:col-span-6">
-        <AnimatePresence mode="wait">
-          {!result && !submitting && (
-            <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-8 rounded-3xl text-center flex flex-col justify-center items-center h-full min-h-[400px]">
-              <HelpCircle className="w-12 h-12 text-slate-300 mb-4" />
-              <h4 className="font-display font-bold text-lg text-slate-600">
-                Awaiting Input
-              </h4>
-              <p className="text-slate-500 text-xs max-w-sm mt-2 leading-relaxed">
-                Fill in the applicant profile and loan request, then run the
-                assessment to get a live risk band, recommendation, and
-                explanation.
-              </p>
-            </div>
-          )}
-
-          {submitting && (
-            <div className="bg-white border border-slate-100 shadow-sm p-8 rounded-3xl text-center flex flex-col justify-center items-center h-full min-h-[400px]">
-              <div className="relative mb-6">
-                <div className="w-16 h-16 bg-brand-primary/10 rounded-full animate-ping absolute" />
-                <div className="w-16 h-16 bg-brand-primary/20 rounded-full flex items-center justify-center relative">
-                  <Sparkles className="w-8 h-8 text-brand-primary animate-pulse" />
-                </div>
-              </div>
-              <h4 className="font-display font-bold text-lg text-slate-800">
-                Assessing Risk
-              </h4>
-              <p className="text-slate-500 text-xs max-w-sm mt-2 leading-relaxed animate-pulse">
-                Running the risk model and building a recommendation…
-              </p>
-            </div>
-          )}
-
-          {result && !submitting && (
+      {/* Result modal — appears after a successful submit instead of a
+          side-by-side panel. The old two-column layout pushed the risk band,
+          probabilities, recommendation and AI explanation below the fold on
+          anything short of a tall desktop screen, and left an empty
+          "Awaiting Input" placeholder taking up half the page the rest of
+          the time. A sticky header (verdict always visible) and sticky
+          footer (actions always reachable) bracket a scrollable body, so
+          nothing needed to read the result — or to get back out — is ever
+          scrolled away at once. */}
+      <AnimatePresence>
+        {result && !submitting && (
+          <motion.div
+            key="risk-result-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={closeResult}
+          >
             <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white border border-slate-100 shadow-md p-6 sm:p-8 rounded-3xl space-y-6"
+              initial={{ opacity: 0, scale: 0.96, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 10 }}
+              transition={{ duration: 0.18 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col"
             >
-              <div className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] text-slate-500">
-                <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
-                Indicative estimate only — nothing has been saved.
+              {/* Header — the headline verdict, never scrolls. */}
+              <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`${riskStyle?.iconWrap} text-white p-2 rounded-full shrink-0`}>
+                    {RiskIcon && <RiskIcon className="w-5 h-5" />}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-display font-bold text-base text-slate-900 truncate">
+                      Risk Assessment Result
+                    </h3>
+                    <span
+                      className={`inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase border ${riskStyle?.badge}`}
+                    >
+                      {result.risk?.category}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeResult}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="p-4 rounded-2xl border flex items-center space-x-3 border-slate-100 bg-slate-50">
-                <div className={`${riskStyle?.iconWrap} text-white p-2 rounded-full shrink-0`}>
-                  {RiskIcon && <RiskIcon className="w-6 h-6" />}
+              {/* Body — everything else, scrolls internally within the
+                  modal's own bounded height rather than the page. */}
+              <div className="px-6 py-5 space-y-6 overflow-y-auto">
+                <div className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] text-slate-500">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+                  Indicative estimate only — nothing has been saved.
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-display font-bold text-sm text-slate-900 uppercase">
-                    {result.risk?.category}
-                  </h4>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${riskStyle?.badge}`}>
-                  {result.risk?.category}
-                </span>
-              </div>
 
-              <div className="space-y-3">
-                <span className="text-[10px] text-slate-400 block uppercase font-semibold tracking-wider">
-                  Risk Probabilities
-                </span>
-                {Object.entries(result.risk?.probabilities || {}).map(([label, prob]) => {
-                  const idx = label === "Low Risk" ? 0 : label === "Medium Risk" ? 1 : 2;
-                  return (
-                    <div key={label}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-600">{label}</span>
-                        <span className="font-mono font-semibold text-slate-800">{formatPercent(prob)}</span>
+                <div className="space-y-3">
+                  <span className="text-[10px] text-slate-400 block uppercase font-semibold tracking-wider">
+                    Risk Probabilities
+                  </span>
+                  {Object.entries(result.risk?.probabilities || {}).map(([label, prob]) => {
+                    const idx = label === "Low Risk" ? 0 : label === "Medium Risk" ? 1 : 2;
+                    return (
+                      <div key={label}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-slate-600">{label}</span>
+                          <span className="font-mono font-semibold text-slate-800">{formatPercent(prob)}</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.round(Number(prob || 0) * 100)}%` }}
+                            transition={{ duration: 0.6 }}
+                            className={`h-full ${RISK_STYLES[idx].bar}`}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.round(Number(prob || 0) * 100)}%` }}
-                          transition={{ duration: 0.6 }}
-                          className={`h-full ${RISK_STYLES[idx].bar}`}
-                        />
-                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="flex items-center space-x-1.5 text-slate-400 mb-1.5">
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase font-semibold tracking-wider">Recommended Amount</span>
                     </div>
-                  );
-                })}
+                    <span className="text-sm font-bold text-slate-800 font-mono">
+                      {formatCurrency(result.recommendation?.recommended_amount)}
+                    </span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="flex items-center space-x-1.5 text-slate-400 mb-1.5">
+                      <Percent className="w-3.5 h-3.5" />
+                      <span className="text-[10px] uppercase font-semibold tracking-wider">Recommended EMI</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-800 font-mono">
+                      {formatCurrency(result.recommendation?.recommended_emi)} / mo
+                    </span>
+                  </div>
+                </div>
+
+                {result.recommendation?.loan_type && (
+                  <div className="text-xs text-slate-500">
+                    Suggested loan type:{" "}
+                    <span className="font-semibold text-slate-700">{result.recommendation.loan_type}</span>
+                  </div>
+                )}
+
+                {/* The what-if check runs the same policy engine as a real
+                    application, so staff see whether the prospect would clear
+                    the mandatory criteria and not just how the model scores
+                    them. Nothing here is persisted. */}
+                <CreditPolicyPanel policy={result.policy} detailed />
+
+                {result.explanation && (
+                  <div className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4 flex items-start space-x-3">
+                    <Sparkles className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-brand-primary uppercase tracking-wider">AI Explanation</h4>
+                      <p className="text-xs text-slate-700 mt-1 leading-relaxed">{result.explanation}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="flex items-center space-x-1.5 text-slate-400 mb-1.5">
-                    <Wallet className="w-3.5 h-3.5" />
-                    <span className="text-[10px] uppercase font-semibold tracking-wider">Recommended Amount</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-800 font-mono">
-                    {formatCurrency(result.recommendation?.recommended_amount)}
-                  </span>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <div className="flex items-center space-x-1.5 text-slate-400 mb-1.5">
-                    <Percent className="w-3.5 h-3.5" />
-                    <span className="text-[10px] uppercase font-semibold tracking-wider">Recommended EMI</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-800 font-mono">
-                    {formatCurrency(result.recommendation?.recommended_emi)} / mo
-                  </span>
-                </div>
+              {/* Footer — always reachable regardless of how long the body
+                  above runs. "Close" keeps the form exactly as filled in, for
+                  the common case of tweaking one figure and re-running;
+                  "New Assessment" is the explicit, separate action for
+                  clearing everything before the next applicant. */}
+              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-slate-100 shrink-0">
+                <button
+                  type="button"
+                  onClick={closeResult}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex items-center justify-center gap-1.5 border border-slate-200 text-slate-600 hover:border-brand-primary hover:text-brand-primary px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  New Assessment
+                </button>
               </div>
-
-              {result.recommendation?.loan_type && (
-                <div className="text-xs text-slate-500">
-                  Suggested loan type:{" "}
-                  <span className="font-semibold text-slate-700">{result.recommendation.loan_type}</span>
-                </div>
-              )}
-
-              {/* The what-if check runs the same policy engine as a real
-                  application, so staff see whether the prospect would clear
-                  the mandatory criteria and not just how the model scores
-                  them. Nothing here is persisted. */}
-              <CreditPolicyPanel policy={result.policy} detailed />
-
-              {result.explanation && (
-                <div className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4 flex items-start space-x-3">
-                  <Sparkles className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-brand-primary uppercase tracking-wider">AI Explanation</h4>
-                    <p className="text-xs text-slate-700 mt-1 leading-relaxed">{result.explanation}</p>
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={resetForm}
-                className="w-full flex items-center justify-center gap-1.5 border border-slate-200 text-slate-600 hover:border-brand-primary hover:text-brand-primary py-3 rounded-xl text-sm font-semibold transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                New Assessment
-              </button>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

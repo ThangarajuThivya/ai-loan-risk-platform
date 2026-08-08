@@ -558,6 +558,7 @@
       "accountMaturity": "Final Instalment Due",
       "accountClosedOn": "This loan was closed on {{date}}.",
       "viewSchedule": "View repayment schedule",
+      "scheduleModalTitle": "Full Repayment Schedule",
       "scheduleLoadError": "Couldn't load the repayment schedule.",
       "scheduleNo": "#",
       "scheduleDueDate": "Due",

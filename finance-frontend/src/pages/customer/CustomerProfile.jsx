@@ -170,9 +170,9 @@ export default function CustomerProfile() {
 
   return (
     <div className="pb-16 px-4 sm:px-6 lg:px-8 pt-6 bg-brand-bg min-h-screen">
-    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-4 max-w-6xl mx-auto">
       {/* Identity summary — fixed after registration */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+      <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-5 items-center">
         <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-brand-primary to-brand-secondary text-white flex items-center justify-center text-2xl font-black shadow-lg shrink-0">
           {(profile?.first_name?.[0] || "").toUpperCase()}
           {(profile?.last_name?.[0] || "").toUpperCase()}
@@ -216,64 +216,71 @@ export default function CustomerProfile() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         {/* Editable contact + financial details */}
         <form
           onSubmit={handleSubmit}
-          className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4"
+          className="lg:col-span-2 bg-white p-7 rounded-2xl border border-slate-100 shadow-sm space-y-6"
         >
-          <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+          <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-3">
             <User className="w-4.5 h-4.5 text-brand-primary" /> {t("customer.profile.contactFinancialHeading")}
           </h4>
-          <p className="text-[11px] text-slate-400 -mt-2">
+          <p className="text-[11px] text-slate-400 -mt-4">
             {t("customer.profile.contactFinancialHint")}
           </p>
 
-          <div className="space-y-3 text-xs">
-            <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase">{t("customer.profile.phoneLabel")}</label>
-              <input
-                type="text"
-                value={form.phone}
-                onChange={handleField("phone")}
-                placeholder={t("customer.profile.phonePlaceholder")}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
-              />
+          <div className="space-y-5 text-xs">
+            {/* Contact fields used to be one full-width row each — three
+                rows just to say phone/ID/address. Grouped into one row per
+                breakpoint's worth of columns instead, since none of these
+                need the extra width to be usable, and the page fits in a
+                lot less height once they stop taking a row apiece. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-500 uppercase">{t("customer.profile.phoneLabel")}</label>
+                <input
+                  type="text"
+                  value={form.phone}
+                  onChange={handleField("phone")}
+                  placeholder={t("customer.profile.phonePlaceholder")}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
+                  <IdCard className="w-3 h-3" /> {t("customer.profile.nationalIdLabel")}
+                </label>
+                <input
+                  type="text"
+                  value={form.nationalId}
+                  onChange={handleField("nationalId")}
+                  disabled={profile?.kyc_status === "verified"}
+                  placeholder={t("customer.profile.nationalIdPlaceholder")}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary disabled:bg-slate-50 disabled:text-slate-400"
+                />
+                {profile?.kyc_status === "verified" ? (
+                  <p className="text-[10px] text-slate-400">{t("customer.profile.nationalIdLockedHint")}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-400">{t("customer.profile.nationalIdHint")}</p>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> {t("customer.profile.addressLabel")}
+                </label>
+                <input
+                  type="text"
+                  value={form.address}
+                  onChange={handleField("address")}
+                  placeholder={t("customer.profile.addressPlaceholder")}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
-                <IdCard className="w-3 h-3" /> {t("customer.profile.nationalIdLabel")}
-              </label>
-              <input
-                type="text"
-                value={form.nationalId}
-                onChange={handleField("nationalId")}
-                disabled={profile?.kyc_status === "verified"}
-                placeholder={t("customer.profile.nationalIdPlaceholder")}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary disabled:bg-slate-50 disabled:text-slate-400"
-              />
-              {profile?.kyc_status === "verified" ? (
-                <p className="text-[10px] text-slate-400">{t("customer.profile.nationalIdLockedHint")}</p>
-              ) : (
-                <p className="text-[10px] text-slate-400">{t("customer.profile.nationalIdHint")}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {t("customer.profile.addressLabel")}
-              </label>
-              <input
-                type="text"
-                value={form.address}
-                onChange={handleField("address")}
-                placeholder={t("customer.profile.addressPlaceholder")}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="space-y-1">
                 <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
                   <Briefcase className="w-3 h-3" /> {t("customer.profile.employmentLabel")}
@@ -281,7 +288,7 @@ export default function CustomerProfile() {
                 <select
                   value={form.employmentType}
                   onChange={handleField("employmentType")}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                 >
                   <option value="">{t("customer.profile.selectPlaceholder")}</option>
                   {EMPLOYMENT_TYPE_OPTIONS.map((o) => (
@@ -300,12 +307,9 @@ export default function CustomerProfile() {
                   value={form.companyName}
                   onChange={handleField("companyName")}
                   placeholder={t("customer.profile.companyPlaceholder")}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
                   <Wallet className="w-3 h-3" /> {t("customer.profile.monthlyIncomeLabel")}
@@ -314,9 +318,10 @@ export default function CustomerProfile() {
                   type="number"
                   required
                   min="0"
+                  step="any"
                   value={form.monthlyIncome}
                   onChange={handleField("monthlyIncome")}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                 />
               </div>
               <div className="space-y-1">
@@ -327,21 +332,24 @@ export default function CustomerProfile() {
                   type="number"
                   required
                   min="0"
+                  step="any"
                   value={form.monthlyExpense}
                   onChange={handleField("monthlyExpense")}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                 />
               </div>
             </div>
 
             {/* H2 — stable attributes promoted from per-application declared
                 fields to durable customer_profiles columns: settable here
-                directly, and reused/reaffirmed by the loan wizard. */}
-            <div className="pt-3 border-t border-slate-100 space-y-3">
+                directly, and reused/reaffirmed by the loan wizard. All five
+                fit in one row on a wide screen instead of three, for the
+                same reason as the contact row above. */}
+            <div className="pt-5 border-t border-slate-100 space-y-5">
               <h5 className="text-[11px] font-bold text-slate-500 uppercase">
                 {t("customer.profile.personalDetailsHeading")}
               </h5>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
                     <Heart className="w-3 h-3" /> {t("customer.profile.maritalStatusLabel")}
@@ -349,7 +357,7 @@ export default function CustomerProfile() {
                   <select
                     value={form.maritalStatus}
                     onChange={handleField("maritalStatus")}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                   >
                     <option value="">{t("customer.profile.selectPlaceholder")}</option>
                     {MARITAL_STATUS_OPTIONS.map((o) => (
@@ -366,7 +374,7 @@ export default function CustomerProfile() {
                   <select
                     value={form.educationLevel}
                     onChange={handleField("educationLevel")}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                   >
                     <option value="">{t("customer.profile.selectPlaceholder")}</option>
                     {EDUCATION_LEVEL_OPTIONS.map((o) => (
@@ -376,9 +384,6 @@ export default function CustomerProfile() {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
                     <Briefcase className="w-3 h-3" /> {t("customer.profile.occupationLabel")}
@@ -386,7 +391,7 @@ export default function CustomerProfile() {
                   <select
                     value={form.occupation}
                     onChange={handleField("occupation")}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                   >
                     <option value="">{t("customer.profile.selectPlaceholder")}</option>
                     {OCCUPATION_OPTIONS.map((o) => (
@@ -403,7 +408,7 @@ export default function CustomerProfile() {
                   <select
                     value={form.employerCategory}
                     onChange={handleField("employerCategory")}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
                   >
                     <option value="">{t("customer.profile.selectPlaceholder")}</option>
                     {EMPLOYER_CATEGORY_OPTIONS.map((o) => (
@@ -413,30 +418,29 @@ export default function CustomerProfile() {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> {t("customer.profile.yearsEmployedLabel")}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="50"
-                  value={form.yearsEmployed}
-                  onChange={handleField("yearsEmployed")}
-                  placeholder={t("customer.profile.yearsEmployedPlaceholder")}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
-                />
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-500 uppercase flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> {t("customer.profile.yearsEmployedLabel")}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={form.yearsEmployed}
+                    onChange={handleField("yearsEmployed")}
+                    placeholder={t("customer.profile.yearsEmployedPlaceholder")}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex justify-end">
+          <div className="pt-5 border-t border-slate-100 flex justify-end">
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 disabled:opacity-50"
+              className="px-6 py-3 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold shadow-md flex items-center gap-1.5 disabled:opacity-50"
             >
               {saving ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -448,7 +452,7 @@ export default function CustomerProfile() {
           </div>
         </form>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* The customer's accounts with this bank (039). Deliberately
               read-only and outside the form above: the bank ISSUES an account
               number, the customer does not declare one, so there is nothing
@@ -458,7 +462,7 @@ export default function CustomerProfile() {
               loan undisbursable until they happened to fill them in.
               An account is opened automatically the moment a loan offer is
               accepted, so an empty list here is a normal state, not a task. */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
             <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
               <Landmark className="w-4.5 h-4.5 text-brand-primary" />{" "}
               {t("customer.profile.accountsHeading")}
@@ -473,11 +477,11 @@ export default function CustomerProfile() {
                 <span>{t("customer.profile.accountsEmpty")}</span>
               </div>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {accounts.map((acc) => (
                   <li
                     key={acc.id}
-                    className={`border rounded-xl p-4 space-y-2 ${
+                    className={`border rounded-xl p-3 space-y-1.5 ${
                       acc.status === "active"
                         ? "border-slate-100 bg-slate-50"
                         : "border-slate-100 bg-white opacity-60"
@@ -521,7 +525,7 @@ export default function CustomerProfile() {
           <ChangePasswordForm />
         </div>
       </div>
-    </div>
+      </div>
     </div>
   );
 }

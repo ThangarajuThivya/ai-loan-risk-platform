@@ -15,7 +15,6 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
-import Footer from "../../components/Footer";
 
 // Defined at module scope (outside SidebarNav), so labels are translation
 // keys resolved via t() at render time rather than literal strings.
@@ -208,15 +207,10 @@ export default function CustomerLayout() {
           </button>
         </header>
 
-        {/* flex column so the footer sits below content (or is pushed to the
-            bottom of the viewport on short pages) instead of being a sibling
-            of the fixed sidebar, which used to let the sidebar paint over it
-            on scroll. */}
         <div className="lg:pl-60 min-h-[calc(100vh-6rem)] flex flex-col">
           <div className="flex-1">
             <Outlet />
           </div>
-          <Footer />
         </div>
       </div>
 
