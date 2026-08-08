@@ -30,8 +30,20 @@ const {
 } = require("../behaviouralFeatures.service");
 const {
   mapProfileToModelFields,
+  normalizeEmploymentType,
   NEUTRAL_DEFAULTS,
+  EMPLOYMENT_TYPE_FALLBACK,
 } = require("../mlClient.service");
+
+// The vocabulary the model was trained on. Duplicated here on purpose: if
+// loan-risk-model/src/config.py ever changes it, this test should fail rather
+// than quietly follow along.
+const MODEL_EMPLOYMENT_TYPES = [
+  "Permanent",
+  "Contract",
+  "Self-Employed",
+  "Government",
+];
 
 let passed = 0;
 function check(name, fn) {
@@ -541,6 +553,89 @@ check("observed defaults cap a declaration even when none were declared", () => 
     { number_of_defaults: 2 }
   );
   assert.strictEqual(f.crib_score, CRIB_CEILING_BY_DEFAULTS[2]);
+});
+
+// ---------------------------------------------------------------------------
+console.log("normalizeEmploymentType — two vocabularies that never matched");
+
+check("EVERY registration option maps into the model's vocabulary", () => {
+  // The regression this guards: Register.jsx offers a taxonomy the model has
+  // never known, and v1's OneHotEncoder(handle_unknown='ignore') swallowed the
+  // mismatch — making employment_type a dead feature for real customers. Once
+  // the model started validating its inputs, the same mismatch became a hard
+  // 422 on every single assessment.
+  const registrationOptions = [
+    "Salaried Employee",
+    "Self Employed",
+    "Business Owner",
+    "Student",
+    "Unemployed",
+  ];
+  for (const option of registrationOptions) {
+    const mapped = normalizeEmploymentType(option);
+    assert.ok(
+      MODEL_EMPLOYMENT_TYPES.includes(mapped),
+      `${option} mapped to ${mapped}, which the model does not accept`
+    );
+  }
+});
+
+check("legacy free text already in the database is handled", () => {
+  for (const legacy of ["employed", "Private Sector", "Government Sector"]) {
+    assert.ok(MODEL_EMPLOYMENT_TYPES.includes(normalizeEmploymentType(legacy)));
+  }
+});
+
+check("the model's own values pass through unchanged", () => {
+  for (const t of MODEL_EMPLOYMENT_TYPES) {
+    assert.strictEqual(normalizeEmploymentType(t), t);
+  }
+});
+
+check("matching ignores case and surrounding whitespace", () => {
+  assert.strictEqual(normalizeEmploymentType("  self employed "), "Self-Employed");
+  assert.strictEqual(normalizeEmploymentType("SALARIED EMPLOYEE"), "Permanent");
+});
+
+check("a salaried job maps to permanent, a business owner to self-employed", () => {
+  assert.strictEqual(normalizeEmploymentType("Salaried Employee"), "Permanent");
+  assert.strictEqual(normalizeEmploymentType("Business Owner"), "Self-Employed");
+});
+
+check("missing or unrecognised never throws and never escapes the vocabulary", () => {
+  // A new registration option must degrade the score, not break the
+  // assessment with a validation error.
+  for (const bad of [null, undefined, "", "Gig Worker", 42, "  "]) {
+    const mapped = normalizeEmploymentType(bad);
+    assert.ok(
+      MODEL_EMPLOYMENT_TYPES.includes(mapped),
+      `${JSON.stringify(bad)} produced ${mapped}`
+    );
+  }
+});
+
+check("the fallback is conservative, not the most favourable option", () => {
+  // Permanent has the LOWEST observed default rate in the training data, so
+  // defaulting an unknown to it would quietly flatter the applicant.
+  assert.strictEqual(EMPLOYMENT_TYPE_FALLBACK, "Contract");
+  assert.notStrictEqual(EMPLOYMENT_TYPE_FALLBACK, "Permanent");
+});
+
+check("the mapper only ever sends a valid employment_type", () => {
+  for (const raw of [
+    "Salaried Employee", "Self Employed", "Business Owner",
+    "Student", "Unemployed", "employed", null, "Gig Worker",
+  ]) {
+    const f = mapProfileToModelFields(
+      { ...profile, employment_type: raw },
+      loanRequest,
+      {}
+    );
+    assert.ok(
+      MODEL_EMPLOYMENT_TYPES.includes(f.employment_type),
+      `profile "${raw}" produced ${f.employment_type}`
+    );
+  }
 });
 
 console.log(`\n${passed} passed`);

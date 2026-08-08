@@ -119,6 +119,89 @@ const CATEGORY_VALUES = {
 };
 
 /**
+ * Translate the registration form's employment taxonomy into the model's.
+ *
+ * These are two different vocabularies and always have been. Register.jsx
+ * offers "Salaried Employee", "Self Employed", "Business Owner", "Student" and
+ * "Unemployed"; the model was trained on "Permanent", "Contract",
+ * "Self-Employed" and "Government". Not one registration value except a
+ * coincidental "Permanent" is a member of the model's set — "Self Employed"
+ * misses "Self-Employed" by a hyphen — and live profiles additionally hold
+ * legacy free text such as "employed".
+ *
+ * This went unnoticed because v1's preprocessor used
+ * OneHotEncoder(handle_unknown='ignore'), which turns an unrecognised category
+ * into an all-zero block instead of failing. `employment_type` was therefore a
+ * DEAD FEATURE for essentially every real customer — silently contributing
+ * nothing to their risk score. The v2 model service validates categoricals
+ * against the trained vocabulary, which surfaced it as a hard 422 on every
+ * assessment; that validation is doing its job, so the fix belongs here rather
+ * than in loosening the model back to silent acceptance.
+ *
+ * Mapping rationale: a salaried job is the analogue of permanent employment; a
+ * business owner is self-employed for income-stability purposes; a student or
+ * unemployed applicant has no stable employment income, so "Contract" (the
+ * least stable salaried category) is the closest honest match.
+ */
+const EMPLOYMENT_TYPE_MAP = {
+  // Register.jsx options
+  "salaried employee": "Permanent",
+  "self employed": "Self-Employed",
+  "business owner": "Self-Employed",
+  student: "Contract",
+  unemployed: "Contract",
+  // Legacy free text already stored on live profiles
+  employed: "Permanent",
+  "private sector": "Permanent",
+  "government sector": "Government",
+  // The model's own vocabulary passes through untouched
+  permanent: "Permanent",
+  contract: "Contract",
+  "self-employed": "Self-Employed",
+  government: "Government",
+};
+
+/**
+ * Conservative fallback for a missing or unrecognised employment type.
+ *
+ * "Contract" rather than the previous "Permanent": measured on the training
+ * data, Contract carries the highest observed default rate (8.14%) and
+ * Permanent the lowest (7.03%), so defaulting an unknown to Permanent would
+ * quietly flatter the applicant. Employment type is a weak feature either way
+ * (a 2.7pp spread in predicted PD across all four values), but the principle
+ * matters: an unknown should never resolve to the most favourable option.
+ */
+const EMPLOYMENT_TYPE_FALLBACK = "Contract";
+
+/**
+ * Map a stored profile's employment type onto a category the model knows.
+ *
+ * Never throws and never returns an unknown value, so a new option added to
+ * the registration form can degrade the score slightly but can never break an
+ * assessment with a validation error. An unmapped value is logged once per
+ * occurrence so the drift is visible rather than silent — which is exactly
+ * what went wrong the first time.
+ *
+ * @param {string|null|undefined} value  customer_profiles.employment_type
+ * @returns {string} one of the model's EMPLOYMENT_TYPES
+ */
+function normalizeEmploymentType(value) {
+  if (value === null || value === undefined || value === "") {
+    return EMPLOYMENT_TYPE_FALLBACK;
+  }
+  const key = String(value).trim().toLowerCase();
+  const mapped = EMPLOYMENT_TYPE_MAP[key];
+  if (mapped) return mapped;
+
+  console.warn(
+    `[mlClient] Unmapped employment_type ${JSON.stringify(value)} — scoring as ` +
+      `"${EMPLOYMENT_TYPE_FALLBACK}". Add it to EMPLOYMENT_TYPE_MAP if it is a ` +
+      `real registration option.`
+  );
+  return EMPLOYMENT_TYPE_FALLBACK;
+}
+
+/**
  * The subset of model fields a customer can optionally self-declare on the
  * loan application form, replacing a hardcoded NEUTRAL_DEFAULTS constant with
  * a real (if unverified) value. Anything not declared keeps using the
@@ -321,7 +404,9 @@ function mapProfileToModelFields(
     province: D.province,
     education_level: pick(declared.education_level, D.education_level),
     occupation: pick(declared.occupation, D.occupation),
-    employment_type: profile.employment_type || "Permanent",
+    // Translated, not passed through: the registration taxonomy and the
+    // model's are different vocabularies (see normalizeEmploymentType).
+    employment_type: normalizeEmploymentType(profile.employment_type),
     years_employed: pickNum(declared.years_employed, D.years_employed),
 
     // --- Income ---
@@ -439,6 +524,9 @@ module.exports = {
   predictRisk,
   ageFromDob,
   isProvided,
+  normalizeEmploymentType,
+  EMPLOYMENT_TYPE_MAP,
+  EMPLOYMENT_TYPE_FALLBACK,
   NEUTRAL_DEFAULTS,
   CATEGORY_VALUES,
   DECLARABLE_FIELDS,

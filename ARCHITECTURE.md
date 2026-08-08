@@ -344,7 +344,7 @@ applies the identical transform:
 | Step | Applied to | Why |
 |---|---|---|
 | **passthrough** (no scaling) | numerical columns | Trees are invariant to monotone rescaling, so scaling never helped — and `StandardScaler` cannot pass a NaN through. Missing values must reach the booster intact (§7.6.1). |
-| `OneHotEncoder(handle_unknown="ignore")` | categorical columns | An unseen category becomes an all-zero block instead of raising. The API *additionally* validates categoricals against the trained vocabulary, so an unknown province fails loudly at the edge rather than silently scoring as a zero vector. |
+| `OneHotEncoder(handle_unknown="ignore")` | categorical columns | An unseen category becomes an all-zero block instead of raising. The API *additionally* validates categoricals against the trained vocabulary, so an unknown value fails loudly at the edge rather than silently scoring as a zero vector — which is exactly how a dead feature went unnoticed for the whole of v1 (§7.6.2). |
 
 Split: **70 / 15 / 15, stratified** (`random_state=42`). Three ways, not v1's
 two: the validation set drives early stopping, and the test set is touched
@@ -509,6 +509,67 @@ a combination the causal DGP makes almost impossible (6 rows at two defaults,
 none at three). Checking model output against the **empirical rate for
 comparable rows in the training data** is the reliable arbiter, not intuition
 about what a number ought to be.
+
+### 7.6.2 Two vocabularies that never matched
+
+A third defect, found when the rebuilt service was first driven from the real
+UI rather than from constructed payloads. Every assessment returned **HTTP 422
+Unprocessable Entity**.
+
+The cause was not the rebuild. The registration form
+(`finance-frontend/src/pages/Register.jsx`) offers an employment taxonomy that
+has never been the model's:
+
+| Stored on `customer_profiles` | In the model's vocabulary? |
+|---|---|
+| `Salaried Employee` | no |
+| `Self Employed` | no — misses `Self-Employed` by a hyphen |
+| `Business Owner` | no |
+| `Student`, `Unemployed` | no |
+| `employed` (legacy free text) | no |
+| `Permanent` | yes, coincidentally |
+
+The model was trained on `Permanent / Contract / Self-Employed / Government`.
+A live query confirmed the mismatch across real rows, including a `NULL`.
+
+**The mismatch is older than v2, and v1 hid it.** With
+`OneHotEncoder(handle_unknown='ignore')`, an unrecognised category becomes an
+all-zero block rather than an error, so `employment_type` silently contributed
+**nothing** to the risk score of essentially every real customer, and no
+metric anywhere would have shown it. v2's input validation converted a silent
+dead feature into a loud failure — unhelpful in the moment, but the validation
+is doing precisely what it was added for, so the fix belongs in the gateway
+rather than in relaxing the model back to silent acceptance.
+
+**Fix.** `normalizeEmploymentType` in `mlClient.service.js` translates the
+registration taxonomy into the model's, and is the single place the two
+vocabularies meet:
+
+- `Salaried Employee`, `employed` → `Permanent`
+- `Self Employed`, `Business Owner` → `Self-Employed`
+- `Student`, `Unemployed` → `Contract` (no stable employment income)
+- the model's own values pass through unchanged
+
+Two properties matter beyond the mapping itself:
+
+- **It cannot fail.** Anything unrecognised — including a new option added to
+  the registration form later — resolves to the fallback and logs a warning,
+  so drift is visible but can never 422 an assessment again.
+- **The fallback is `Contract`, not `Permanent`.** Measured on the training
+  data, `Contract` carries the highest observed default rate (8.14%) and
+  `Permanent` the lowest (7.03%), so defaulting an unknown to `Permanent` — as
+  the previous `profile.employment_type || "Permanent"` did — would quietly
+  flatter the applicant. Employment type is a weak feature either way (a 2.7
+  percentage-point spread in predicted PD across all four values), but the
+  principle is the same one behind §7.6.1: **an unknown must never resolve to
+  the most favourable option.**
+
+Regression tests in `behaviouralFeatures.test.js` assert that every option the
+registration form actually offers maps into the model's vocabulary, that legacy
+free text is handled, and that no input of any kind can produce a value the
+model would reject. The model's vocabulary is deliberately restated in that
+test file rather than imported, so changing it on the Python side fails the
+Node suite instead of silently drifting again.
 
 ### 7.7 Performance
 
@@ -1253,6 +1314,12 @@ with full history — `income_stability`, `digital_payment_ratio`, `rent`,
 `province` — so the remaining gap is explicit rather than implied by absence.
 The staff review panel renders all of this as an "Evidence behind this score"
 note beside the probability of default.
+
+`mlClient.service.js` is also where the gateway reconciles the registration
+form's employment taxonomy with the model's, which are two different
+vocabularies (§7.6.2) — `normalizeEmploymentType` is the single place they
+meet, and it is written so an unrecognised value degrades with a warning
+rather than failing an assessment.
 
 Implementation: `finance-backend/src/services/behaviouralFeatures.service.js`
 and `loanModel.findBorrowerCreditHistory`; migration:
