@@ -1,27 +1,128 @@
-Sri Lanka Credit Risk Model - Evaluation Report
-============================================================
-Generated on: 2026-07-03 11:28:50
-Dataset Size  : 150000 rows
-Test Set Size : 30000 rows
+Sri Lanka Credit Risk Model — Evaluation Report (v2)
+====================================================================
+Generated      : 2026-08-08 09:08:06
+Dataset        : 150,000 rows, 40 features
+Split          : 105,000 train / 22,500 val / 22,500 test (70/15/15, stratified)
+Trees          : 310 (early stopping, cap 2000)
+Class weights  : none — deliberately unweighted so the probabilities stay calibrated
+                 for pricing; the risk band comes from a PD threshold, not argmax.
 
-Accuracy          : 0.8810 (88.10%)
-Weighted F1 Score : 0.8805
+TARGET: a SAMPLED repayment outcome, not a threshold rule.
+  0 Repaid cleanly  1 Delinquent  2 Defaulted
 
-Classification Report:
-              precision    recall  f1-score   support
+ROC-AUC (macro OvR)          : 0.9124
+ROC-AUC (default vs rest)    : 0.9615
+Accuracy                     : 0.8306
+Majority-class baseline      : 0.7395
+Weighted F1                  : 0.8225
+Macro F1                     : 0.7071
+Calibration MAE (PD deciles) : 0.0021
 
-    Low Risk       0.90      0.89      0.89     12278
- Medium Risk       0.87      0.90      0.89     15320
-   High Risk       0.86      0.74      0.80      2402
+Classification report:
+                precision    recall  f1-score   support
 
-    accuracy                           0.88     30000
-   macro avg       0.87      0.84      0.86     30000
-weighted avg       0.88      0.88      0.88     30000
+Repaid cleanly      0.885     0.942     0.912     16638
+    Delinquent      0.574     0.474     0.519      4186
+     Defaulted      0.779     0.619     0.690      1676
+
+      accuracy                          0.831     22500
+     macro avg      0.746     0.678     0.707     22500
+  weighted avg      0.819     0.831     0.822     22500
 
 
-Confusion Matrix:
-[[10871  1407     0]
- [ 1248 13769   303]
- [    0   613  1789]]
+Confusion matrix (rows = actual, cols = predicted):
+[[15667   950    21]
+ [ 1929  1983   274]
+ [  116   522  1038]]
 
-Note: Rows = Actual, Columns = Predicted
+PD calibration by decile:
+ decile    n  mean_predicted_pd  actual_default_rate
+      1 2250           0.000154             0.000000
+      2 2250           0.000387             0.000444
+      3 2250           0.000827             0.000444
+      4 2250           0.001637             0.002667
+      5 2250           0.003222             0.004000
+      6 2250           0.006276             0.004000
+      7 2250           0.012936             0.015556
+      8 2250           0.030100             0.032000
+      9 2250           0.099720             0.095556
+     10 2250           0.598139             0.590222
+
+Risk banding (Medium >= 0.08, High >= 0.22) — the operating point in production:
+  band     n  share_of_book  actual_default_rate  mean_predicted_pd  defaults_captured
+   Low 18953       0.842356             0.009919           0.009698                188
+Medium  1405       0.062444             0.129537           0.133950                182
+  High  2142       0.095200             0.609711           0.617715               1306
+  default recall in the High band : 0.7792
+  precision of the High band      : 0.6097
+  defaults missed in the Low band : 0.1122
+
+Feature importance (% of total gain):
+number_of_defaults                   27.150999
+savings_ratio                        17.761999
+disposable_income                     3.512000
+crib_score                            2.887000
+guarantor_defaults                    2.847000
+avg_bank_balance                      2.358000
+avg_repayment_behaviour               1.918000
+repayment_consistency_score           1.858000
+debt_to_income_ratio                  1.658000
+credit_utilization                    1.607000
+financial_stability_score             1.461000
+guarantor_risk_score                  1.391000
+loan_tenure_months                    0.960000
+income_stability                      0.944000
+historical_delinquencies              0.898000
+years_employed                        0.830000
+marital_status_Married                0.829000
+loan_amount                           0.801000
+expense_ratio                         0.768000
+employment_type_Permanent             0.754000
+marital_status_Single                 0.740000
+employment_type_Contract              0.716000
+employment_type_Self-Employed         0.710000
+overdue_installments                  0.707000
+loan_restructuring_history            0.681000
+employment_type_Government            0.665000
+settled_loans                         0.649000
+guarantor_exposure                    0.630000
+emi                                   0.599000
+credit_inquiry_count                  0.597000
+province_Western                      0.588000
+age                                   0.587000
+interest_rate                         0.574000
+employer_category_Startup             0.570000
+education_level_Master or Higher      0.570000
+highest_outstanding_balance           0.567000
+marital_status_Divorced               0.563000
+rent                                  0.562000
+monthly_salary                        0.559000
+province_Uva                          0.558000
+province_Central                      0.556000
+occupation_Driver                     0.556000
+province_Sabaragamuwa                 0.553000
+province_North Central                0.550000
+monthly_expenses                      0.548000
+employer_category_Other               0.547000
+additional_income                     0.540000
+occupation_Private Sector             0.536000
+employer_category_Large Corporate     0.531000
+province_North Western                0.528000
+education_level_O/L                   0.527000
+occupation_IT/Tech                    0.525000
+province_Southern                     0.525000
+digital_payment_ratio                 0.525000
+education_level_Below O/L             0.522000
+employer_category_Government          0.521000
+existing_loans                        0.516000
+active_facilities                     0.516000
+province_Eastern                      0.511000
+province_Northern                     0.510000
+occupation_Teacher                    0.493000
+occupation_Government                 0.491000
+occupation_Other                      0.480000
+education_level_A/L                   0.480000
+occupation_Business Owner             0.463000
+education_level_Bachelor              0.458000
+employer_category_SME                 0.458000
+occupation_Garment                    0.445000

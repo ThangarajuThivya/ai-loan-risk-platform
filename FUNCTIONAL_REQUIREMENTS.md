@@ -70,6 +70,7 @@ password by email.
 - **FR-CUS-09**: A customer can upload supporting documents (e.g. identity documents, proof of income) as part of their application, and re-upload a replacement if a document is rejected.
 - **FR-CUS-10**: If a customer is interrupted partway through the application form, their progress is **saved automatically as a draft** and can be resumed later from where they left off.
 - **FR-CUS-11**: Once submitted, the application is automatically assessed and the customer is shown an instant, plain-language explanation of the outcome (e.g. why they were placed in a particular risk category), not just a raw score.
+- **FR-CUS-11a**: If the customer has borrowed from the bank before, their own repayment record with the bank (on-time payments, any missed instalments, facilities already settled) is taken into account alongside their declared details when assessing a new application — a returning customer with a good record is not scored purely on self-declared information the way a first-time applicant is.
 - **FR-CUS-12**: A customer can withdraw their own application at any point before it is finalised, if they no longer wish to proceed.
 - **FR-CUS-12a**: Before an application can be submitted, the customer must explicitly agree to the bank processing their personal data and checking their credit bureau (CRIB) record. The system keeps a permanent, timestamped record of exactly what was agreed to and when, and does not ask again once already agreed — unless the bank's policy text itself changes.
 
@@ -126,7 +127,9 @@ reserved for administrators (Section 5).
 ### 4.1 Reviewing & Deciding on Loan Applications
 
 - **FR-STF-01**: A staff member can view a queue of all loan applications, filterable by status, so they can prioritise their work.
-- **FR-STF-02**: For any application, a staff member can view the applicant's declared details, the AI-generated risk assessment (risk category and probability breakdown), and a plain-language explanation of that assessment.
+- **FR-STF-02**: For any application, a staff member can view the applicant's declared details, the AI-generated risk assessment (probability of default, risk category, and outcome breakdown), and a plain-language explanation of that assessment.
+- **FR-STF-02a**: Alongside the risk assessment, a staff member can see how much of it is based on the applicant's own repayment record with the bank versus assumed values for a first-time applicant ("thin file") — so a clean record is never mistaken for a record that simply doesn't exist yet.
+- **FR-STF-02b**: If an applicant declares a credit bureau (CRIB) score that is inconsistent with the defaults or arrears already on their application (e.g. a very high score alongside multiple declared defaults), the system flags this contradiction to the reviewing staff member rather than accepting the declared score at face value.
 - **FR-STF-03**: In addition to the AI risk score, every application is automatically checked against the bank's own fixed lending rules (e.g. affordability limits, minimum age); staff can see clearly whether these rules are met before making a decision.
 - **FR-STF-04**: The system provides staff with an automatic **recommendation** (approve, decline, or refer for manual review), which staff always review and can override — recording a reason whenever they do.
 - **FR-STF-05**: A staff member can move an application forward through its lifecycle: request more information from the applicant, approve, decline, or (once approved) issue a formal loan offer.

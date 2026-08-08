@@ -30,6 +30,10 @@ const {
   PROFILE_BACKED_FIELDS,
 } = require("../services/mlClient.service");
 const {
+  deriveBehaviouralFeatures,
+  reconcileDeclaredCribScore,
+} = require("../services/behaviouralFeatures.service");
+const {
   sanitizeDraftPayload,
   sanitizeStep,
   DraftPayloadError,
@@ -98,6 +102,27 @@ function splitProbabilities(probabilities = {}) {
     probMedium: Number(probabilities["Medium Risk"] || 0),
     probHigh: Number(probabilities["High Risk"] || 0),
   };
+}
+
+/**
+ * Decode risk_assessments.behavioural_snapshot (043).
+ *
+ * mysql2 returns a JSON column as an already-parsed object on some driver
+ * versions and as a raw string on others, so both are handled. A malformed
+ * value degrades to null rather than throwing: this is display-only
+ * provenance, and it must never be able to break loading an application.
+ *
+ * @param {object|string|null} value
+ * @returns {object|null}
+ */
+function parseBehaviouralSnapshot(value) {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -478,8 +503,17 @@ function serializeApplication(row, role, { offerFees } = {}) {
             "Medium Risk": Number(row.prob_medium),
             "High Risk": Number(row.prob_high),
           },
+          // Under the v2 model the three probabilities are OUTCOME
+          // probabilities (repaid cleanly / delinquent / defaulted), so the
+          // stored prob_high IS the probability of default — no extra column
+          // needed, and every historical row keeps working.
+          probability_of_default: Number(row.prob_high),
         }
       : null,
+    // What the model was shown about this customer's repayment record AT THE
+    // TIME it scored them (043). Null for assessments made before behavioural
+    // features existed, which is accurate rather than a gap.
+    credit_history: parseBehaviouralSnapshot(row.behavioural_snapshot),
     recommendation: hasRec
       ? {
           recommended_amount: row.recommended_amount,
@@ -2399,7 +2433,22 @@ exports.assess = async (req, res) => {
       });
     }
 
-    // 3. Map to the 35 raw model fields and score via the Python service.
+    // 2c. Behavioural credit features from this customer's OWN record with
+    // us. Read BEFORE the assess transaction opens, exactly like the
+    // guarantor exposure lookup above: the application being scored does not
+    // exist yet, so it cannot contaminate its own history.
+    //
+    // This is what un-pins the model's strongest inputs. Before it,
+    // number_of_defaults / overdue_installments / credit_utilization were
+    // sent as fixed constants for every applicant — roughly 46% of the
+    // model's total gain frozen at one value. A first-time borrower still
+    // has nothing to observe and falls back to the neutral defaults, flagged
+    // as a thin file so a reviewer can tell "clean record" from "no record".
+    const creditHistory = await loanModel.findBorrowerCreditHistory(userId);
+    const { fields: behaviouralFields, meta: behaviouralMeta } =
+      deriveBehaviouralFeatures(creditHistory);
+
+    // 3. Map to the raw model fields and score via the Python service.
     // The model is fed the product's BASE rate — same reasoning as a real
     // underwriter assessing against the headline terms before a risk-based
     // price is set. D3's priced rate is an OUTPUT of this assessment, not
@@ -2408,8 +2457,29 @@ exports.assess = async (req, res) => {
     const modelFields = mapProfileToModelFields(
       profile,
       { requested_amount, tenure_months, interest_rate: interestRate },
-      declared
+      declared,
+      behaviouralFields
     );
+
+    // Did the applicant's declared bureau score contradict the adverse history
+    // on the same application? The mapper already capped it; this recomputes
+    // the (pure, trivial) check so the outcome can be shown to a reviewer.
+    // A self-contradictory declaration is a signal worth surfacing, not one to
+    // absorb quietly.
+    const cribCheck = reconcileDeclaredCribScore(
+      isProvided(declared.crib_score) ? Number(declared.crib_score) : null,
+      {
+        number_of_defaults: modelFields.number_of_defaults,
+        overdue_installments: modelFields.overdue_installments,
+      }
+    );
+    behaviouralMeta.crib_declaration = {
+      declared: cribCheck.declared,
+      used: modelFields.crib_score,
+      capped: cribCheck.capped,
+      plausible_ceiling: cribCheck.ceiling,
+    };
+
     const risk = await predictRisk(modelFields);
 
     // 3b. Risk-based interest pricing (D3) — resolves the rate this
@@ -2594,6 +2664,9 @@ exports.assess = async (req, res) => {
         risk_label: risk.risk_label,
         risk_category: risk.risk_category,
         model_version: risk.model_version,
+        // Frozen alongside the score (043): what the model was actually shown
+        // about this customer's repayment record at this moment.
+        behaviouralSnapshot: behaviouralMeta,
         ...probs,
       },
       recommendation,
@@ -2674,7 +2747,15 @@ exports.assess = async (req, res) => {
         label: risk.risk_label,
         category: risk.risk_category,
         probabilities: risk.probabilities,
+        // The calibrated probability the band was derived from (v2). Exposed
+        // separately because it is the number that actually means something —
+        // the band is a policy cut-off applied to it.
+        probability_of_default: risk.probability_of_default,
       },
+      // How much of the assessment rested on this customer's observed conduct
+      // versus neutral assumptions. Surfaced so a reviewer can distinguish a
+      // genuinely clean record from no record at all.
+      credit_history: behaviouralMeta,
       recommendation,
       // The rate this application was actually assessed and quoted at (D3),
       // and which recommendation.recommended_emi above is computed from.
@@ -2760,6 +2841,11 @@ exports.manualAssess = async (req, res) => {
   try {
     const profile = { age, gender, employment_type, monthly_income, monthly_expense };
 
+    // No behavioural features here, deliberately: this is a what-if for a
+    // hypothetical person (a walk-in enquiry), who by definition has no
+    // account history to observe. Everything not declared falls back to the
+    // neutral defaults, which is the honest answer for someone we have never
+    // lent to.
     const modelFields = mapProfileToModelFields(
       profile,
       { requested_amount, tenure_months, interest_rate },
@@ -2828,6 +2914,7 @@ exports.manualAssess = async (req, res) => {
         label: risk.risk_label,
         category: risk.risk_category,
         probabilities: risk.probabilities,
+        probability_of_default: risk.probability_of_default,
       },
       recommendation,
       policy: {

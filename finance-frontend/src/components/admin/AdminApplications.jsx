@@ -93,6 +93,92 @@ function DecisionMatrixBanner({ matrix }) {
   );
 }
 
+/**
+ * How much of the risk assessment rested on this customer's OWN repayment
+ * record with us, versus neutral assumptions.
+ *
+ * This matters to a reviewer in a way that is easy to miss: a first-time
+ * borrower's assessment shows no defaults and no arrears, but that is because
+ * we have never lent to them — not because they have a clean record. Without
+ * this note the two look identical on screen, and "no evidence of problems"
+ * reads as "evidence of no problems".
+ *
+ * The figures are a snapshot frozen when the model scored the application
+ * (migration 043), not today's record, so they always describe what the model
+ * actually saw.
+ */
+function CreditHistoryNote({ history }) {
+  // Assessments made before behavioural features existed carry no snapshot.
+  // Rendering nothing is honest; a "thin file" badge would assert something
+  // that was never measured.
+  if (!history) return null;
+
+  const thin = history.is_thin_file || !history.has_internal_history;
+  const weight = Math.round(Number(history.evidence_weight || 0) * 100);
+
+  return (
+    <div
+      className={`rounded-xl border p-3 space-y-1.5 ${
+        thin ? "bg-amber-50/70 border-amber-200" : "bg-white/70 border-indigo-100"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+          Evidence behind this score
+        </span>
+        <span
+          className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+            thin ? "bg-amber-200 text-amber-900" : "bg-indigo-100 text-indigo-800"
+          }`}
+        >
+          {thin ? "Thin file" : `${weight}% observed`}
+        </span>
+      </div>
+
+      {thin ? (
+        <p className="text-[11px] text-amber-900 leading-relaxed">
+          No meaningful repayment history with us. The credit-behaviour inputs
+          fall back to neutral assumptions — this is <strong>not</strong> a
+          verified clean record.
+        </p>
+      ) : (
+        <p className="text-[11px] text-slate-600 leading-relaxed">
+          Scored using this customer&apos;s own record:{" "}
+          {history.accounts_observed} facilit
+          {history.accounts_observed === 1 ? "y" : "ies"},{" "}
+          {history.installments_concluded} concluded instalment
+          {history.installments_concluded === 1 ? "" : "s"},{" "}
+          {history.late_installments} paid late
+          {history.written_off_accounts > 0
+            ? `, ${history.written_off_accounts} written off`
+            : ""}
+          .
+        </p>
+      )}
+
+      {history.crib_declaration?.capped ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-2 space-y-0.5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-rose-800">
+            Declared CRIB score contradicts the file
+          </p>
+          <p className="text-[11px] text-rose-900 leading-relaxed">
+            Applicant stated{" "}
+            <strong>{history.crib_declaration.declared}</strong>, which that
+            default/arrears history could not support. Scored at{" "}
+            <strong>{history.crib_declaration.used}</strong> (plausible ceiling{" "}
+            {history.crib_declaration.plausible_ceiling}).
+          </p>
+        </div>
+      ) : null}
+
+      <p className="text-[10px] text-slate-400 leading-relaxed">
+        No credit-bureau (CRIB) feed is connected; bureau score remains
+        self-declared.
+      </p>
+    </div>
+  );
+}
+
 const RISK_STYLES = {
   0: { badge: "bg-emerald-50 text-emerald-700 border-emerald-100", bar: "bg-emerald-500" },
   1: { badge: "bg-amber-50 text-amber-700 border-amber-100", bar: "bg-amber-500" },
@@ -1559,13 +1645,41 @@ export default function AdminApplications({ focusApplicationId, onFocusHandled }
                         AI Risk Assessment
                       </h5>
                     </div>
+
+                    {/* Probability of default leads, because it is the one
+                        number that means something on its own — the three
+                        bars below are the outcome distribution it comes from,
+                        and the risk band is a policy cut-off applied to it. */}
+                    <div className="flex items-baseline justify-between gap-3 pb-3 border-b border-indigo-100/70">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          Probability of Default
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Chance this facility is charged off
+                        </p>
+                      </div>
+                      <span className="text-2xl font-bold font-mono text-indigo-900">
+                        {formatPercent(
+                          selectedApp.risk.probability_of_default ??
+                            selectedApp.risk.probabilities["High Risk"]
+                        )}
+                      </span>
+                    </div>
+
                     <div className="space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        Predicted repayment outcome
+                      </p>
                       {Object.entries(selectedApp.risk.probabilities).map(([label, prob]) => {
                         const idx = label === "Low Risk" ? 0 : label === "Medium Risk" ? 1 : 2;
+                        // The model predicts an observed OUTCOME, so name the
+                        // outcome rather than repeating the band label.
+                        const outcome = ["Repaid cleanly", "Repaid, but late", "Defaulted"][idx];
                         return (
                           <div key={label}>
                             <div className="flex justify-between text-xs mb-1">
-                              <span className="text-slate-600">{label}</span>
+                              <span className="text-slate-600">{outcome}</span>
                               <span className="font-mono font-semibold text-slate-800">
                                 {formatPercent(prob)}
                               </span>
@@ -1580,6 +1694,8 @@ export default function AdminApplications({ focusApplicationId, onFocusHandled }
                         );
                       })}
                     </div>
+
+                    <CreditHistoryNote history={selectedApp.credit_history} />
                   </div>
                 )}
 
