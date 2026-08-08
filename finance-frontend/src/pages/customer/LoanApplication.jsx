@@ -154,7 +154,7 @@ function SelectField({ label, value, onChange, options, placeholder, disabled })
   );
 }
 
-function NumberField({ label, value, onChange, min, max, placeholder, disabled }) {
+function NumberField({ label, value, onChange, min, max, step, placeholder, disabled }) {
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -164,6 +164,11 @@ function NumberField({ label, value, onChange, min, max, placeholder, disabled }
         type="number"
         min={min}
         max={max}
+        // Plain <input type="number"> defaults to step="1", which silently
+        // blocks native HTML5 validation (and the whole form's submit) on a
+        // decimal LKR amount like 50000.50 — "any" is correct here since
+        // none of this form's numeric fields are meant to be whole numbers.
+        step={step ?? "any"}
         placeholder={placeholder}
         value={value}
         disabled={disabled}
@@ -1692,27 +1697,36 @@ export default function LoanApplication() {
                   {/* Step 6 — Review */}
                   {step === 6 && (
                     <div className="space-y-2">
-                      {reviewRows.map((row) => (
-                        <div
-                          key={row.label}
-                          className="flex items-center justify-between py-2.5 px-3 rounded-lg odd:bg-slate-50"
-                        >
-                          <span className="text-xs text-slate-500">{row.label}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-800 text-right">
-                              {row.value}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setStep(row.step)}
-                              className="text-slate-300 hover:text-brand-primary transition-colors"
-                              aria-label={`Edit ${row.label}`}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
+                      {/* Two columns from `sm` up so the full review fits in
+                          view (or close to it) on a normal laptop screen
+                          instead of a single long stacked list — the Submit
+                          button itself is guaranteed reachable regardless via
+                          the sticky action bar below, but a review a user
+                          can actually see at a glance is the point of this
+                          step. */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {reviewRows.map((row) => (
+                          <div
+                            key={row.label}
+                            className="flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-slate-50 min-w-0"
+                          >
+                            <span className="text-[11px] text-slate-500 truncate">{row.label}</span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-xs font-semibold text-slate-800 text-right truncate max-w-[140px]">
+                                {row.value}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setStep(row.step)}
+                                className="text-slate-300 hover:text-brand-primary transition-colors shrink-0"
+                                aria-label={`Edit ${row.label}`}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                       <p className="text-[11px] text-slate-400 pt-3 leading-relaxed">
                         {t("customer.loanApplication.reviewFooterNote")}
                       </p>
@@ -1757,8 +1771,37 @@ export default function LoanApplication() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* Nav buttons */}
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
+              {/* H3 — explicit save. Progress is already auto-saved on every
+                  step change; this is the reassuring, visible version of that
+                  for an applicant who wants to leave deliberately. Placed
+                  above the sticky action bar (rather than after it) so it
+                  scrolls with the step content — the always-visible sticky
+                  bar stays reserved for the two primary actions. */}
+              <div className="flex justify-center mt-6">
+                <button
+                  type="button"
+                  onClick={handleSaveAndExit}
+                  disabled={savingDraft}
+                  className="px-4 py-2 rounded-xl text-[11px] font-semibold text-slate-500 hover:text-brand-primary disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {savingDraft ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  {t("customer.loanApplication.saveAndContinueLater")}
+                </button>
+              </div>
+
+              {/* Nav buttons — sticky to the bottom of the viewport so Back/
+                  Next/Submit are always reachable without scrolling, no
+                  matter how long a given step's content is (the review step
+                  in particular can run past one screen). Bleeds out to the
+                  card's full width via negative margins so the background
+                  covers edge-to-edge instead of leaving the card's padding
+                  visible on either side, and a faint upward shadow separates
+                  it from whatever is scrolling underneath. */}
+              <div className="sticky bottom-0 -mx-6 sm:-mx-8 px-6 sm:px-8 pt-4 pb-4 sm:pb-5 mt-8 bg-white border-t border-slate-100 shadow-[0_-6px_16px_-8px_rgba(15,23,42,0.08)] flex items-center justify-between">
                 <button
                   type="button"
                   onClick={goBack}
@@ -1796,25 +1839,6 @@ export default function LoanApplication() {
                     {t("customer.loanApplication.submitApplication")}
                   </button>
                 )}
-              </div>
-
-              {/* H3 — explicit save. Progress is already auto-saved on every
-                  step change; this is the reassuring, visible version of that
-                  for an applicant who wants to leave deliberately. */}
-              <div className="flex justify-center mt-4">
-                <button
-                  type="button"
-                  onClick={handleSaveAndExit}
-                  disabled={savingDraft}
-                  className="px-4 py-2 rounded-xl text-[11px] font-semibold text-slate-500 hover:text-brand-primary disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                >
-                  {savingDraft ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Save className="w-3.5 h-3.5" />
-                  )}
-                  {t("customer.loanApplication.saveAndContinueLater")}
-                </button>
               </div>
             </>
           )}

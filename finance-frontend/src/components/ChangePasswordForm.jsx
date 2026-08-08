@@ -64,13 +64,13 @@ export default function ChangePasswordForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4"
+      className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3"
     >
       <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
         <Lock className="w-4.5 h-4.5 text-brand-primary" /> Change Password
       </h4>
 
-      <div className="space-y-3 text-xs">
+      <div className="space-y-2.5 text-xs">
         <div className="space-y-1">
           <label className="font-bold text-slate-500 uppercase">Current Password</label>
           <input

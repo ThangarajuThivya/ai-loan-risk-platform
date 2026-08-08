@@ -33,11 +33,14 @@ function AppContent() {
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/staff") ||
     (location.pathname.startsWith("/dashboard") && user?.role === "staff");
-  // The customer portal keeps the public Navbar but owns its own Footer
-  // placement (inside CustomerLayout's padded content column) so it isn't
-  // rendered under the fixed sidebar — see CustomerLayout.jsx.
+  // The customer portal keeps the public Navbar but, like the auth pages
+  // below, has no footer of its own — see CustomerLayout.jsx.
+  const isAuthPage =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/forgot-password";
   const hideGlobalFooter =
-    isFullShellPortal || location.pathname.startsWith("/dashboard");
+    isFullShellPortal || location.pathname.startsWith("/dashboard") || isAuthPage;
   return (
     <div className="flex flex-col min-h-screen bg-brand-bg font-sans selection:bg-brand-accent selection:text-white">
       {/* Navigation Head (hidden on admin/staff portals) */}
@@ -82,8 +85,8 @@ function AppContent() {
           <Route path="/unauthorized" element={<Unauthorized />} />
         </Routes>
       </main>
-      {/* Footer info panel (hidden on admin/staff/customer portals — customer
-          renders its own inside CustomerLayout) */}
+      {/* Footer info panel (hidden on admin/staff/customer portals and on
+          the login/register/forgot-password auth pages). */}
       {!hideGlobalFooter && <Footer />}
     </div>
   );

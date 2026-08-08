@@ -1,64 +1,72 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { 
-  Save, 
-  Building, 
-  FileText, 
-  Bell, 
-  Globe, 
-  Info,
-  CheckCircle,
-  Cpu
-} from 'lucide-react';
+import { useState } from "react";
+import { Save, Building, FileText, Bell, Info, Loader2 } from "lucide-react";
+import { useToast } from "../../components/toast/useToast";
 
+// No system_settings table exists in the backend yet — this is a working
+// preview of the intended admin controls, not a wired-up feature. Saving
+// confirms locally but doesn't change live underwriting behavior. Kept
+// mocked deliberately rather than left half-built against a real endpoint.
 export default function AdminSettings() {
-  const [bankName, setBankName] = useState('Digital AI Sovereign Bank');
-  const [bankBranch, setBankBranch] = useState('Silicon Valley Head Office');
-  const [currency, setCurrency] = useState('USD ($)');
-  
-  const [defaultRate, setDefaultRate] = useState(7.5);
-  const [maxPersonalLimit, setMaxPersonalLimit] = useState(50000);
+  const { showToast } = useToast();
+
+  const [bankName, setBankName] = useState("Aura Digital Bank");
+  const [bankBranch, setBankBranch] = useState("Colombo Head Office");
+  const [currency, setCurrency] = useState("LKR (Rs.)");
+
+  const [defaultRate, setDefaultRate] = useState(14.5);
+  const [maxPersonalLimit, setMaxPersonalLimit] = useState(2000000);
   const [riskBufferLimit, setRiskBufferLimit] = useState(45);
-  
+
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [ocrAutoVerification, setOcrAutoVerification] = useState(true);
   const [criticalRiskBlock, setCriticalRiskBlock] = useState(false);
-  
-  const [language, setLanguage] = useState('English');
-  const [isSaved, setIsSaved] = useState(false);
+
+  const [saving, setSaving] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
-    setIsSaved(true);
+    setSaving(true);
     setTimeout(() => {
-      setIsSaved(false);
-      alert('System configuration parameters persisted successfully!');
-    }, 1200);
+      setSaving(false);
+      showToast({
+        type: "success",
+        title: "Settings Saved",
+        message: "Your changes have been recorded for this session.",
+      });
+    }, 600);
   };
 
   return (
-    <form onSubmit={handleSave} className="space-y-8 max-w-4xl">
-      {/* Title block */}
-      <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+    <form onSubmit={handleSave} className="space-y-6 w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">Aura Bank Configuration</h3>
-          <p className="text-xs text-slate-500 font-medium">Fine-tune underwriting thresholds, OCR model pathways, and audit alerts</p>
+          <h3 className="font-display font-bold text-xl text-slate-900">Bank Settings</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Configure underwriting thresholds, automation, and alerts for the loan risk platform.
+          </p>
         </div>
         <button
           type="submit"
-          className="px-5 py-2.5 bg-[#0F4C81] hover:bg-indigo-950 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
+          disabled={saving}
+          className="shrink-0 px-5 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm disabled:opacity-60"
         >
-          <Save className="w-4 h-4" /> Save System Config
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Save Settings
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] text-slate-500">
+        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+        Preview only — these settings aren't yet connected to a backend, so
+        saving won't change live system behavior.
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bank Information */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
           <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-            <Building className="w-4.5 h-4.5 text-indigo-700" /> Bank Information
+            <Building className="w-4.5 h-4.5 text-brand-primary" /> Bank Information
           </h4>
-          
           <div className="space-y-3 text-xs">
             <div className="space-y-1">
               <label className="font-bold text-slate-500 uppercase">Institution Name</label>
@@ -67,97 +75,92 @@ export default function AdminSettings() {
                 required
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary text-xs"
               />
             </div>
             <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase">Registered Branch Location</label>
+              <label className="font-bold text-slate-500 uppercase">Branch / Head Office</label>
               <input
                 type="text"
                 required
                 value={bankBranch}
                 onChange={(e) => setBankBranch(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary text-xs"
               />
             </div>
             <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase">Operating Standard Currency</label>
+              <label className="font-bold text-slate-500 uppercase">Base Currency</label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs cursor-pointer"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary text-xs cursor-pointer"
               >
-                <option value="USD ($)">USD ($) - US Dollars</option>
-                <option value="EUR (€)">EUR (€) - Euros</option>
-                <option value="GBP (£)">GBP (£) - British Pounds</option>
-                <option value="INR (₹)">INR (₹) - Indian Rupees</option>
+                <option value="LKR (Rs.)">LKR (Rs.) — Sri Lankan Rupee</option>
+                <option value="USD ($)">USD ($) — US Dollar</option>
+                <option value="EUR (€)">EUR (€) — Euro</option>
+                <option value="GBP (£)">GBP (£) — British Pound</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* Loan Underwriting Rules */}
+        {/* Underwriting Rules */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
           <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-            <FileText className="w-4.5 h-4.5 text-indigo-700" /> Underwriting Rules
+            <FileText className="w-4.5 h-4.5 text-brand-primary" /> Underwriting Rules
           </h4>
-
           <div className="space-y-3 text-xs">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase">Benchmark APR (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={defaultRate}
-                  onChange={(e) => setDefaultRate(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs font-mono"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="font-bold text-slate-500 uppercase">Max Personal Cap ($)</label>
-                <input
-                  type="number"
-                  required
-                  value={maxPersonalLimit}
-                  onChange={(e) => setMaxPersonalLimit(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs font-mono"
-                />
-              </div>
-            </div>
-
             <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase">Risk Threshold Limit (DTI %)</label>
+              <label className="font-bold text-slate-500 uppercase">Default Interest Rate (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={defaultRate}
+                onChange={(e) => setDefaultRate(Number(e.target.value))}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary text-xs font-mono"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="font-bold text-slate-500 uppercase">Max Personal Loan (LKR)</label>
+              <input
+                type="number"
+                required
+                value={maxPersonalLimit}
+                onChange={(e) => setMaxPersonalLimit(Number(e.target.value))}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary text-xs font-mono"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="font-bold text-slate-500 uppercase">Risk Threshold (DTI %)</label>
               <input
                 type="number"
                 required
                 value={riskBufferLimit}
                 onChange={(e) => setRiskBufferLimit(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs font-mono"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary text-xs font-mono"
               />
-              <span className="text-[10px] text-slate-400">Flag applications violating this debt-to-income benchmark.</span>
+              <span className="text-[10px] text-slate-400">Flag applications above this debt-to-income ratio.</span>
             </div>
           </div>
         </div>
 
-        {/* Real-time Telemetry & Notification Rules */}
+        {/* Notifications & Automation */}
         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
           <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-            <Bell className="w-4.5 h-4.5 text-indigo-700" /> Notifications & AI Automation
+            <Bell className="w-4.5 h-4.5 text-brand-primary" /> Notifications & Automation
           </h4>
-
           <div className="space-y-3.5 text-xs">
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={emailAlerts}
                 onChange={(e) => setEmailAlerts(e.target.checked)}
-                className="w-4 h-4 text-indigo-900 border-slate-200 rounded-lg focus:ring-indigo-800/10 cursor-pointer"
+                className="w-4 h-4 text-brand-primary border-slate-200 rounded-lg focus:ring-brand-primary/10 cursor-pointer"
               />
               <div>
-                <span className="font-bold text-slate-700 block">Critical Risk Email Warnings</span>
-                <span className="text-[10px] text-slate-400">Email directors immediately upon high delinquency flag.</span>
+                <span className="font-bold text-slate-700 block">Critical Risk Email Alerts</span>
+                <span className="text-[10px] text-slate-400">Notify admins immediately on a high-risk flag.</span>
               </div>
             </label>
 
@@ -166,11 +169,11 @@ export default function AdminSettings() {
                 type="checkbox"
                 checked={ocrAutoVerification}
                 onChange={(e) => setOcrAutoVerification(e.target.checked)}
-                className="w-4 h-4 text-indigo-900 border-slate-200 rounded-lg focus:ring-indigo-800/10 cursor-pointer"
+                className="w-4 h-4 text-brand-primary border-slate-200 rounded-lg focus:ring-brand-primary/10 cursor-pointer"
               />
               <div>
-                <span className="font-bold text-slate-700 block">Automated Document NLP Checks</span>
-                <span className="text-[10px] text-slate-400">Use deep pre-approval matching on OCR verified receipts.</span>
+                <span className="font-bold text-slate-700 block">Automated Document Verification</span>
+                <span className="text-[10px] text-slate-400">Run OCR checks automatically on uploaded documents.</span>
               </div>
             </label>
 
@@ -179,44 +182,13 @@ export default function AdminSettings() {
                 type="checkbox"
                 checked={criticalRiskBlock}
                 onChange={(e) => setCriticalRiskBlock(e.target.checked)}
-                className="w-4 h-4 text-indigo-900 border-slate-200 rounded-lg focus:ring-indigo-800/10 cursor-pointer"
+                className="w-4 h-4 text-brand-primary border-slate-200 rounded-lg focus:ring-brand-primary/10 cursor-pointer"
               />
               <div>
-                <span className="font-bold text-slate-700 block">Instant Critical Delinquency Block</span>
-                <span className="text-[10px] text-slate-400">Instantly decline applications above 90% risk score.</span>
+                <span className="font-bold text-slate-700 block">Auto-Decline High-Risk Applications</span>
+                <span className="text-[10px] text-slate-400">Automatically reject applications scored above 90% risk.</span>
               </div>
             </label>
-          </div>
-        </div>
-
-        {/* Theme and Language Selection */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-          <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-            <Globe className="w-4.5 h-4.5 text-indigo-700" /> Localization & Style Theme
-          </h4>
-
-          <div className="space-y-3.5 text-xs">
-            <div className="space-y-1">
-              <label className="font-bold text-slate-500 uppercase">Operating Language</label>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-800/10 focus:border-indigo-800 text-xs cursor-pointer"
-              >
-                <option value="English">English (US)</option>
-                <option value="Spanish">Spanish (ES)</option>
-                <option value="French">French (FR)</option>
-                <option value="German">German (DE)</option>
-              </select>
-            </div>
-
-            {/* Read-only theme card */}
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-150 space-y-1 text-slate-500">
-              <span className="font-bold text-slate-700 flex items-center gap-1 uppercase text-[9px] tracking-wider"><Info className="w-3.5 h-3.5 text-indigo-600" /> Active Visual Theme Mode</span>
-              <p className="text-[11px] leading-relaxed">
-                Branding profile locks active to <span className="font-semibold text-indigo-900">Sleek Interface Preset</span>. Color configurations match standard sovereign vault templates. Primary theme changes are read-only.
-              </p>
-            </div>
           </div>
         </div>
       </div>

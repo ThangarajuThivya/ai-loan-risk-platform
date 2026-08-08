@@ -67,7 +67,7 @@ function MyApplications() {
 
   return (
     <div className="pb-16 px-4 sm:px-6 lg:px-8 pt-6 bg-brand-bg min-h-screen">
-      <div className="max-w-5xl mx-auto">
+      <div className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center space-x-3">
             <div className="bg-brand-primary/10 text-brand-primary p-2.5 rounded-xl shrink-0">
@@ -118,13 +118,13 @@ function MyApplications() {
         )}
 
         {appsLoading && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 flex items-center justify-center text-slate-400">
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-8 flex items-center justify-center text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         )}
 
         {!appsLoading && appsError && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
             <div className="flex items-start space-x-3 bg-rose-50 border border-rose-100 text-rose-700 rounded-xl p-4 text-xs">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{appsError}</span>
@@ -133,7 +133,7 @@ function MyApplications() {
         )}
 
         {!appsLoading && !appsError && applications.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
             <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-700">
               {t("customer.common.noApplicationsTitle")}
@@ -153,7 +153,7 @@ function MyApplications() {
         )}
 
         {!appsLoading && !appsError && applications.length > 0 && filteredApplications.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
             <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-700">
               {t("customer.applications.noneInFilter")}
@@ -162,7 +162,7 @@ function MyApplications() {
         )}
 
         {!appsLoading && !appsError && filteredApplications.length > 0 && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filteredApplications.map((application) => (
               <ApplicationSummaryCard
                 key={application.application_id}
