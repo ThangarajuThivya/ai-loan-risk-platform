@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, Mail, Phone, MapPin, ShieldAlert, FileText, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react';
 
 export default function Footer() {
   const { t } = useTranslation();
@@ -42,9 +42,6 @@ export default function Footer() {
                 <Link to="/about" className="hover:text-brand-accent transition-colors">{t('footer.aboutUs')}</Link>
               </li>
               <li>
-                <Link to="/loans" className="hover:text-brand-accent transition-colors">{t('footer.loanProducts')}</Link>
-              </li>
-              <li>
                 <Link to="/eligibility" className="hover:text-brand-accent transition-colors">{t('footer.eligibilityChecker')}</Link>
               </li>
               <li>
@@ -83,17 +80,20 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="font-display font-bold text-sm tracking-widest uppercase text-slate-300 mb-4">{t('footer.contactInfoHeading')}</h3>
             <div className="space-y-3 text-sm text-slate-400">
+              {/* These were a US toll-free number and a Manhattan address on
+                  a Sri Lankan bank. Left in place they contradicted every
+                  other thing the site says about where it operates. */}
               <div className="flex items-start space-x-3">
                 <Phone className="w-5 h-5 text-brand-secondary shrink-0 mt-0.5" />
-                <span>+1 (800) 555-Degital (2872)</span>
+                <span>+94 11 234 5678</span>
               </div>
               <div className="flex items-start space-x-3">
                 <Mail className="w-5 h-5 text-brand-secondary shrink-0 mt-0.5" />
-                <span>support@Degital-iloan.com</span>
+                <span>support@degital.lk</span>
               </div>
               <div className="flex items-start space-x-3">
                 <MapPin className="w-5 h-5 text-brand-secondary shrink-0 mt-0.5" />
-                <span>100 Financial Plaza, Floor 42, New York, NY 10005</span>
+                <span>No. 42, Janadhipathi Mawatha, Colombo 01, Sri Lanka</span>
               </div>
             </div>
           </div>

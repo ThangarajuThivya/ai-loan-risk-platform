@@ -7,6 +7,8 @@ import {
   FileStack,
   FilePlus2,
   UserCircle,
+  Car,
+  CarFront,
   Coins,
   MessageSquare,
   LogOut,
@@ -15,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import NotificationBell from "../../components/notifications/NotificationBell";
 
 // Defined at module scope (outside SidebarNav), so labels are translation
 // keys resolved via t() at render time rather than literal strings.
@@ -30,6 +33,17 @@ const NAV_GROUPS = [
     items: [
       { to: "/dashboard/applications", end: false, labelKey: "customer.layout.navMyApplications", icon: FileStack },
       { to: "/dashboard/apply", end: false, labelKey: "customer.layout.navApplyForLoan", icon: FilePlus2 },
+    ],
+  },
+  // Leasing is its own group, peer to Loans — not an item inside it. A
+  // finance lease is a distinct instrument, not a kind of loan, and nesting
+  // it would put back in the navigation exactly the misclassification the
+  // schema was corrected of. See ARCHITECTURE.md §9.19.
+  {
+    labelKey: "customer.layout.navLeasing",
+    items: [
+      { to: "/dashboard/leases", end: true, labelKey: "customer.layout.navMyLeases", icon: Car },
+      { to: "/dashboard/leases/apply", end: false, labelKey: "customer.layout.navApplyForLease", icon: CarFront },
     ],
   },
   {
@@ -94,6 +108,13 @@ function SidebarNav({ user, onNavigate, onLogout }) {
           <p className="text-xs font-bold text-slate-800 truncate">
             {user?.email || t("customer.layout.welcomeBack")}
           </p>
+        </div>
+        {/* The lessee's own bell. Their notification panel on the overview
+            page is still there, but it is only visible on ONE page — a
+            rental falling due should be findable from anywhere in the
+            portal. */}
+        <div className="ml-auto shrink-0">
+          <NotificationBell />
         </div>
       </div>
 
@@ -198,13 +219,16 @@ export default function CustomerLayout() {
               {user?.email || t("customer.layout.customerPortal")}
             </span>
           </div>
-          <button
-            onClick={() => setMobileNavOpen(true)}
-            type="button"
-            className="p-2 text-slate-500 hover:text-brand-primary transition-colors shrink-0"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <NotificationBell />
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              type="button"
+              className="p-2 text-slate-500 hover:text-brand-primary transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         <div className="lg:pl-60 min-h-[calc(100vh-6rem)] flex flex-col">

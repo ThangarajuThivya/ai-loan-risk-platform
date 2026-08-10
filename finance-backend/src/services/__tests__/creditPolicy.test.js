@@ -585,4 +585,87 @@ check("an empty input degrades to skips and income failures, not a crash", () =>
   assert(result.rules.length > 0);
 });
 
+/* --------------------------------------------------------------------- *
+ * Leasing rules (L2.2)
+ * --------------------------------------------------------------------- */
+
+const LEASE_OK = {
+  ltv: { decidable: true, ltv: 68, maxLtv: 70, withinPolicy: true, base: 4000000, baseSource: "valuation" },
+  downPaymentPercent: 32,
+  minimumDownPaymentPercent: 30,
+};
+
+check("LOAD-BEARING: a loan evaluation is unchanged by the leasing rules existing", () => {
+  // The lease rules must be ABSENT for a loan, not present-and-skipped:
+  // anything else changes the stored rule set of every existing loan.
+  const codes = evaluateCreditPolicy(CLEAN).rules.map((r) => r.code);
+  assert.ok(!codes.includes("LEASE_LTV"), "LEASE_LTV must not appear on a loan");
+  assert.ok(!codes.includes("LEASE_DOWN_PAYMENT"), "LEASE_DOWN_PAYMENT must not appear on a loan");
+});
+
+check("a compliant lease adds both rules and still passes", () => {
+  const result = evaluateCreditPolicy({ ...CLEAN, lease: LEASE_OK });
+  const codes = result.rules.map((r) => r.code);
+  assert.ok(codes.includes("LEASE_LTV") && codes.includes("LEASE_DOWN_PAYMENT"));
+  assert.strictEqual(result.rules.find((r) => r.code === "LEASE_LTV").status, "pass");
+  assert.strictEqual(result.outcome, "pass");
+});
+
+check("LTV above the cap is a mandatory breach, not a referral", () => {
+  const result = evaluateCreditPolicy({
+    ...CLEAN,
+    lease: {
+      ...LEASE_OK,
+      ltv: { decidable: true, ltv: 87.5, maxLtv: 70, withinPolicy: false, base: 4000000, baseSource: "valuation" },
+    },
+  });
+  const r = result.rules.find((x) => x.code === "LEASE_LTV");
+  assert.strictEqual(r.status, "fail");
+  assert.strictEqual(result.outcome, "decline");
+  assert.ok(result.reason_codes.includes("LEASE_LTV"));
+});
+
+check("an LTV judged on a valuation says so in its detail", () => {
+  const result = evaluateCreditPolicy({ ...CLEAN, lease: LEASE_OK });
+  const r = result.rules.find((x) => x.code === "LEASE_LTV");
+  // Which figure the ratio was measured against changes what it means, so a
+  // reviewer must be able to see it without opening another table.
+  assert.ok(/valuation/i.test(r.detail), `detail should name the base: ${r.detail}`);
+});
+
+check("a missing valuation refers — neither a pass nor a decline", () => {
+  const result = evaluateCreditPolicy({
+    ...CLEAN,
+    lease: { ...LEASE_OK, ltv: { decidable: false, reason: "valuation_required" } },
+  });
+  const r = result.rules.find((x) => x.code === "LEASE_LTV");
+  assert.strictEqual(r.status, "refer");
+  assert.strictEqual(result.outcome, "refer");
+  assert.ok(/valuation is required/i.test(r.detail));
+});
+
+check("a short down payment is a mandatory breach", () => {
+  const result = evaluateCreditPolicy({
+    ...CLEAN,
+    lease: { ...LEASE_OK, downPaymentPercent: 12, minimumDownPaymentPercent: 30 },
+  });
+  const r = result.rules.find((x) => x.code === "LEASE_DOWN_PAYMENT");
+  assert.strictEqual(r.status, "fail");
+  assert.strictEqual(result.outcome, "decline");
+});
+
+check("an unsupplied down payment skips rather than failing", () => {
+  const result = evaluateCreditPolicy({
+    ...CLEAN,
+    lease: { ltv: LEASE_OK.ltv, downPaymentPercent: null, minimumDownPaymentPercent: null },
+  });
+  const r = result.rules.find((x) => x.code === "LEASE_DOWN_PAYMENT");
+  assert.strictEqual(r.status, "skipped");
+});
+
+check("lease rule codes stay unique alongside the loan ones", () => {
+  const codes = evaluateCreditPolicy({ ...CLEAN, lease: LEASE_OK }).rules.map((r) => r.code);
+  assert.strictEqual(new Set(codes).size, codes.length);
+});
+
 console.log(`\n${passed} assertions passed.`);

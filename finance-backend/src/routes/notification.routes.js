@@ -1,24 +1,27 @@
+"use strict";
+
 const express = require("express");
 
 const router = express.Router();
 
-const db = require("../config/db");
 const notification = require("../controllers/notifications");
 const { verifyToken } = require("../middleware/auth.middleware");
 
-router.get(
-"/my-notifications",
-verifyToken,
-notification.getNotifications
-);
+// Every route here is scoped to the CALLER inside the model — there is no
+// user id in any path or body, so one account can never read or clear
+// another's notifications regardless of what a client sends.
 
-// PATCH /api/notifications/read-all (K4) — mark all of the caller's own
-// notifications as read. See controllers/notifications.js markAllRead.
-router.patch(
-"/read-all",
-verifyToken,
-notification.markAllRead
-);
+// GET /api/notifications/my-notifications?limit=&offset=&category=&unread=1
+router.get("/my-notifications", verifyToken, notification.getNotifications);
 
+// GET /api/notifications/unread-count — total plus a per-category breakdown.
+router.get("/unread-count", verifyToken, notification.getUnreadCount);
+
+// PATCH /api/notifications/read-all?category= (K4)
+router.patch("/read-all", verifyToken, notification.markAllRead);
+
+// PATCH /api/notifications/:id/read — clear one, for the click-through path.
+// Declared AFTER /read-all so "read-all" is never parsed as an :id.
+router.patch("/:id/read", verifyToken, notification.markRead);
 
 module.exports = router;

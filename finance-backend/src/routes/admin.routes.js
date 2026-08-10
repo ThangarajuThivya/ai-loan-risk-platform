@@ -3,6 +3,7 @@ const { body, param, query } = require("express-validator");
 const admin = require("../controllers/admin.controller");
 const loanController = require("../controllers/loan.controller");
 const loanReportsController = require("../controllers/loanReports.controller");
+const lease = require("../controllers/lease.controller");
 const { verifyToken } = require("../middleware/auth.middleware");
 const { allowRoles } = require("../middleware/role.middleware");
 const {
@@ -185,6 +186,18 @@ router.patch(
       .withMessage("status must be one of: active, inactive, suspended"),
   ],
   admin.updateCustomerStatus
+);
+
+// DELETE /api/admin/customers/:userId — permanently remove a customer
+// account. See admin.controller.js deleteCustomer for the guard: an account
+// with any loan/lease application on file is refused (409) rather than
+// deleted, to protect the audit trail those cascade into.
+router.delete(
+  "/customers/:userId",
+  verifyToken,
+  allowRoles("admin"),
+  [param("userId").isInt({ gt: 0 }).withMessage("userId must be a positive integer").toInt()],
+  admin.deleteCustomer
 );
 
 // GET /api/admin/customers/:userId/bank-accounts (039) — every account this
@@ -806,6 +819,164 @@ router.delete(
   allowRoles("admin"),
   [param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt()],
   admin.deleteStaff
+);
+
+/* -------------------------------------------------------------------- *
+ * Vehicle leasing reference data (L1.2, extended L17)
+ *
+ * READ is admin+staff. CREATE is admin+staff, but the two roles do not get
+ * the same power: the controller drops a dealer's banking details and any
+ * status change for a non-admin caller, so a staff member can add a
+ * counterparty mid-application without also choosing where purchase money
+ * goes. That narrowing is deliberately NOT expressed as separate routes —
+ * one endpoint with a role-aware body keeps the two paths from drifting.
+ * See services/leaseRegister.service.js for the reasoning.
+ *
+ * UPDATE stays admin-only. Creating a counterparty that cannot yet be paid
+ * is recoverable; silently editing an approved one is not.
+ *
+ * Neither register has a DELETE: suppliers and valuers are referenced by
+ * vehicles and valuations respectively, so they are suspended via the status
+ * field, never removed. See lease.controller.js.
+ * -------------------------------------------------------------------- */
+
+const SUPPLIER_VALIDATORS = [
+  body("name")
+    .exists({ checkFalsy: true })
+    .withMessage("name is required")
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 150 })
+    .withMessage("name must be between 2 and 150 characters"),
+  body("business_reg_no")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("business_reg_no must be 50 characters or fewer"),
+  body("contact_person")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 150 })
+    .withMessage("contact_person must be 150 characters or fewer"),
+  body("phone")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage("phone must be 20 characters or fewer"),
+  body("email")
+    .optional({ nullable: true, checkFalsy: true })
+    .isEmail()
+    .withMessage("email must be a valid email address")
+    .normalizeEmail(),
+  body("address")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("address must be 500 characters or fewer"),
+  body("bank_name")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("bank_name must be 100 characters or fewer"),
+  body("bank_branch")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("bank_branch must be 100 characters or fewer"),
+  body("bank_account_no")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 30 })
+    .withMessage("bank_account_no must be 30 characters or fewer"),
+  body("account_holder")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 150 })
+    .withMessage("account_holder must be 150 characters or fewer"),
+  body("status")
+    .optional({ nullable: true, checkFalsy: true })
+    .isIn(["active", "suspended"])
+    .withMessage("status must be one of: active, suspended"),
+];
+
+const VALUER_VALIDATORS = [
+  body("name")
+    .exists({ checkFalsy: true })
+    .withMessage("name is required")
+    .isString()
+    .trim()
+    .isLength({ min: 2, max: 150 })
+    .withMessage("name must be between 2 and 150 characters"),
+  body("license_no")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("license_no must be 50 characters or fewer"),
+  body("phone")
+    .optional({ nullable: true, checkFalsy: true })
+    .isString()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage("phone must be 20 characters or fewer"),
+  body("email")
+    .optional({ nullable: true, checkFalsy: true })
+    .isEmail()
+    .withMessage("email must be a valid email address")
+    .normalizeEmail(),
+  body("status")
+    .optional({ nullable: true, checkFalsy: true })
+    .isIn(["active", "suspended"])
+    .withMessage("status must be one of: active, suspended"),
+];
+
+const idParam = [
+  param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+];
+
+router.get(
+  "/lease/suppliers",
+  verifyToken,
+  allowRoles("admin", "staff"),
+  lease.listSuppliers
+);
+router.post(
+  "/lease/suppliers",
+  verifyToken,
+  allowRoles("admin", "staff"),
+  SUPPLIER_VALIDATORS,
+  lease.createSupplier
+);
+router.put(
+  "/lease/suppliers/:id",
+  verifyToken,
+  allowRoles("admin"),
+  [...idParam, ...SUPPLIER_VALIDATORS],
+  lease.updateSupplier
+);
+
+router.get("/lease/valuers", verifyToken, allowRoles("admin", "staff"), lease.listValuers);
+router.post(
+  "/lease/valuers",
+  verifyToken,
+  allowRoles("admin", "staff"),
+  VALUER_VALIDATORS,
+  lease.createValuer
+);
+router.put(
+  "/lease/valuers/:id",
+  verifyToken,
+  allowRoles("admin"),
+  [...idParam, ...VALUER_VALIDATORS],
+  lease.updateValuer
 );
 
 module.exports = router;

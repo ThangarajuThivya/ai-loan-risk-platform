@@ -6,6 +6,7 @@ const rateFeed = require("./services/rateFeed.service");
 const fxExpirySweep = require("./services/fxExpirySweep.service");
 const offerExpiry = require("./services/offerExpiry.service");
 const lateFeeSweep = require("./services/lateFeeSweep.service");
+const leaseReminderSweep = require("./services/leaseReminderSweep.service");
 const PORT = process.env.PORT || 5000;
 (async() =>{
     await seedAdmin();
@@ -29,4 +30,10 @@ const PORT = process.env.PORT || 5000;
     // Late-fee sweep (C5) — charges a one-time penalty on installments
     // overdue past their grace period. See lateFeeSweep.service.js.
     lateFeeSweep.scheduleLateFeeSweep();
+    // Lease reminders (L16) — rentals due and overdue, quotations about to
+    // lapse, unpaid signing amounts, and leases stalled on OUR side. Every
+    // notice is deduped by a UNIQUE key in the schema, so the sweep is safe
+    // to run at any frequency and keeps no state between runs. See
+    // leaseReminderSweep.service.js.
+    leaseReminderSweep.scheduleLeaseReminderSweep();
 })()

@@ -76,7 +76,9 @@ export default function AdminProducts({ readOnly = false }) {
   const [deletingId, setDeletingId] = useState(null);
 
   const loadProducts = async () => {
-    const res = await api.get("/loans/products");
+    // include_inactive so retired products stay visible here — the customer
+    // picker hides them, but the screen that governs the catalogue must not.
+    const res = await api.get("/loans/products?include_inactive=true");
     return res.data?.products || [];
   };
 

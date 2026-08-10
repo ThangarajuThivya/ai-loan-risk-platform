@@ -2258,7 +2258,9 @@ export default function AdminApplications({ focusApplicationId, onFocusHandled }
                                 {fee.calc_method === "percentage"
                                   ? ` (${fee.rate_or_amount}%)`
                                   : ""}
-                                {fee.waived && fee.waived_reason && (
+                                {/* Boolean(): `waived` is a MySQL TINYINT,
+                                    and `{0 && ...}` renders a literal "0". */}
+                                {Boolean(fee.waived) && fee.waived_reason && (
                                   <span className="italic text-amber-700">
                                     {" "}
                                     — waived: {fee.waived_reason}

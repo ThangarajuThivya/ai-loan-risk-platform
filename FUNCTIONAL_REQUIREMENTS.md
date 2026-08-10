@@ -19,10 +19,10 @@ discussion — it has no meaning beyond that.
 
 | Role | Who they are | What they broadly do |
 |---|---|---|
-| **Visitor** | Anyone browsing the public website, not yet logged in | Learns about the bank's loan products, checks whether they might qualify, gets in touch |
-| **Customer** | A registered borrower | Applies for loans, manages their loan(s), makes repayments, exchanges currency, gets support |
-| **Staff** | A bank employee (loan officer / operations) | Reviews and processes applications, verifies documents, records payments, handles day-to-day currency exchange operations |
-| **Administrator** | Bank management / system owner | Everything staff can do, plus configuring loan products, managing staff accounts, and viewing bank-wide performance reports |
+| **Visitor** | Anyone browsing the public website, not yet logged in | Learns about the bank's loan and vehicle leasing products, checks whether they might qualify, gets in touch |
+| **Customer** | A registered borrower or lessee | Applies for loans and vehicle leases, manages them, makes repayments/rental payments, exchanges currency, gets support |
+| **Staff** | A bank employee (loan officer / operations) | Reviews and processes loan and lease applications, verifies documents, records payments, manages the vehicle leasing lifecycle (valuations, dealers, registration), handles day-to-day currency exchange operations |
+| **Administrator** | Bank management / system owner | Everything staff can do, plus configuring loan and leasing products, managing staff accounts, and viewing bank-wide performance reports |
 
 Every registered user (customer, staff, or administrator) also gets their
 own secure login, a profile page, and the ability to reset a forgotten
@@ -34,7 +34,8 @@ password by email.
 
 ### 2.1 Information & Marketing
 
-- **FR-VIS-01**: A visitor can view general information about the bank and the loan products it offers (personal, housing, vehicle, business, education, and pawning loans).
+- **FR-VIS-01**: A visitor can view general information about the bank and the loan products it offers (personal, housing, business, education, and pawning loans).
+- **FR-VIS-01a**: A visitor can view the bank's vehicle leasing products (car, van/SUV, motorcycle, three-wheeler, and commercial vehicle finance leases) alongside its loan products, since a lease is a distinct kind of financing rather than a type of loan — the vehicle is owned by the bank and leased to the customer until the final rental is paid, rather than the customer borrowing money against it.
 - **FR-VIS-02**: A visitor can view a summary of the bank's other services: currency exchange, AI-assisted decision tools, and multilingual support.
 - **FR-VIS-03**: A visitor can browse a Frequently Asked Questions (FAQ) page maintained by the bank.
 - **FR-VIS-04**: A visitor can view the website in **English, Sinhala, or Tamil**, switching at any time.
@@ -116,6 +117,32 @@ password by email.
 - **FR-CUS-37**: A customer can open a **support conversation** with the bank directly from within the system and continue the conversation as a message thread, rather than only through the public contact form.
 - **FR-CUS-38**: A customer can use the entire customer portal in **English, Sinhala, or Tamil**.
 
+### 3.8 Vehicle Leasing
+
+A vehicle lease is a **separate kind of facility from a loan**: the bank buys
+and owns the vehicle, the customer (the lessee) pays a monthly rental to use
+it, and ownership transfers to the customer only once every rental has been
+paid. It has its own application, its own approval and payment steps, and its
+own dedicated section of the customer portal, alongside — not inside — the
+loan journey described in §3.2–§3.5.
+
+- **FR-CUS-39**: A customer can browse the bank's vehicle leasing products (car, van/SUV, motorcycle, three-wheeler, and commercial vehicle) and start a new lease application.
+- **FR-CUS-40**: When applying, a customer provides the vehicle's details (make, model, year of manufacture, condition — brand new, reconditioned, or used — and invoice price), the amount they want financed, and their preferred lease term, and selects the supplying dealer from the bank's approved list, or indicates the vehicle is being bought from a private seller.
+- **FR-CUS-41**: A customer can upload supporting documents for a lease application (e.g. identity documents, proof of income, the vehicle's invoice) in the same way as for a loan application.
+- **FR-CUS-42**: Once submitted, a lease application is automatically assessed using the same AI risk assessment and credit-policy checks as a loan application, plus a check on how much is being financed relative to the vehicle's value (loan-to-value).
+- **FR-CUS-43**: If the vehicle is used or reconditioned, a customer is told that an independent valuation is required before a decision can be made on their application, and can see once that valuation has been completed.
+- **FR-CUS-44**: A customer can track their lease application on a clear, plain-language **progress tracker** showing all eight steps of a lease (Applied → Under Review → Approved → Terms Quoted → Down Payment → Vehicle & Title → Rentals → Yours), which step they are currently at, and — at every step — a single, one-line answer to "what happens next, and whose turn is it?" so they are never left wondering whether they are waiting on the bank or the bank is waiting on them.
+- **FR-CUS-45**: Once approved, a customer receives a formal **quotation** showing the monthly rental amount, the down payment required, the interest rate and lease term, and any applicable fees and charges — and can **accept or decline** it. Nothing is payable until the customer accepts.
+- **FR-CUS-46**: A customer can view and download the formal **lease agreement** (a statement of terms consistent with the Finance Leasing Act) as a PDF once they accept a quotation.
+- **FR-CUS-47**: A customer can pay the required **down payment** (and any fees) online by card through the same secure Stripe-powered payment page used for loan repayments, or have it recorded by staff if paid in person at a branch — and can see at all times how much has been received and how much remains outstanding.
+- **FR-CUS-48**: A customer is automatically kept informed as the bank buys the vehicle from the dealer and registers it with the Department of Motor Traffic (DMT), naming the bank as the vehicle's absolute owner and the customer as its registered user until the lease is complete — without needing to contact staff for an update.
+- **FR-CUS-49**: Once the vehicle is registered and the lease is activated, a customer can view their full **rental schedule** — every monthly rental, its due date, and whether it has been paid, part-paid, or is still due — in the same way they view a loan repayment schedule.
+- **FR-CUS-50**: A customer can pay a monthly rental online by card: the next rental due, any overdue rentals, a full early settlement of the remaining lease, or a bounded custom amount — and, exactly as with a loan repayment, the amount charged is always calculated by the system from the actual lease balance, never simply typed into a box.
+- **FR-CUS-51**: A customer can see the exact figure required to **settle their lease early in full**, with any unearned finance charge rebated, calculated automatically and always kept up to date.
+- **FR-CUS-52**: Once every rental has been paid in full, a customer is issued a **letter of release** confirming the lease is complete, after which they can transfer legal ownership of the vehicle into their own name at the DMT.
+- **FR-CUS-53**: A customer receives an in-app notification (and, for major events, an email) at every significant stage of their lease — a quotation being ready, a down payment or rental falling due or becoming overdue, the vehicle being purchased and registered, and the lease reaching completion.
+- **FR-CUS-54**: A customer can use the entire vehicle leasing journey — applying, tracking progress, reviewing and accepting a quotation, paying, and reading their agreement — in **English, Sinhala, or Tamil**.
+
 ---
 
 ## 4. Bank Staff
@@ -180,6 +207,26 @@ reserved for administrators (Section 5).
 
 - **FR-STF-29**: A staff member has their own profile page and can update their own contact details and password.
 
+### 4.9 Vehicle Leasing Operations
+
+Processing a lease has extra steps a loan does not — arranging a valuation,
+buying the vehicle, registering it — each of which is a staff (not customer)
+action.
+
+- **FR-STF-30**: A staff member can view a queue of all vehicle lease applications, each showing the same plain-language progress indicator the customer sees, and an "action needed" flag identifying which leases are waiting on the bank right now.
+- **FR-STF-31**: A staff member can request an independent valuation for a used or reconditioned vehicle from the bank's approved list of valuers, and record the outcome once it is back — a lease cannot be approved without one when the vehicle's condition requires it.
+- **FR-STF-32**: A staff member can make a credit decision on a lease application (approve, decline, or request more information from the customer), seeing the same AI risk assessment and rule-based policy checks used for a loan, plus a loan-to-value check specific to the financed vehicle.
+- **FR-STF-33**: A staff member can issue or re-issue a formal quotation to the customer (monthly rental, down payment, fees), and can **waive an individual fee** with a mandatory recorded reason, in the same way as for a loan offer.
+- **FR-STF-34**: A staff member can record a down payment received in person or by other offline means, alongside the online card channel available to the customer, against a single running total of what is owed at signing.
+- **FR-STF-35**: A staff member can attach the selling dealer to a specific lease application from the bank's approved dealer register — or quickly add a new dealer's basic details on the fly if the register does not yet have them — before the vehicle is purchased.
+- **FR-STF-36**: A staff member can record that the vehicle has been bought from the supplier (the payout) once the customer's down payment has cleared, and is clearly warned if a dealer cannot yet be paid because their payout bank account has not been set up.
+- **FR-STF-37**: A staff member can record the vehicle's registration with the Department of Motor Traffic — including reference numbers and dates — naming the bank as absolute owner and the customer as registered user, before any monthly rentals begin.
+- **FR-STF-38**: A staff member can activate a lease once the vehicle is registered, which automatically generates the full monthly rental schedule.
+- **FR-STF-39**: A staff member can record a rental payment received in person or by other offline means; the system automatically works out which rental(s) it clears, exactly as it does for a loan instalment.
+- **FR-STF-40**: Once every rental has been paid, a staff member can issue the **letter of release**, and separately record confirmation once the vehicle has actually been transferred into the customer's name at the DMT.
+- **FR-STF-41**: A staff member can look up, add, and edit the bank's approved vehicle **dealers** and independent **valuers** used across all lease applications — though only an administrator can set or change a dealer's payout bank account, since that is who the bank's purchase money is sent to.
+- **FR-STF-42**: A staff member can view a bank-wide **leasing portfolio** summary — vehicles the bank currently owns under an active lease, rentals collected, and rentals overdue — reported separately from the loan portfolio, since a fleet of owned vehicles is a materially different kind of asset from a loan balance.
+
 ---
 
 ## 5. Administrator
@@ -219,6 +266,13 @@ the bank's overall lending and currency book is performing.
 
 - **FR-ADM-15**: An administrator can configure the bank's own identity details (name, main branch) as shown throughout the system.
 
+### 5.6 Vehicle Leasing Configuration & Registers
+
+- **FR-ADM-16**: An administrator can add, edit, and configure vehicle leasing products (vehicle class, allowed financed amounts, lease terms, interest rate, and fees), independently of the loan product catalogue.
+- **FR-ADM-17**: An administrator can set or change a dealer's **payout bank account** details — a staff member may add or edit a dealer's identity (name, contact details) but never their banking, since that is the account the bank's own purchase money is sent to.
+- **FR-ADM-18**: An administrator can **suspend** a dealer or an independent valuer, preventing them from being assigned to any new lease application.
+- **FR-ADM-19**: An administrator can view the bank-wide **leasing portfolio dashboard** alongside the loan portfolio dashboard (FR-ADM-06), reported as its own, separate figure rather than combined into the loan book's totals.
+
 ---
 
 ## 6. Requirements That Apply Across the Whole System
@@ -243,12 +297,23 @@ that every part of the system is expected to have.
   with anyone, regardless of technical background.
 - A few capabilities that were explored during development are **not**
   included above because they are not yet part of the system: joint/
-  co-borrower applications, loan top-ups or restructuring, repayment
-  frequencies other than monthly, product-specific workflows for
-  pawning (gold appraisal/auction) and leasing (asset/residual value) beyond
-  treating them as standard instalment loans, withdrawing a consent once
-  given (a customer can only give a fresh, up-to-date consent — see
-  FR-CUS-12a), and refunding a loan fee once charged (an early settlement
-  recalculates interest owed, but never refunds a processing/documentation/
-  insurance fee already deducted). These can be scoped as future additions
-  if needed.
+  co-borrower or joint-lessee applications, loan top-ups or restructuring,
+  repayment/rental frequencies other than monthly, a product-specific
+  workflow for pawning (gold appraisal/auction) beyond treating it as a
+  standard instalment loan, a guarantor mechanic for a lease (only a loan
+  can currently have one), any lease structure other than a full-payout
+  finance lease ending in mandatory ownership transfer (there is no
+  operating-lease/optional-return-the-vehicle variant), withdrawing a
+  consent once given (a customer can only give a fresh, up-to-date consent —
+  see FR-CUS-12a), and refunding a loan or leasing fee once charged (an
+  early settlement recalculates interest/finance charge owed, but never
+  refunds a processing/documentation/insurance fee already deducted). These
+  can be scoped as future additions if needed.
+- **Vehicle leasing** (§3.8, §4.9, §5.6) was, for a period during
+  development, modelled as nothing more than a specially-named loan product
+  — the same application, offer, and repayment flow as a personal loan, with
+  no vehicle, dealer, valuation, down payment, or ownership-transfer
+  mechanic of its own. It has since been rebuilt as the fully distinct
+  facility described throughout this document, and the requirements above
+  reflect the system as it exists today, not that earlier, superseded
+  design.
