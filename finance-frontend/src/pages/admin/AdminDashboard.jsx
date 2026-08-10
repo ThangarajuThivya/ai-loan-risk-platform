@@ -12,19 +12,19 @@ import {
   Settings,
   UserCircle,
   LogOut,
-  Bell,
   Search,
-  Menu,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Database,
   Grid,
   UserCog,
   Coins,
+  Car,
   ArrowLeftRight,
   FileBarChart,
   BarChart3,
+  Store,
+  Gavel,
 } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 // Modular view imports
@@ -34,6 +34,9 @@ import AdminStaff from "../../components/admin/AdminStaff";
 import AdminApplications from "../../components/admin/AdminApplications";
 import AdminProducts from "../../components/admin/AdminProducts";
 import AdminRiskAnalysis from "../../components/admin/AdminRiskAnalysis";
+import LeaseReviewQueue from "../../components/leasing/LeaseReviewQueue";
+import LeasePortfolio from "../../components/leasing/LeasePortfolio";
+import LeaseRegister from "../../components/leasing/LeaseRegister";
 import AdminMessages from "../../components/admin/AdminMessages";
 import AdminFaqManagement from "../../components/admin/AdminFaqManagement";
 import AdminSettings from "../../components/admin/AdminSettings";
@@ -43,15 +46,22 @@ import AdminFxExchange from "../../components/admin/AdminFxExchange";
 import AdminReports from "../../components/admin/AdminReports";
 import AdminPortfolioDashboard from "../../components/admin/AdminPortfolioDashboard";
 import api from "../../api/axios";
-import { useToast } from "../../components/toast/useToast";
+import NotificationBell from "../../components/notifications/NotificationBell";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  // Honours ?tab= on first render so a notification can deep-link
+  // straight to the section it is about. Admin and staff have no
+  // sub-routes — the whole dashboard is one component with tab state —
+  // so without this a staff notification has nowhere to send anyone.
+  // Read once, as the initial value: re-syncing on every location
+  // change would fight the user the moment they clicked another tab.
+  const [activeTab, setActiveTab] = useState(
+    () => new URLSearchParams(window.location.search).get("tab") || "dashboard"
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, logout } = useAuth();
-  const { showToast } = useToast();
 
   const [customers, setCustomers] = useState([]);
 
@@ -62,25 +72,12 @@ export default function AdminDashboard() {
   const [focusApplicationId, setFocusApplicationId] = useState(null);
 
   // Notification dropdown state
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [openMsgCount, setOpenMsgCount] = useState(0);
-  const [markingRead, setMarkingRead] = useState(false);
 
   // Profile dropdown state
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   useEffect(() => {
-    const getNotifications = async () => {
-      try {
-        const res = await api.get("/notifications/my-notifications");
-
-        setNotifications(res.data);
-      } catch (error) {
-        console.log(error);
-        console.log(error.response?.status);
-      }
-    };
     const getAllCustomers = async () => {
       try {
         const res = await api.get("/admin/getAllCustomer");
@@ -92,7 +89,6 @@ export default function AdminDashboard() {
       }
     };
 
-    getNotifications();
     getAllCustomers();
   }, []);
 
@@ -113,27 +109,6 @@ export default function AdminDashboard() {
     navigate("/");
   };
 
-  // K4 — this used to only rewrite local state, so a reload (or the next
-  // getNotifications poll) always showed everything as unread again.
-  const handleMarkAllRead = async () => {
-    if (markingRead) return;
-    setMarkingRead(true);
-    const previous = notifications;
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
-    try {
-      await api.patch("/notifications/read-all");
-    } catch (err) {
-      console.error("MARK ALL NOTIFICATIONS READ ERROR:", err);
-      setNotifications(previous);
-      showToast({
-        type: "error",
-        title: "Couldn't Update Notifications",
-        message: "Please try again.",
-      });
-    } finally {
-      setMarkingRead(false);
-    }
-  };
 
   const handleNavigate = (tab) => {
     setActiveTab(tab);
@@ -171,6 +146,21 @@ export default function AdminDashboard() {
       ],
     },
     {
+      // Peer to Loan Management, not inside it — a finance lease is a
+      // distinct instrument. See ARCHITECTURE.md §9.19.
+      label: "Leasing",
+      items: [
+        { id: "lease-applications", label: "Lease Applications", icon: Car },
+        { id: "lease-portfolio", label: "Leasing Portfolio", icon: BarChart3 },
+        // The two counterparty registers (L17). Kept as siblings of the
+        // queue rather than buried in Settings: who we buy from and who
+        // values the vehicle are operational leasing decisions, and both
+        // registers were empty for as long as they had no screen.
+        { id: "lease-dealers", label: "Dealers", icon: Store },
+        { id: "lease-valuers", label: "Valuers", icon: Gavel },
+      ],
+    },
+    {
       label: "Currency",
       items: [
         { id: "currency", label: "Currency Analytics", icon: Coins },
@@ -199,8 +189,6 @@ export default function AdminDashboard() {
   // of duplicating ids.
   const flatMenuItems = menuGroups.flatMap((group) => group.items);
   const activeMenuItem = flatMenuItems.find((item) => item.id === activeTab);
-
-  const unreadNotifsCount = notifications.filter((n) => n.is_read === 0).length;
 
   // Sidebar groups behave as a single-open accordion: clicking a group's
   // header expands it and collapses whichever other group was open.
@@ -247,6 +235,10 @@ export default function AdminDashboard() {
       <AdminRiskAnalysis onViewApplication={handleViewApplicationFromHome} />
     ),
     "portfolio-dashboard": () => <AdminPortfolioDashboard />,
+    "lease-applications": () => <LeaseReviewQueue />,
+    "lease-portfolio": () => <LeasePortfolio />,
+    "lease-dealers": () => <LeaseRegister kind="dealers" role="admin" />,
+    "lease-valuers": () => <LeaseRegister kind="valuers" role="admin" />,
     currency: () => <AdminCurrency />,
     "fx-exchange": () => <AdminFxExchange customers={customers} />,
     "fx-reports": () => <AdminReports />,
@@ -422,78 +414,15 @@ console.log(user)
               />
             </div>
 
-            {/* Notification alert dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowNotifDropdown(!showNotifDropdown);
-                  setShowProfileDropdown(false);
-                }}
-                className="p-1.5 text-slate-500 hover:text-[#0F4C81] hover:bg-slate-50 rounded-lg transition-all relative cursor-pointer"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadNotifsCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-[#00A86B] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-sm">
-                    {unreadNotifsCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Notification Overlay Menu */}
-              <AnimatePresence>
-                {showNotifDropdown && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowNotifDropdown(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 overflow-hidden"
-                    >
-                      <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <span className="text-xs font-extrabold text-slate-700 uppercase">
-                          System Alerts
-                        </span>
-                        <button
-                          onClick={handleMarkAllRead}
-                          disabled={markingRead}
-                          className="text-[10px] text-indigo-700 hover:text-indigo-900 font-bold disabled:opacity-50"
-                        >
-                          Mark all read
-                        </button>
-                      </div>
-
-                      <div className="divide-y divide-slate-100 text-xs">
-                        {notifications.map((n) => (
-                          <div
-                            key={n.id}
-                            className={`p-3.5 hover:bg-slate-50 transition-colors ${n.is_read === 0 ? "bg-indigo-50/10" : ""}`}
-                          >
-                            <p className="text-slate-600 leading-snug">
-                              {n.message}
-                            </p>
-                            <span className="text-[10px] text-slate-400 block mt-1 font-mono">
-                              {n.created_at}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* Replaced a bespoke dropdown that could not deep-link, could
+                not separate products, and fetched every notification the
+                admin had ever received on each load. See NotificationBell. */}
+            <NotificationBell />
 
             {/* Profile Dropdown */}
             <div className="relative">
               <button
-                onClick={() => {
-                  setShowProfileDropdown(!showProfileDropdown);
-                  setShowNotifDropdown(false);
-                }}
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 className="flex items-center gap-2 hover:opacity-85 transition-opacity cursor-pointer text-left"
               >
                 <div className="w-8 h-8 rounded-full bg-[#0F4C81] text-white flex items-center justify-center font-bold text-xs">

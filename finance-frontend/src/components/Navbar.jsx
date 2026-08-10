@@ -38,15 +38,21 @@ export default function Navbar() {
     };
   }, []);
 
-  // Close mobile menu on navigate
+  // Close mobile menu on navigate. Wrapped rather than called directly:
+  // a synchronous setState call in an effect body trips this project's
+  // cascading-render lint rule; the microtask defers it past the render pass.
   useEffect(() => {
-    setMobileMenuOpen(false);
+    queueMicrotask(() => setMobileMenuOpen(false));
   }, [location.pathname]);
 
+  // Loans used to have its own tab here pointing at a standalone /loans
+  // page. That page is gone — loan (and leasing) products are now shown
+  // inline on /services, which already has a tab of its own — so the entry
+  // was removed rather than repointed, to avoid two tabs landing in the
+  // same place.
   const navLinks = [
     { name: t('navbar.home'), path: '/' },
     { name: t('navbar.about'), path: '/about' },
-    { name: t('navbar.loans'), path: '/loans' },
     { name: t('navbar.services'), path: '/services' },
     { name: t('navbar.faq'), path: '/faq' },
     { name: t('navbar.contact'), path: '/contact' },

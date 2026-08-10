@@ -1266,6 +1266,7 @@ export default function LoanApplication() {
                           value={requestedAmount}
                           onChange={setRequestedAmount}
                         />
+
                         {selectedProduct && (
                           <p
                             className={`mt-1 text-[11px] ${

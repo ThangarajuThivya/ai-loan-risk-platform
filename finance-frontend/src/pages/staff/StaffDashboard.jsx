@@ -7,6 +7,8 @@ import {
   Layers,
   Calculator,
   Coins,
+  Car,
+  BarChart3,
   ArrowLeftRight,
   MessageSquare,
   HelpCircle,
@@ -27,7 +29,10 @@ import RiskCalculator from "../../components/RiskCalculator";
 import StaffCurrency from "../../components/staff/StaffCurrency";
 import StaffFxExchange from "../../components/staff/StaffFxExchange";
 import StaffProfile from "./StaffProfile";
+import LeaseReviewQueue from "../../components/leasing/LeaseReviewQueue";
+import LeasePortfolio from "../../components/leasing/LeasePortfolio";
 import api from "../../api/axios";
+import NotificationBell from "../../components/notifications/NotificationBell";
 
 // Staff scope: review + decide applications, read-only customers/products,
 // the manual risk calculator, currency decision aids, and the FX exchange
@@ -45,6 +50,15 @@ const menuGroups = [
     items: [
       { id: "customers", label: "Customers", icon: Users },
       { id: "products", label: "Loan Products", icon: Layers },
+    ],
+  },
+  {
+    // Leasing is its own group, peer to Loan Operations — a finance lease is
+    // a distinct instrument, not a kind of loan. See ARCHITECTURE.md §9.19.
+    label: "Leasing",
+    items: [
+      { id: "lease-applications", label: "Lease Applications", icon: Car },
+      { id: "lease-portfolio", label: "Leasing Portfolio", icon: BarChart3 },
     ],
   },
   {
@@ -73,7 +87,15 @@ export default function StaffDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("applications");
+  // Honours ?tab= on first render so a notification can deep-link
+  // straight to the section it is about. Admin and staff have no
+  // sub-routes — the whole dashboard is one component with tab state —
+  // so without this a staff notification has nowhere to send anyone.
+  // Read once, as the initial value: re-syncing on every location
+  // change would fight the user the moment they clicked another tab.
+  const [activeTab, setActiveTab] = useState(
+    () => new URLSearchParams(window.location.search).get("tab") || "applications"
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [openMsgCount, setOpenMsgCount] = useState(0);
@@ -141,6 +163,8 @@ export default function StaffDashboard() {
     ),
     products: () => <AdminProducts readOnly />,
     "risk-calculator": () => <RiskCalculator />,
+    "lease-applications": () => <LeaseReviewQueue />,
+    "lease-portfolio": () => <LeasePortfolio />,
     currency: () => <StaffCurrency />,
     "fx-exchange": () => <StaffFxExchange customers={customers} />,
     messages: () => <AdminMessages />,
@@ -286,6 +310,11 @@ export default function StaffDashboard() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Staff previously had NO notification surface at all — which
+                stopped mattering the moment leasing began routing work to
+                the desk (a new application, terms accepted, arrears, a
+                lease stalled on our side). */}
+            <NotificationBell />
             <div className="w-8 h-8 rounded-full bg-[#0F4C81] text-white flex items-center justify-center font-bold text-xs">
               {(user?.email || "S").slice(0, 1).toUpperCase()}
             </div>

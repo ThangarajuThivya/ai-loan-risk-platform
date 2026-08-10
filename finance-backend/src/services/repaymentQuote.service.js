@@ -44,19 +44,41 @@ const MIN_PAYMENT = 100;
  * means: not the nominal EMI, but what is actually left on the oldest row,
  * including any late fee and net of anything already part-paid or waived.
  *
+ * A residual below MIN_PAYMENT rolls forward into the following
+ * instalment(s) — a gateway will not process it, and nobody would
+ * deliberately pay a few rupees anyway. It arises whenever an earlier
+ * payment landed a few cents short of a full instalment (an offline receipt
+ * keyed in as 35,583.00 instead of 35,583.34, say), and without this the
+ * shortfall sits on the ledger forever: "pay my instalment" would forever
+ * quote an amount nothing will charge. This changes nothing about how a
+ * payment is ALLOCATED once made — allocatePayment applies it oldest-first
+ * regardless of what the quote was for, so a combined charge simply clears
+ * both rows.
+ *
  * @param {object[]} installments repayment_schedule rows
- * @returns {{scheduleId:number, installmentNo:number, dueDate:string, amount:number}|null}
+ * @returns {{scheduleId:number, installmentNo:number, throughInstallmentNo?:number,
+ *            dueDate:string, amount:number}|null}
  */
 function nextInstallmentDue(installments) {
   const sorted = [...installments].sort((a, b) => a.installment_no - b.installment_no);
-  for (const row of sorted) {
+  for (let i = 0; i < sorted.length; i += 1) {
+    const row = sorted[i];
     const owed = outstandingOn(row);
     if (owed.total > 0) {
+      let amount = round2(owed.total);
+      let through = i;
+      while (amount > 0 && amount < MIN_PAYMENT && through + 1 < sorted.length) {
+        through += 1;
+        amount = round2(amount + outstandingOn(sorted[through]).total);
+      }
       return {
         scheduleId: row.id,
         installmentNo: row.installment_no,
+        // Present only when rolled forward, so a caller that doesn't care
+        // can ignore it — an ordinary full instalment is unaffected.
+        throughInstallmentNo: through !== i ? sorted[through].installment_no : undefined,
         dueDate: row.due_date,
-        amount: owed.total,
+        amount,
       };
     }
   }
@@ -119,6 +141,17 @@ function resolvePayment({ installments, kind, amount, asOf = new Date() }) {
 
   if (kind === "settlement") {
     const quote = computeSettlement(installments, asOf);
+    // Defence in depth: on the very last instalment of the loan, settling
+    // and paying it outright are nearly the same figure, and if that figure
+    // ever rounds below what a gateway will process there is no row left to
+    // roll it into. Caught here rather than reaching the gateway.
+    if (quote.total > 0 && quote.total < MIN_PAYMENT) {
+      return {
+        ok: false,
+        reason: "BELOW_MINIMUM",
+        message: `This comes to only ${quote.total}, too small to pay online. Please contact us.`,
+      };
+    }
     return {
       ok: true,
       amount: quote.total,
@@ -137,6 +170,16 @@ function resolvePayment({ installments, kind, amount, asOf = new Date() }) {
         ok: false,
         reason: "NOTHING_OWED",
         message: "This loan has nothing left to pay.",
+      };
+    }
+    // nextInstallmentDue already rolls a tiny residual forward into a
+    // following row; this only fires when that row was the LAST one on the
+    // schedule and there was nowhere left to roll it into.
+    if (next.amount > 0 && next.amount < MIN_PAYMENT) {
+      return {
+        ok: false,
+        reason: "BELOW_MINIMUM",
+        message: `This comes to only ${next.amount}, too small to pay online. Please contact us.`,
       };
     }
     return {

@@ -266,6 +266,58 @@ exports.updateCustomerStatus = async (req, res) => {
   }
 };
 
+// DELETE /api/admin/customers/:userId — permanently remove a customer
+// account, alongside the existing activate/deactivate/suspend above.
+//
+// GUARDED, unlike deleteStaff. Every table a customer's own records live in
+// (loan_applications, loan_accounts, lease_applications, lease_agreements,
+// bank_accounts, ...) cascades off `users(user_id)`, and everything hanging
+// off THOSE — repayment history, adverse-action records, decision-matrix
+// rows — cascades again. Deleting a customer who ever applied for credit
+// would silently erase that trail, which is exactly the record a lender is
+// expected to be able to produce later. So a customer with any loan or
+// lease application on file cannot be hard-deleted here; deactivate/suspend
+// is the correct action for them, and permanent deletion is left for
+// accounts that never went further than registering (duplicates, test
+// signups, abandoned signups) — where CASCADE only ever removes the shell:
+// drafts, consents, an unopened bank account.
+exports.deleteCustomer = async (req, res) => {
+  const userId = Number(req.params.userId);
+
+  try {
+    const customer = await userModel.findCustomerById(userId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer account not found." });
+    }
+
+    const counts = await userModel.countCustomerFinancialRecords(userId);
+    if (counts.loanApplications > 0 || counts.leaseApplications > 0) {
+      const parts = [];
+      if (counts.loanApplications > 0) {
+        parts.push(`${counts.loanApplications} loan application${counts.loanApplications === 1 ? "" : "s"}`);
+      }
+      if (counts.leaseApplications > 0) {
+        parts.push(`${counts.leaseApplications} lease application${counts.leaseApplications === 1 ? "" : "s"}`);
+      }
+      return res.status(409).json({
+        message:
+          `This account has ${parts.join(" and ")} on file. Permanently deleting it would ` +
+          `also erase that history, which we're expected to keep for audit purposes — ` +
+          `deactivate or suspend the account instead.`,
+      });
+    }
+
+    const deleted = await userModel.deleteCustomerPermanently(userId);
+    if (!deleted) {
+      return res.status(404).json({ message: "Customer account not found." });
+    }
+    return res.status(204).send();
+  } catch (err) {
+    console.error("DELETE CUSTOMER ERROR:", err);
+    return res.status(500).json({ message: "Failed to delete customer account." });
+  }
+};
+
 // GET /api/admin/customers/:userId/bank-accounts (staff/admin; 039) — every
 // account this customer holds with the bank, live and closed.
 exports.listCustomerBankAccounts = async (req, res) => {

@@ -347,7 +347,10 @@ function OfferTab({ application, onAnswerOffer, offerActing }) {
                     <span className="text-slate-500">
                       {fee.label}
                       {fee.calc_method === "percentage" ? ` (${fee.rate_or_amount}%)` : ""}
-                      {fee.waived && (
+                      {/* Boolean(): `waived` is a MySQL TINYINT, and
+                          `{0 && <jsx/>}` renders a literal "0" after the fee
+                          name ("Processing Fee0"). */}
+                      {Boolean(fee.waived) && (
                         <span className="text-emerald-700 font-semibold">
                           {" "}
                           · {t("customer.widgets.offerFeeWaived")}

@@ -84,6 +84,9 @@ app.get("/", (req,res)=>{
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/user", require("./routes/user.routes"));
 app.use("/api/loans", require("./routes/loan.routes"));
+// Leasing is a distinct financing type, so it gets its own top-level
+// namespace rather than living under /api/loans — see ARCHITECTURE.md §9.19.
+app.use("/api/leases", require("./routes/lease.routes"));
 app.use("/api/admin", require("./routes/admin.routes"));
 app.use("/api/notifications", require("./routes/notification.routes"));
 app.use("/api/currency", require("./routes/currency.routes"));

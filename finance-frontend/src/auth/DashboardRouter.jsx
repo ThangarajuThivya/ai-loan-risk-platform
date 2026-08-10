@@ -9,6 +9,9 @@ import MyApplications from "../pages/customer/MyApplications";
 import LoanApplicationDetail from "../pages/customer/LoanApplicationDetail";
 import LoanApplication from "../pages/customer/LoanApplication";
 import CustomerProfile from "../pages/customer/CustomerProfile";
+import MyLeases from "../pages/customer/MyLeases";
+import LeaseApplication from "../pages/customer/LeaseApplication";
+import LeaseDetail from "../pages/customer/LeaseDetail";
 import CustomerCurrency from "../pages/customer/CustomerCurrency";
 import CurrencyExchange from "../pages/customer/CurrencyExchange";
 import MyExchangeRequests from "../pages/customer/MyExchangeRequests";
@@ -36,6 +39,11 @@ export default function DashboardRouter() {
             <Route path="applications" element={<MyApplications />} />
             <Route path="applications/:id" element={<LoanApplicationDetail />} />
             <Route path="apply" element={<LoanApplication />} />
+            {/* Leasing — a distinct top-level section, not nested under the
+                loan routes above. */}
+            <Route path="leases" element={<MyLeases />} />
+            <Route path="leases/apply" element={<LeaseApplication />} />
+            <Route path="leases/:id" element={<LeaseDetail />} />
             <Route path="currency" element={<CustomerCurrency />} />
             <Route path="currency/exchange" element={<CurrencyExchange />} />
             <Route path="currency/exchange/requests" element={<MyExchangeRequests />} />

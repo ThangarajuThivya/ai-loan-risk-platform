@@ -181,24 +181,58 @@ export default function RepaymentPanel({ applicationId, refreshKey = 0 }) {
         </p>
       )}
 
+      {/* Dust sitting on the very last instalment, with no following row for
+          the server to roll it into (see repaymentQuote.service's
+          nextInstallmentDue). Shown as a fact rather than a button certain
+          to come back as a 409 — a card gateway will not process a few
+          rupees, and this is the one case the server's own roll-forward
+          cannot fix. */}
+      {canPay &&
+        options.next_installment &&
+        !options.next_installment.through_installment_no &&
+        options.next_installment.amount < (options.min_payment || 100) && (
+          <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex items-start gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
+            {t("customer.repayment.tooSmallToPayOnline", {
+              amount: formatCurrency(options.next_installment.amount),
+            })}
+          </p>
+        )}
+
       {canPay && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {options.next_installment && (
-              <PayOption
-                label={t("customer.repayment.nextInstallmentLabel", {
-                  no: options.next_installment.installment_no,
-                })}
-                sub={t("customer.repayment.dueOn", {
-                  date: formatDate(options.next_installment.due_date),
-                })}
-                amount={options.next_installment.amount}
-                cta={t("customer.repayment.payCta")}
-                busy={paying === KINDS.INSTALLMENT}
-                disabled={busy}
-                onClick={() => startPayment(KINDS.INSTALLMENT)}
-              />
-            )}
+            {options.next_installment &&
+              (options.next_installment.through_installment_no ||
+                options.next_installment.amount >= (options.min_payment || 100)) && (
+                <PayOption
+                  label={
+                    options.next_installment.through_installment_no
+                      ? t("customer.repayment.nextInstallmentRangeLabel", {
+                          from: options.next_installment.installment_no,
+                          through: options.next_installment.through_installment_no,
+                        })
+                      : t("customer.repayment.nextInstallmentLabel", {
+                          no: options.next_installment.installment_no,
+                        })
+                  }
+                  sub={
+                    options.next_installment.through_installment_no
+                      ? t("customer.repayment.installmentRolledForwardHint", {
+                          no: options.next_installment.installment_no,
+                          through: options.next_installment.through_installment_no,
+                        })
+                      : t("customer.repayment.dueOn", {
+                          date: formatDate(options.next_installment.due_date),
+                        })
+                  }
+                  amount={options.next_installment.amount}
+                  cta={t("customer.repayment.payCta")}
+                  busy={paying === KINDS.INSTALLMENT}
+                  disabled={busy}
+                  onClick={() => startPayment(KINDS.INSTALLMENT)}
+                />
+              )}
             {options.settlement && (
               <PayOption
                 label={t("customer.repayment.settlementLabel")}

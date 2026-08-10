@@ -17,6 +17,8 @@ import {
   Phone,
   Mail,
   IdCard,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import api from "../../api/axios";
 import { useToast } from "../toast/useToast";
@@ -130,6 +132,15 @@ export default function AdminCustomers({ customers, onUpdateCustomers }) {
   const [editBusy, setEditBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
 
+  // Permanent delete — separate from status, and a lot more careful about
+  // it. Confirmed via a modal like AdminStaff's, and the server itself
+  // refuses (409) any account with a loan or lease application on file, so
+  // the error path here is a real, expected outcome, not just a network
+  // failure.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
+
   // Search and filter logic. user_id is a number, not a string — String()
   // it before searching rather than calling .toLowerCase() directly on it
   // (that used to throw the moment any customer had a non-empty list,
@@ -197,6 +208,34 @@ export default function AdminCustomers({ customers, onUpdateCustomers }) {
       });
     } finally {
       setStatusBusy(false);
+    }
+  };
+
+  const confirmDeleteCustomer = async () => {
+    if (!pendingDelete) return;
+    setDeletingId(pendingDelete.user_id);
+    setDeleteError("");
+    try {
+      await api.delete(`/admin/customers/${pendingDelete.user_id}`);
+      onUpdateCustomers(customers.filter((c) => c.user_id !== pendingDelete.user_id));
+      if (selectedCustomer && selectedCustomer.user_id === pendingDelete.user_id) {
+        setSelectedCustomer(null);
+      }
+      showToast({
+        type: "success",
+        title: "Customer Deleted",
+        message: `${pendingDelete.email} was permanently removed.`,
+      });
+      setPendingDelete(null);
+    } catch (err) {
+      // A 409 here is the server's financial-history guard, not a bug — it
+      // is shown inline in the confirmation dialog rather than as a toast,
+      // since it's the answer to the exact question this dialog is asking.
+      setDeleteError(
+        err.response?.data?.message || "Couldn't delete this customer account."
+      );
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -427,6 +466,21 @@ export default function AdminCustomers({ customers, onUpdateCustomers }) {
                               <UserMinus className="w-4 h-4" />
                             ) : (
                               <UserCheck className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteError("");
+                              setPendingDelete(cust);
+                            }}
+                            disabled={deletingId === cust.user_id}
+                            className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors disabled:opacity-40"
+                            title="Delete Permanently"
+                          >
+                            {deletingId === cust.user_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
                             )}
                           </button>
                         </div>
@@ -927,6 +981,16 @@ export default function AdminCustomers({ customers, onUpdateCustomers }) {
 
                   <div className="pt-4 border-t border-slate-100 flex gap-3 justify-end">
                     <button
+                      onClick={() => {
+                        setDeleteError("");
+                        setPendingDelete(selectedCustomer);
+                      }}
+                      disabled={deletingId === selectedCustomer.user_id}
+                      className="px-4 py-2 text-sm font-semibold rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete Permanently
+                    </button>
+                    <button
                       onClick={() =>
                         handleToggleStatus(selectedCustomer.user_id, selectedCustomer.status)
                       }
@@ -946,6 +1010,66 @@ export default function AdminCustomers({ customers, onUpdateCustomers }) {
                   </div>
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Permanent delete confirmation. The server enforces the real rule
+          (an account with any loan/lease application is refused, 409) —
+          this dialog exists so a genuine mistake needs a second click, not
+          to duplicate that check client-side. */}
+      <AnimatePresence>
+        {pendingDelete && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-100 w-full max-w-sm p-6"
+            >
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-slate-900">Delete Customer Account</h3>
+              </div>
+
+              <p className="text-sm text-slate-600 mb-4">
+                Permanently delete{" "}
+                <span className="font-semibold text-slate-800">
+                  {pendingDelete.first_name} {pendingDelete.last_name}
+                </span>{" "}
+                ({pendingDelete.email})? This erases the account and cannot be undone. If
+                they've ever applied for a loan or lease, this will be refused — deactivate
+                the account instead so that history is kept.
+              </p>
+
+              {deleteError && (
+                <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2 mb-4">
+                  {deleteError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setPendingDelete(null)}
+                  disabled={deletingId === pendingDelete.user_id}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteCustomer}
+                  disabled={deletingId === pendingDelete.user_id}
+                  className="px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50"
+                >
+                  {deletingId === pendingDelete.user_id && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  Confirm Delete
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

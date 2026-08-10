@@ -18,7 +18,6 @@
   "navbar": {
     "home": "Home",
     "about": "About",
-    "loans": "Loans",
     "eligibilityChecker": "Eligibility Checker",
     "emiCalculator": "EMI Calculator",
     "services": "Services",
@@ -30,16 +29,15 @@
     "getStarted": "Get Started"
   },
   "footer": {
-    "tagline": "Empowering global consumers and banking officers with instant, deep-learning risk evaluations and tailor-made micro-loan terms.",
-    "fdicBadge": "FDIC Insured Partner Brokerage",
+    "tagline": "A Sri Lankan digital bank for loans, vehicle leasing and currency exchange — with the reasoning behind every credit decision shown to the person it affects.",
+    "fdicBadge": "Served in Sinhala, Tamil and English",
     "navigationHeading": "Navigation",
     "homeLanding": "Home Landing",
     "aboutUs": "About Us",
-    "loanProducts": "Loan Products",
     "eligibilityChecker": "Eligibility Checker",
     "emiCalculator": "EMI Calculator",
     "services": "Services",
-    "platformHeading": "SaaS Platform",
+    "platformHeading": "Your account",
     "faqLink": "Frequently Asked Questions",
     "contactSupport": "Contact Support",
     "officerSignIn": "Officer Portal Sign In",
@@ -47,81 +45,89 @@
     "apiDocsLocked": "Developer API Docs",
     "locked": "LOCKED",
     "contactInfoHeading": "Contact Info",
-    "copyright": "© {{year}} Degital AI Loan Systems Inc. All Rights Reserved. Prepared for Academic Demonstration.",
+    "copyright": "© {{year}} Degital. All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
-    "securityAudits": "Security Audits (SOC2 Type II)"
+    "securityAudits": "Security & privacy"
   },
   "home": {
-    "badge": "Fintech 2.0 Underwriting System",
-    "heroTitlePrefix": "The Future of ",
-    "heroTitleHighlight": "Smarter, Safer",
-    "heroTitleSuffix": " Loan Approvals",
-    "checkEligibility": "Check Eligibility",
-    "exploreProducts": "Explore Products",
-    "architectureEyebrow": "Our Architecture",
-    "architectureTitle": "A Direct Alternative to Legacy Underwriting",
-    "cashflowTitle": "Alternative Cashflow Evaluation",
-    "fairLendingTitle": "Fair Lending Compliance",
-    "fraudTitle": "Deep Fraud Isolation",
-    "auditTrailTitle": "Underwriting Audit Trail",
-    "capabilitiesEyebrow": "Platform Capabilities",
-    "capabilitiesTitle": "Pioneering Features for High Integrity Finance",
-    "featureNeuralTitle": "Neural Credit Analysis",
-    "featureRapidTitle": "5-Minute Rapid Pre-Approval",
-    "featureOcrTitle": "Secure Document Handling",
-    "exploreAllServices": "Explore all our services",
-    "meritsEyebrow": "System Merits",
-    "whyChooseTitle": "Why Borrowers and Banks Alike Choose Degital",
-    "automatedDecisionPaths": "Fully Automated Decision Paths",
-    "realtimeInterestOptimization": "Real-time Interest Optimization",
-    "militaryGradeSafety": "Military-Grade SOC2 Safety Levels",
-    "benefitLabel": "0{{num}}. BENEFIT",
-    "benefitEnhancedApprovalTitle": "Enhanced Approval Probability",
-    "benefitAprTitle": "Hyper-Personalized APR Tranches",
-    "benefitPrivacyTitle": "Guaranteed SOC2 Privacy Cryptography",
-    "benefitIntegrationTitle": "Enterprise Integration Layer",
-    "statProcessedDecisions": "Processed Decisions",
-    "statSupportedLanguages": "Supported Languages",
-    "statVolumeEvaluated": "Volume Evaluated ($)",
-    "statAvgLatency": "Avg Decision Latency",
-    "ctaTitle": "Ready to Find Your Perfect Loan Eligibility Terms?",
-    "applyNow": "Apply Now & Verify",
-    "tryEmiCalculator": "Try EMI Calculator",
-    "heroSubtitle": "Degital is a digital-first credit risk assessment application. By using neural modeling and secure document handling, we deliver lightning-fast micro-eligibility feedback with absolute structural transparency.",
-    "hudNeuralCreditHealth": "NEURAL CREDIT HEALTH",
-    "hudRiskReading": "{{percent}}% LOW RISK",
-    "hudAnnualInflow": "ANNUAL INFLOW",
-    "hudDebtRatio": "DEBT RATIO",
-    "hudAutomatedRecommendation": "Automated Recommendation",
-    "hudRecommendationText": "Recommended for: Premium Business Loan with special {{rate}}% promotional APR split.",
-    "hudOcrVerified": "Documents Secured",
-    "hudSecureAudit": "SECURE AUDIT",
-    "architectureIntro": "Traditional credit assessment models rely strictly on archaic FICO indices, penalizing small business owners and contractors. Degital introduces custom, safety-compliant mathematical modeling to dynamically verify true repayment strength in real-time.",
-    "cashflowDesc": "We read ledger stability factors, consistent deposits, and recurrent subscriptions rather than static scoring matrices.",
-    "fairLendingDesc": "Explicit mitigation algorithms prevent demographic bias, keeping evaluations strictly focused on financial numbers and true cash safety.",
-    "fraudDesc": "Integrated pattern recognizers compare metadata structures against hundreds of tampering behaviors automatically.",
-    "simulationOutput": "SIMULATION OUTPUT",
-    "auditTrailIntro": "Our model maps thousands of variables. Here is how a standard verification log translates for an applicant with irregular freelancing cashflows:",
-    "logOcrStream": "[{{time}}s] Document Received:",
-    "logOcrStreamValue": "1099_FORM.pdf uploaded",
-    "logSignature": "[{{time}}s] Signature Match & Verity:",
-    "logSignatureValue": "{{percent}}% INTEGRITY MATCH",
-    "logCashReserves": "[{{time}}s] Recurrent Cash Reserves:",
-    "logCashReservesValue": "{{amount}} / month avg",
-    "logLiquidity": "[{{time}}s] Computed Liquidity Risk:",
-    "logLiquidityValue": "LOW RISK COEFF ({{coefficient}})",
-    "logVerdict": "[{{time}}s] System Verdict:",
-    "logVerdictValue": "PRE-APPROVED & RECOMMENDED",
-    "featureNeuralDesc": "Our proprietary multi-layer neural network looks beyond legacy credit scores to assess alternative cashflow habits instantly.",
-    "featureRapidDesc": "Complete our simplified digital criteria questionnaire and receive an instant, accurate underwriting pre-approval output.",
-    "featureOcrDesc": "Upload your income proofs and KYC documents through an encrypted channel; our compliance team reviews and verifies each one before it factors into your application.",
-    "whyChooseDesc": "By taking advantage of deep-learning algorithms, we restructure the traditional friction points of personal and commercial borrowing, bringing unmatched speed, accessibility, and transparency.",
-    "benefitEnhancedApprovalDesc": "Alternative scoring parameters recognize stable income streams traditional systems overlook, raising baseline approvals by 27%.",
-    "benefitAprDesc": "Instead of strict rigid tiering, our reinforcement engine computes custom rates aligned exactly to your debt-to-income bandwidth.",
-    "benefitPrivacyDesc": "All submitted KYC assets are dynamically redacted during analysis, securing absolute confidentiality across databases.",
-    "benefitIntegrationDesc": "Compatible with standard bank ledger configurations, simplifying manual loan officer audits with robust metadata transparency.",
-    "ctaSubtitle": "Take our 5-minute digital-eligibility quiz to preview risk tiers, interest rates, and customized repayment schedules designed for you. No credit score drop guaranteed."
+    "locale": "Sri Lanka · Sinhala · Tamil · English",
+    "heroLine1": "A transparent digital bank",
+    "heroLine2": "for Sri Lanka.",
+    "heroSubtitle": "Personal and business loans, vehicle leasing under the Finance Leasing Act, and multi-currency exchange. Every credit decision arrives with the reasons behind it — not just a yes or a no.",
+    "checkEligibility": "Check your eligibility",
+    "exploreProducts": "See all products",
+    "lineLoans": "Loans",
+    "lineLeasing": "Vehicle leasing",
+    "lineCurrency": "Currency exchange",
+    "boardTitle": "Indicative rates",
+    "boardLive": "LIVE",
+    "boardLoans": "Lending",
+    "boardLeasing": "Vehicle leasing",
+    "boardUnavailable": "Rates are unavailable right now.",
+    "from": "from",
+    "perAnnum": "p.a.",
+    "months": "months",
+    "boardDisclaimer": "Indicative annual rates, read live from our product catalogue. Your rate depends on your assessment — better applications price lower.",
+    "productsEyebrow": "What we do",
+    "productsTitle": "Three ways to move money, one account.",
+    "productsIntro": "Apply once. Your profile, documents and verification carry across all three, so the second application asks far less than the first.",
+    "factFrom": "From",
+    "factUpTo": "Up to",
+    "factProducts": "Products",
+    "factTerm": "Term",
+    "factVehicles": "Vehicle classes",
+    "factPairs": "Currencies",
+    "factSettles": "Settlement",
+    "factSameDay": "Same day",
+    "factRecords": "Every deal",
+    "factReceipted": "Receipted",
+    "pa": "p.a.",
+    "loansEyebrow": "Lending",
+    "loansTitle": "Loans",
+    "loansBody": "Personal, housing, education, business and pawning. Fixed or reducing balance, with the full repayment schedule shown before you commit.",
+    "loansCta": "Compare loans",
+    "leaseEyebrow": "Leasing",
+    "leaseTitle": "Vehicle leasing",
+    "leaseBody": "Cars, vans, motorcycles, three-wheelers and commercial vehicles. We buy the vehicle from an approved dealer; you pay monthly rentals.",
+    "leaseCta": "How leasing works",
+    "fxEyebrow": "Currency",
+    "fxTitle": "Currency exchange",
+    "fxBody": "Buy and sell major currencies at rates published on the board, with a receipt and a record for every transaction you make.",
+    "fxCta": "See today's board",
+    "decisionEyebrow": "How a decision is made",
+    "decisionTitle": "Five steps, and you can see all of them.",
+    "decisionIntro": "Most lenders return a verdict and keep the reasoning. We show the sequence, and if you are declined we tell you which factors weighed against you and what would change the answer.",
+    "decisionHuman": "A model scores your application. It does not approve it. Every decision is confirmed by a credit officer, and the officer's name is on the record.",
+    "stepApplyTitle": "You apply",
+    "stepApplyDesc": "Income, employment and commitments, plus your documents. Drafts save as you go, so a long form can be finished later.",
+    "stepScoreTitle": "The model scores it",
+    "stepScoreDesc": "A risk model reads your profile and returns a score with the factors that drove it — kept as a snapshot, so the reasoning survives the decision.",
+    "stepPolicyTitle": "Policy rules run",
+    "stepPolicyDesc": "Affordability, debt-to-income, age, tenure and loan-to-value are checked as explicit rules. Each one passes or fails on its own and says why.",
+    "stepReviewTitle": "An officer reviews",
+    "stepReviewDesc": "A person reads the file, the score and the policy result, then decides. They can approve on different terms, ask for more, or decline with a reason.",
+    "stepOfferTitle": "You get an offer",
+    "stepOfferDesc": "Amount, rate, term, monthly instalment, fees and the full schedule — in writing, before you accept anything.",
+    "leaseSpotEyebrow": "Vehicle leasing",
+    "leaseSpotTitle": "A lease is not a car loan.",
+    "leaseSpotBody": "Under the Finance Leasing Act we buy the vehicle and remain its absolute owner while you use it. You are the registered user from day one, and ownership transfers to you after the final rental. That is a different instrument from a loan secured against a car, and we treat it as one.",
+    "leaseSpotCta": "Read how leasing works",
+    "titleJourney": "Who owns the vehicle",
+    "titleStartTitle": "At the start",
+    "titleStartDesc": "You pay a down payment. We pay the dealer and register the vehicle with the DMT — us as absolute owner, you as registered user.",
+    "titleDuringTitle": "During the lease",
+    "titleDuringDesc": "You hold and use the vehicle and pay monthly rentals. Settle early and the unearned interest is rebated.",
+    "titleEndTitle": "At the end",
+    "titleEndDesc": "The final rental clears, we issue a letter of release, and the DMT transfers absolute ownership to you.",
+    "langEyebrow": "Language",
+    "langTitle": "In the language you actually bank in.",
+    "langBody": "The customer side of this bank runs in Sinhala, Tamil and English. Switch at any time — your application, your schedule and your documents follow you.",
+    "ctaTitle": "Find out where you stand.",
+    "ctaSubtitle": "A short eligibility check tells you the likely amount, rate and monthly instalment before you make a formal application.",
+    "applyNow": "Check eligibility",
+    "tryEmiCalculator": "Try the EMI calculator",
+    "ctaFootnote": "No effect on your credit record. Takes about five minutes."
   },
   "about": {
     "pageTitle": "About Degital AI",
@@ -139,10 +145,10 @@
     "stackAiCategory": "AI & Document Modules",
     "stackDataCategory": "Data & Security Rules",
     "teamEyebrow": "Scientific Board",
-    "teamTitle": "Meet the Academic Research Team",
+    "teamTitle": "Meet the Research Team",
     "pageSubtitle": "Learn more about the project goals, core mathematical objectives, technological stack, and researchers behind this modern underwriting SaaS simulator.",
     "genesisPara1": "The traditional financial apparatus evaluates risk using methods created in the mid-20th century. Standard credit reports represent historical payments but fail to capture real-time financial trajectory or asset stability.",
-    "genesisPara2": "<b>Degital AI Loan System</b> is an academic simulation built to showcase the feasibility of decentralized, automated credit assessments. By integrating secure document handling and alternative cashflow modeling, Degital predicts debt-to-income sustainability in real-time, removing biases and streamlining officer review queues.",
+    "genesisPara2": "<b>Degital AI Loan System</b> is a simulation built to showcase the feasibility of decentralized, automated credit assessments. By integrating secure document handling and alternative cashflow modeling, Degital predicts debt-to-income sustainability in real-time, removing biases and streamlining officer review queues.",
     "blueprintQuote": "\"Our simulation bridges user-submitted data with algorithmic rate-setting, proving that digital automation can slash application assessment latencies from weeks to under five seconds safely.\"",
     "blueprintAttribution": "- Degital Technical Report, 2026",
     "objectiveAccuracyDesc": "Move past static 3-digit legacy scores by predicting default probability with multiple concurrent data variables.",
@@ -159,7 +165,7 @@
     "stackData1": "Deterministic mathematical debt-to-income equations",
     "stackData2": "Anonymized customer payload hashing standard",
     "stackData3": "Mock backend safety logs displaying raw underwriting telemetry",
-    "stackData4": "Compliance sandboxing mapped for academic demonstration",
+    "stackData4": "Compliance sandboxing mapped for demonstration purposes",
     "verifiedSandboxModule": "VERIFIED SANDBOX MODULE {{num}}",
     "teamRole1": "Chief AI Research Scientist",
     "teamBio1": "Former MIT AI Lab lead developer. Evelyn designs our underlying credit risk scoring neural networks and automated evaluation engines.",
@@ -201,7 +207,6 @@
     "appointmentsBody": "Prior scheduling via our digital customer portal is strictly required for in-person consultations. No walk-ins permitted."
   },
   "loans": {
-    "pageTitle": "Loan Product Portfolios",
     "loadError": "Couldn't load loan products. Please try again shortly.",
     "emptyState": "No loan products are available right now. Please check back soon.",
     "interestRateLabel": "Interest Rate",
@@ -214,7 +219,6 @@
     "amountRangeLabel": "Amount Range",
     "closePortfolio": "Close Portfolio",
     "checkEligibilityNow": "Check Eligibility Now",
-    "pageSubtitle": "Configure dynamic loan terms tailored specifically to standard consumer and commercial portfolios. Click learn more to see our AI pre-approved structures.",
     "cardDescriptionFallback": "{{type}} financing tailored to your needs.",
     "modalDescriptionFallback": "Each loan requested undergoes real-time parsing to determine interest rates, matched against the baseline tiers detailed below.",
     "tenureYears": "{{min}} - {{max}} Years",
@@ -224,12 +228,10 @@
   },
   "servicesPage": {
     "pageTitle": "Our Services",
-    "pageSubtitle": "A complete look at what you can do here — apply for a loan, exchange currency, and get AI-assisted guidance along the way.",
+    "pageSubtitle": "A complete look at what you can do here — apply for a loan, lease a vehicle, exchange currency, and get AI-assisted guidance along the way.",
     "loansEyebrow": "BORROWING",
     "loansHeading": "Loan Products",
-    "loanProductsTitle": "Loan Products",
-    "loanProductsDesc": "Six loan types to choose from — Personal, Housing, Vehicle Leasing, Education, Business, and Pawning — each with clear rates and terms shown upfront.",
-    "loanProductsLink": "View all loan products",
+    "loanProductsDesc": "Five loan types to choose from — Personal, Housing, Education, Business, and Pawning — each with clear rates and terms shown upfront.",
     "aiToolsEyebrow": "SMARTER LENDING",
     "aiToolsHeading": "AI-Powered Tools",
     "riskAssessmentTitle": "AI Risk Assessment",
@@ -257,7 +259,10 @@
     "multilingualTitle": "Multilingual Interface",
     "multilingualDesc": "Use the entire site in English, Sinhala, or Tamil — switch anytime from the navigation bar.",
     "complianceLabel": "Important:",
-    "complianceBody": "This page describes the services available in this application, built as an academic project. No real personal or financial data is processed — every result shown is for demonstration purposes only."
+    "complianceBody": "This page describes the services available in this application. No real personal or financial data is processed — every result shown is for demonstration purposes only.",
+    "leasingEyebrow": "VEHICLE FINANCE",
+    "leasingHeading": "Vehicle Leasing",
+    "leasingProductsDesc": "Cars, vans and SUVs, motorcycles, three-wheelers and commercial vehicles. We buy the vehicle and remain its owner until the final rental; you register and drive it from day one."
   },
   "emiCalculator": {
     "pageTitle": "Dynamic EMI Calculator",
@@ -285,36 +290,17 @@
   },
   "eligibility": {
     "pageTitle": "Loan Eligibility Underwriter",
-    "loginPromptTitle": "Log In For A Live Assessment",
-    "logIn": "Log In",
-    "unavailableTitle": "Live Assessment Unavailable",
-    "underwritingForm": "Underwriting Form",
-    "loadProductsError": "Could not load loan products. Please refresh the page.",
-    "assessError": "Failed to assess your application. Please try again.",
-    "loanProductLabel": "Loan Product",
-    "loadingProducts": "Loading products…",
-    "noProductsAvailable": "No products available",
-    "requestedAmountLabel": "Requested Amount (LKR)",
-    "tenureMonthsLabel": "Tenure (months)",
-    "purposeLabel": "Purpose",
-    "optionalBadge": "Optional",
-    "analyzingButton": "Executing Underwriter Analysis...",
-    "evaluateButton": "Evaluate Eligibility Status",
-    "pendingTitle": "Pending Execution",
-    "assessingTitle": "Assessing Risk Coefficients",
-    "assessingSubtext": "Running the risk model and building your recommendation...",
     "riskRatingBadgeLabel": "Risk Rating Badge",
     "recommendedAmountLabel": "Recommended Amount",
-    "aiRecommendationLabel": "AI Recommendation",
-    "viewInDashboard": "View Full Application in Dashboard",
     "pageSubtitle": "Get an instant, real risk assessment from our AI underwriting engine — live risk band, recommended amount, and EMI.",
-    "loginPromptBody": "The eligibility underwriter runs our real AI risk model against your profile. Log in (or register) to submit an application and get a live risk band, recommended amount, and EMI.",
-    "unavailableBody": "Your account role (\"{{role}}\") does not have access to live loan eligibility assessment.",
-    "pendingBody": "Choose a loan product, requested amount, and tenure on the left, then evaluate to get a live risk band and recommended amount from our AI underwriter.",
-    "recommendationBody": "Based on your <b>{{category}}</b> rating, we recommend up to <b>{{amount}}</b> for {{loanType}}, at an EMI of <b>{{emi}}</b>.",
-    "amountPlaceholder": "e.g. 2500000",
-    "tenurePlaceholder": "e.g. 36",
-    "purposePlaceholder": "e.g. Home renovation"
+    "signupPitchTitle": "See What You Could Borrow",
+    "signupPitchBody": "Our risk model runs against your real income, employment and existing commitments to give you an actual risk band, a recommended amount, and a monthly instalment — not a generic estimate. Create a free account to run it.",
+    "createAccountCta": "Create a Free Account",
+    "signInCta": "Sign In",
+    "signupFootnote": "Takes about five minutes. No effect on your credit record.",
+    "previewHeading": "What you'll see",
+    "previewEmiLabel": "Monthly EMI",
+    "previewLockedNote": "Unlocks once you create an account"
   },
   "faq": {
     "pageTitle": "Frequently Asked Questions",
@@ -490,6 +476,9 @@
       "navOverview": "Overview",
       "navDashboard": "Dashboard",
       "navLoans": "Loans",
+      "navLeasing": "Leasing",
+      "navMyLeases": "My Leases",
+      "navApplyForLease": "Apply for a Lease",
       "navMyApplications": "My Applications",
       "navApplyForLoan": "Apply for a Loan",
       "navCurrency": "Currency",
@@ -808,8 +797,8 @@
     "profile": {
       "dobLabel": "Date of Birth",
       "genderLabel": "Gender",
-      "contactFinancialHeading": "Contact & Financial Details",
-      "contactFinancialHint": "Keep these current — your income and expenses are used to assess new loan applications.",
+      "contactFinancialHeading": "Contact Details",
+      "contactFinancialHint": "Keep these current — we use them to reach you and to verify your identity.",
       "phoneLabel": "Phone",
       "phonePlaceholder": "e.g. 0771234567",
       "nationalIdLabel": "National ID (NIC)",
@@ -827,7 +816,6 @@
       "companyPlaceholder": "Optional",
       "monthlyIncomeLabel": "Monthly Income (LKR)",
       "monthlyExpenseLabel": "Monthly Expenses (LKR)",
-      "personalDetailsHeading": "Personal & Employment Details",
       "maritalStatusLabel": "Marital Status",
       "educationLevelLabel": "Education Level",
       "occupationLabel": "Occupation",
@@ -850,7 +838,29 @@
       "accountType": {
         "savings": "Savings",
         "loan_disbursement": "Loan disbursement"
-      }
+      },
+      "memberSince": "Member since {{date}}",
+      "sectionEmploymentHeading": "Employment & Income",
+      "sectionEmploymentHint": "Used to assess new loan and lease applications — keep these current.",
+      "completenessHeading": "Profile strength",
+      "completenessComplete": "Your profile is fully complete.",
+      "completenessNext": "Add your {{field}} to reach 100%.",
+      "completenessCta": "Finish now",
+      "unsavedChanges": "You have unsaved changes",
+      "allSaved": "All changes saved",
+      "retryButton": "Try again",
+      "copyAccountNumber": "Copy account number",
+      "accountNumberCopied": "Account number copied",
+      "tabOverview": "Overview",
+      "tabContact": "Contact & Personal",
+      "tabEmployment": "Employment & Income",
+      "tabAccounts": "Accounts",
+      "tabSecurity": "Security",
+      "attentionBannerTitle": "Your profile is {{percent}}% complete",
+      "attentionBannerBody": "Add your {{field}} to speed up loan and lease approvals.",
+      "overviewChecklistHeading": "What's left to add",
+      "overviewIdentityHeading": "Identity verification",
+      "overviewAccountsStat": "Accounts with us"
     },
     "messages": {
       "supportEyebrow": "Support",
@@ -1042,6 +1052,8 @@
       "nothingOwed": "This loan is fully repaid — there is nothing left to pay.",
       "gatewayUnavailable": "Online card payment is temporarily unavailable. Please contact support to arrange your payment.",
       "nextInstallmentLabel": "Instalment {{no}}",
+      "nextInstallmentRangeLabel": "Instalments {{from}}–{{through}}",
+      "installmentRolledForwardHint": "A small balance from instalment {{no}} is included, plus instalment {{through}} in full",
       "dueOn": "Due {{date}}",
       "settlementLabel": "Settle in full",
       "settlementSub": "Clear the whole loan today",
@@ -1068,7 +1080,197 @@
       "cancelledTitle": "Payment Cancelled",
       "cancelledMessage": "You cancelled the payment. Nothing has been charged.",
       "pendingTitle": "Payment Processing",
-      "pendingMessage": "Your payment is still being confirmed. It will appear on your loan shortly — please don't pay again."
+      "pendingMessage": "Your payment is still being confirmed. It will appear on your loan shortly — please don't pay again.",
+      "tooSmallToPayOnline": "The remaining {{amount}} on this loan is too small to pay online. Please contact us to settle it."
+    },
+    "leasing": {
+      "eyebrow": "Leasing",
+      "applyTitle": "Apply for a Vehicle Lease",
+      "myLeasesTitle": "My Leases",
+      "applyCta": "Apply for a Lease",
+      "ownershipNote": "Under a finance lease we buy the vehicle and remain its registered owner until your final rental is paid, after which ownership transfers to you.",
+      "noLeasesTitle": "No lease applications yet",
+      "noLeasesHint": "Pick a vehicle, tell us the price and how much you'd like financed, and we'll take it from there.",
+      "backToLeases": "Back to My Leases",
+      "quotationHeading": "Your Lease Quotation",
+      "noQuotationTitle": "No quotation yet",
+      "noQuotationHint": "We'll send you one once your application has been reviewed.",
+      "payableAtSigning": "Payable at Signing",
+      "acceptTerms": "Accept These Terms",
+      "decline": "Decline",
+      "readFullTerms": "Read the Full Terms",
+      "yourRentals": "Your Rentals",
+      "yourVehicle": "Your Vehicle",
+      "rentalSchedule": "Rental Schedule",
+      "viewSchedule": "View Rental Schedule",
+      "downloadRelease": "Download Release Letter",
+      "valuationPending": "This vehicle needs an independent valuation before we can approve it. We'll arrange one and let you know.",
+      "approvedAwaitingQuotationTitle": "Approved — your quotation is being prepared",
+      "approvedAwaitingQuotationHint": "Your application has been approved. We're finalising your rental, down payment and charges. Once we send the quotation you can accept it here and pay your down payment.",
+      "documentsOutstanding": "We don't have any documents from you yet. Uploading them below will speed up your application.",
+      "releaseReady": "Your letter of release is ready",
+      "releaseReadyHint": "Take it to the DMT to transfer the vehicle into your own name.",
+      "viewAllSteps": "See all 8 steps",
+      "loadError": "Couldn't load this lease application.",
+      "listCardSummary": "{{amount}} financed · {{term}} mo · {{condition}}",
+      "appliedInline": "applied {{date}}",
+      "notFound": "Lease application not found.",
+      "quotationAcceptedToastTitle": "Quotation Accepted",
+      "quotationDeclinedToastTitle": "Quotation Declined",
+      "quotationAcceptedToastMsg": "We'll be in touch about your down payment and the vehicle purchase.",
+      "quotationDeclinedToastMsg": "Thanks for letting us know.",
+      "couldNotRecordResponseTitle": "Couldn't Record Your Response",
+      "tryAgain": "Please try again.",
+      "couldNotStartPaymentTitle": "Couldn't Start the Payment",
+      "tryAgainShortly": "Please try again shortly.",
+      "couldNotDownloadTitle": "Couldn't Download That",
+      "validUntil": "Valid until {{date}}",
+      "feesHeading": "Fees & Charges",
+      "waivedTag": "waived",
+      "payableAtSigningSummary": "Your down payment of {{amount}}{{feesClause}}. Then {{rental}} a month for {{term}} months.",
+      "feesClauseSuffix": ", plus {{amount}} in fees",
+      "acceptedOn": "You accepted these terms on {{date}}.",
+      "downPaymentPaidInFull": "Paid in full. We'll purchase the vehicle and register it next — you'll hear from us once that's done.",
+      "downPaymentPayHint": "This covers your down payment and any fees. You can pay it online, or at any branch.",
+      "payByCard": "Pay {{amount}} by Card",
+      "gatewayUnavailable": "Online card payment is temporarily unavailable — please pay at a branch.",
+      "receiptsHeading": "Receipts",
+      "purchasedOn": "We purchased the vehicle on {{date}}.",
+      "registeredWithCr": "Registered · CR {{number}}",
+      "absoluteOwnerNote": "{{owner}} is the absolute owner and you are the registered user, until your final rental is paid.",
+      "progressHeading": "Progress"
+    },
+    "leaseDash": {
+      "history": "Lease history",
+      "atAGlance": "At a glance",
+      "downloads": "Downloads",
+      "vehiclePrice": "Vehicle price",
+      "financed": "Financed",
+      "term": "Term",
+      "registrationNo": "Registration",
+      "agreementNo": "Agreement",
+      "accepted": "Accepted",
+      "settled": "Settled",
+      "registered": "Registered to us",
+      "timeline": "Timeline",
+      "updates": "updates",
+      "monthlyRental": "Monthly rental",
+      "downPaymentLabel": "Down payment",
+      "rate": "Rate",
+      "termMonthsValue": "{{term}} months",
+      "totalDue": "Total due",
+      "received": "Received",
+      "outstanding": "Outstanding",
+      "tableDue": "Due",
+      "tableCapital": "Capital",
+      "tableFinance": "Finance",
+      "tableRental": "Rental",
+      "tableBalance": "Balance",
+      "tableStatus": "Status"
+    },
+    "leaseTabs": {
+      "overview": "Overview",
+      "quotation": "Quotation",
+      "payments": "Payments",
+      "documents": "Documents",
+      "history": "History",
+      "takeMeThere": "Take me there"
+    },
+    "leaseRentals": {
+      "title": "Your Rentals",
+      "viewSchedule": "Full schedule",
+      "monthlyRental": "Monthly rental",
+      "paidSoFar": "Rentals paid",
+      "outstanding": "Outstanding",
+      "nextDue": "Next due",
+      "rentalNo": "Rental",
+      "rentalRange": "Rentals {{from}}–{{through}}",
+      "arrearsWarning": "{{count}} rental(s) overdue since {{since}}, totalling {{amount}}. Please pay as soon as you can.",
+      "allPaid": "Every rental is paid. The vehicle is yours once we issue your release letter and you transfer it at the DMT.",
+      "notPayable": "This lease is {{status}}, so no further rentals can be paid online.",
+      "gatewayDown": "Online card payment is unavailable at the moment. Please contact us to pay another way.",
+      "payRental": "Pay rental {{no}}",
+      "payRentalRange": "Pay rentals {{from}}–{{through}}",
+      "rolledForwardHint": "A small balance from rental {{no}} is included, plus rental {{through}} in full",
+      "dueOn": "Due {{date}}",
+      "partiallyPaidHint": "Part paid already — this clears it (full rental {{full}})",
+      "clearArrears": "Clear all arrears",
+      "arrearsCount": "{{count}} overdue rental(s)",
+      "settleEarly": "Settle the lease early",
+      "settleHint": "Clears the remaining {{remaining}} rentals and saves you {{saving}} in finance charges",
+      "payAnother": "Or pay another amount",
+      "amountPlaceholder": "Amount in LKR",
+      "pay": "Pay",
+      "maxHint": "Up to {{max}} — the most this lease still owes.",
+      "history": "Payments received",
+      "settlementTag": "settlement",
+      "loadError": "Couldn't load your rental payment options.",
+      "paymentFailedTitle": "Couldn't Start the Payment",
+      "paymentFailed": "Please try again shortly.",
+      "enterAmount": "Enter an amount greater than zero.",
+      "tooMuch": "That is more than this lease owes. The most you can pay is {{max}}.",
+      "tooSmallToPayOnline": "The remaining {{amount}} on this lease is too small to pay online. Please contact us to settle it."
+    },
+    "leaseApplication": {
+      "optionalBadge": "Optional",
+      "facilityHeading": "The Facility",
+      "leaseProductLabel": "Lease Product",
+      "amountToFinanceLabel": "Amount to Finance (LKR)",
+      "amountPlaceholder": "e.g. 4000000",
+      "termMonthsLabel": "Term (months)",
+      "termPlaceholder": "e.g. 60",
+      "vehicleHeading": "The Vehicle",
+      "conditionLabel": "Condition",
+      "conditionBrandNew": "Brand new",
+      "conditionBrandNewHint": "No valuation needed",
+      "conditionReconditioned": "Reconditioned",
+      "conditionReconditionedHint": "Valuation required",
+      "conditionUsed": "Used (registered)",
+      "conditionUsedHint": "Valuation required",
+      "minDownSuffix": "min {{percent}}% down",
+      "makeLabel": "Make",
+      "makePlaceholder": "e.g. Toyota",
+      "modelLabel": "Model",
+      "modelPlaceholder": "e.g. Aqua",
+      "yearLabel": "Year of Manufacture",
+      "yearPlaceholder": "e.g. 2021",
+      "mileageLabel": "Mileage (km)",
+      "registrationNoLabel": "Registration Number",
+      "registrationRequiredHint": "Required — the CR will be transferred to us",
+      "chassisNoLabel": "Chassis Number",
+      "engineNoLabel": "Engine Number",
+      "fuelTypeLabel": "Fuel Type",
+      "transmissionLabel": "Transmission",
+      "vehiclePriceLabel": "Vehicle Price (LKR)",
+      "vehiclePriceHint": "As shown on the invoice or quotation",
+      "vehiclePricePlaceholder": "e.g. 5000000",
+      "dealerLabel": "Dealer",
+      "dealerHint": "We pay an approved dealer directly",
+      "dealerPrivateOption": "Private seller / not listed",
+      "invoiceNoLabel": "Invoice No.",
+      "invoiceDateLabel": "Invoice Date",
+      "downPaymentHeading": "Your Down Payment",
+      "downPaymentEmptyHint": "Enter the vehicle price and the amount to finance — the difference is what you pay up front.",
+      "downPaymentMeetsMin": "meets the {{percent}}% minimum for this vehicle",
+      "downPaymentBelowMin": "this vehicle needs at least {{percent}}% — reduce the amount to finance",
+      "consentHeading": "Consent",
+      "consentIntro": "We need your agreement to these before we can assess your application.",
+      "consentLoadError": "Couldn't load the consent notices. Please refresh — you can't submit without them.",
+      "submitErrorDefault": "Couldn't submit your lease application. Please try again.",
+      "submitFailedToastTitle": "Application Not Submitted",
+      "submitFailedToastDefault": "Please check the form and try again.",
+      "submittingButton": "Submitting…",
+      "submitButton": "Submit Lease Application",
+      "resultTitle": "Lease Application Submitted",
+      "resultReference": "Reference #{{id}}",
+      "resultMonthlyRental": "Monthly Rental",
+      "resultDownPayment": "Down Payment",
+      "resultRate": "Rate",
+      "resultRateFlat": "{{rate}}% flat",
+      "resultRisk": "Risk",
+      "resultValuationNote": "An independent valuation of this vehicle is required before we can approve it. We'll arrange one and be in touch.",
+      "resultIndicativeNote": "These figures are indicative. A formal quotation follows once your application has been reviewed.",
+      "viewMyLeases": "View My Leases"
     }
   },
   "fxDocuments": {
@@ -1108,6 +1310,32 @@
     "viewError": "Couldn't open that document.",
     "deleteError": "Couldn't remove that document."
   },
+  "leaseDocuments": {
+    "title": "Supporting Documents",
+    "intro": "Upload your NIC, proof of income and the vehicle invoice. A registered vehicle also needs its CR.",
+    "none": "No documents uploaded yet.",
+    "view": "View",
+    "remove": "Remove document",
+    "upload": "Upload Document",
+    "uploading": "Uploading…",
+    "uploadHint": "PDF, JPG or PNG · up to 5 MB each.",
+    "type_national_id": "National Identity Card",
+    "type_payslip": "Payslip",
+    "type_bank_statement": "Bank Statement",
+    "type_vehicle_invoice": "Vehicle Invoice",
+    "type_cr_copy": "Certificate of Registration (CR)",
+    "type_valuation_report": "Valuation Report",
+    "type_lease_agreement": "Lease Agreement",
+    "type_release_letter": "Letter of Release",
+    "type_other": "Other",
+    "status_pending": "Pending review",
+    "status_verified": "Verified",
+    "status_rejected": "Rejected",
+    "loadError": "Couldn't load the documents for this lease application.",
+    "uploadError": "Couldn't upload that file.",
+    "viewError": "Couldn't open that document.",
+    "deleteError": "Couldn't remove that document."
+  },
   "rateBoard": {
     "unknownTime": "unknown time",
     "momentsAgo": "moments ago",
@@ -1134,6 +1362,274 @@
     "creditBureau": {
       "title": "Credit bureau (CRIB) check",
       "body": "I authorise Aura to obtain and review my credit bureau (CRIB) record as part of assessing this loan application."
+    }
+  },
+  "leasingPage": {
+    "loadError": "Couldn't load vehicle classes. Please try again shortly.",
+    "emptyState": "No vehicle classes are available right now. Please check back soon.",
+    "interestRateLabel": "Interest Rate",
+    "financedAmountLabel": "Max Financed Amount",
+    "learnMoreDetails": "View Lease Terms",
+    "termsSuffix": "Terms",
+    "interestAprLabel": "Interest Rate",
+    "termLabel": "Lease Term",
+    "financedRangeLabel": "Financed Amount",
+    "closeLabel": "Close",
+    "getStartedCta": "Get Started",
+    "cardDescriptionFallback": "{{type}} leasing under the Finance Leasing Act.",
+    "modalDescriptionFallback": "Your exact rate depends on your assessment. The range below shows what's possible for this vehicle class.",
+    "termYears": "{{min}} - {{max}} Years",
+    "termMonths": "{{min}} - {{max}} Months",
+    "ownershipNote": "You are the registered user from day one. Ownership transfers to you after the final rental."
+  },
+  "leaseProgress": {
+    "steps": {
+      "applied": {
+        "label": "Applied",
+        "hint": "We have your application and the vehicle details."
+      },
+      "review": {
+        "label": "Under review",
+        "hint": "We check your documents and, for a used or reconditioned vehicle, arrange an independent valuation."
+      },
+      "approved": {
+        "label": "Approved",
+        "hint": "Credit approved. Approval is not the last step — we still have to quote your terms."
+      },
+      "quotation": {
+        "label": "Terms quoted",
+        "hint": "We send your rental, down payment and charges. Nothing is payable until you accept them."
+      },
+      "down_payment": {
+        "label": "Down payment",
+        "hint": "You pay your down payment and any fees. We cannot buy the vehicle before this clears."
+      },
+      "purchase": {
+        "label": "Vehicle & title",
+        "hint": "We pay the supplier and register the vehicle with the DMT, with us as absolute owner and you as registered user."
+      },
+      "rentals": {
+        "label": "Rentals",
+        "hint": "The lease is live. You pay a monthly rental for the term, or settle early for less."
+      },
+      "released": {
+        "label": "Yours",
+        "hint": "Every rental paid. We issue your letter of release and you transfer the vehicle into your own name at the DMT."
+      }
+    },
+    "detail": {
+      "infoRequested": "We need more information from you",
+      "quotationAccepted": "Terms accepted",
+      "quotationWaiting": "Waiting for you to accept or decline",
+      "downPaymentSettled": "Settled in full",
+      "downPaymentOutstanding": "{{amount}} outstanding",
+      "purchaseRegistered": "Registered to us",
+      "purchaseDealerPaid": "Bought — waiting on the CR",
+      "rentalsPaid": "{{paid}} of {{total}} rentals paid",
+      "released": "Letter of release issued"
+    },
+    "halted": {
+      "rejected": "This application was declined and will go no further.",
+      "withdrawn": "This application was withdrawn.",
+      "declined": "The quoted terms were declined, so this lease did not proceed.",
+      "default": "This application is no longer progressing."
+    },
+    "tracker": {
+      "stepByStepCustomer": "Your lease, step by step",
+      "stepByStepStaff": "Where this lease has got to",
+      "withUs": "With us",
+      "overToYou": "Over to you",
+      "waitingOnUs": "Waiting on us",
+      "complete": "Complete",
+      "stoppedAt": "Stopped at {{step}}",
+      "stepOf": "Step {{current}} of {{total}}"
+    },
+    "tone": {
+      "closed": "Closed",
+      "complete": "Complete",
+      "yourTurn": "Your turn",
+      "actionNeeded": "Action needed",
+      "withUs": "With us",
+      "waitingOnLessee": "Waiting on the lessee",
+      "inProgress": "In progress",
+      "goThere": "Go there"
+    },
+    "nextAction": {
+      "halted": {
+        "label": "No further action"
+      },
+      "complete": {
+        "staff": {
+          "label": "Lease complete",
+          "hint": "Every rental is paid, the release letter is issued and title has transferred."
+        },
+        "customer": {
+          "label": "All done",
+          "hint": "The vehicle is yours. Nothing further is owed on this lease."
+        }
+      },
+      "issue_release": {
+        "staff": {
+          "label": "Issue the letter of release",
+          "hint": "Every rental is paid. The lessee cannot transfer the vehicle into their name without it."
+        },
+        "customer": {
+          "label": "Waiting for your release letter",
+          "hint": "You've paid every rental. We're preparing the letter that lets you put the vehicle in your own name."
+        }
+      },
+      "record_transfer": {
+        "staff": {
+          "label": "Record the DMT transfer",
+          "hint": "The release letter is issued. Record the transfer once the DMT confirms it."
+        },
+        "customer": {
+          "label": "Transfer the vehicle at the DMT",
+          "hint": "Take your release letter to the DMT to put the vehicle in your own name."
+        }
+      },
+      "clear_arrears": {
+        "staff": {
+          "label": "Chase overdue rentals",
+          "hint": "{{count}} rental(s) overdue. The lessee can pay online, or you can record an offline payment."
+        },
+        "customer": {
+          "label": "You have overdue rentals",
+          "hint": "Please clear them as soon as you can — you can pay by card here."
+        }
+      },
+      "pay_rental": {
+        "staff": {
+          "label": "Rentals in progress",
+          "hint": "{{paid}} of {{total}} paid. Nothing is owed from us right now."
+        },
+        "customer": {
+          "label": "Keep up your monthly rentals",
+          "hint": "You can pay the next one, clear arrears, or settle the lease early here."
+        }
+      },
+      "pay_dealer": {
+        "staff": {
+          "label": "Pay the supplier",
+          "hint": "The down payment has cleared, so the vehicle can be bought."
+        },
+        "customer": {
+          "label": "We're buying your vehicle",
+          "hint": "Your down payment has cleared and we're paying the supplier."
+        }
+      },
+      "lodge_cr": {
+        "staff": {
+          "label": "Lodge the CR with the DMT",
+          "hint": "The vehicle is bought. Register it with us as absolute owner."
+        },
+        "customer": {
+          "label": "Registering your vehicle",
+          "hint": "We've bought it and are registering it with the DMT."
+        }
+      },
+      "confirm_cr": {
+        "staff": {
+          "label": "Confirm the CR came back",
+          "hint": "Lodged with the DMT. Record the CR number once it's returned."
+        },
+        "customer": {
+          "label": "Waiting on the DMT",
+          "hint": "Your registration is with the DMT. We'll start your rentals once the CR is back."
+        }
+      },
+      "activate": {
+        "staff": {
+          "label": "Activate the lease",
+          "hint": "Title is registered to us. Activating generates the rental schedule and starts the term."
+        },
+        "customer": {
+          "label": "Your lease is about to start",
+          "hint": "The vehicle is registered. We're setting up your rental schedule."
+        }
+      },
+      "collect_down_payment": {
+        "staff": {
+          "label": "Awaiting the down payment",
+          "hintAmount": "{{amount}} outstanding. The lessee can pay by card, or you can record an offline receipt.",
+          "hintGeneric": "The lessee needs to pay their down payment before we can buy the vehicle."
+        },
+        "customer": {
+          "label": "Pay your down payment",
+          "hint": "We buy the vehicle once this clears. You can pay by card here."
+        }
+      },
+      "accept_quotation": {
+        "staff": {
+          "label": "Awaiting the lessee's answer",
+          "hint": "Terms have been quoted. Nothing is payable until they accept."
+        },
+        "customer": {
+          "label": "Review and accept your terms",
+          "hint": "Your rental, down payment and charges are ready. Nothing is payable until you accept."
+        }
+      },
+      "issue_quotation": {
+        "staff": {
+          "label": "Issue the quotation",
+          "hint": "Approved — but nothing is payable until terms are quoted and accepted. The lessee is waiting on this."
+        },
+        "customer": {
+          "label": "Your quotation is being prepared",
+          "hint": "You're approved. We're finalising your rental, down payment and charges."
+        }
+      },
+      "provide_info": {
+        "staff": {
+          "label": "Waiting on the lessee",
+          "hint": "More information has been requested from them."
+        },
+        "customer": {
+          "label": "We need more from you",
+          "hint": "Please upload the documents we've asked for so we can carry on."
+        }
+      },
+      "valuation": {
+        "staff": {
+          "label": "Get an independent valuation",
+          "hint": "A used or reconditioned vehicle can't be approved until one is back — LTV is measured against it."
+        },
+        "customer": {
+          "label": "Your vehicle is being valued",
+          "hint": "An independent valuer needs to inspect it before we can decide."
+        }
+      },
+      "decide": {
+        "staff": {
+          "label": "Make a credit decision",
+          "hint": "Everything needed is in. Approve, request more information, or decline."
+        },
+        "customer": {
+          "label": "We're reviewing your application",
+          "hint": "We'll let you know as soon as there's a decision."
+        }
+      }
+    },
+    "tiles": {
+      "monthlyRental": "Monthly rental",
+      "rentalsPaid": "Rentals paid",
+      "rentalsPaidOf": "{{paid}} of {{total}}",
+      "outstanding": "Outstanding",
+      "status": "Status",
+      "fullyPaid": "Fully paid",
+      "nextDue": "Next due",
+      "overdueCount": "{{count}} overdue",
+      "dueAtSigning": "Due at signing",
+      "received": "Received",
+      "termMonths": "{{count}} months",
+      "payableAtSigning": "Payable at signing",
+      "percentDown": "{{percent}}% down",
+      "percentDownPlusFees": "{{percent}}% down + fees",
+      "term": "Term",
+      "rate": "Rate",
+      "vehiclePrice": "Vehicle price",
+      "toFinance": "To finance",
+      "stage": "Stage"
     }
   }
 }

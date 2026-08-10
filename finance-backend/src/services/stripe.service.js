@@ -93,6 +93,14 @@ async function createCheckoutSession({
   applicationId,
   intentId,
   customerEmail,
+  // Which ledger this session settles into. The webhook dispatches on it,
+  // because a lease down payment and a loan repayment are different rows in
+  // different tables and confusing the two would post money to the wrong
+  // place. Defaults to the loan path so existing callers are unchanged.
+  kind = "loan_repayment",
+  // Where the gateway sends the customer back to. Defaults to the customer
+  // dashboard, which is where a loan repayment belongs.
+  returnPath = "/dashboard",
 }) {
   const stripe = getClient();
   const session = await stripe.checkout.sessions.create({
@@ -102,8 +110,8 @@ async function createCheckoutSession({
     // application id rides along only so the return page knows which endpoint
     // to poll — it is never trusted as authorisation, because the poll
     // endpoint re-checks that the intent really belongs to the caller.
-    success_url: `${PUBLIC_URL}/dashboard?payment=success&application=${applicationId}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${PUBLIC_URL}/dashboard?payment=cancelled&application=${applicationId}&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${PUBLIC_URL}${returnPath}?payment=success&application=${applicationId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${PUBLIC_URL}${returnPath}?payment=cancelled&application=${applicationId}&session_id={CHECKOUT_SESSION_ID}`,
     customer_email: customerEmail || undefined,
     line_items: [
       {
@@ -121,6 +129,7 @@ async function createCheckoutSession({
     metadata: {
       intent_id: String(intentId),
       application_id: String(applicationId),
+      kind,
     },
   });
   return { id: session.id, url: session.url };
@@ -130,14 +139,26 @@ async function createCheckoutSession({
  * Fetch a session's current state straight from Stripe. Used by the return
  * page to settle a payment whose webhook has not landed (or was never
  * configured — the common case on localhost without the Stripe CLI).
+ * THE RETURN SHAPE IS camelCase AND DELIBERATELY NOT STRIPE'S. Callers must
+ * read `paymentStatus` / `paymentIntentId`, never Stripe's own
+ * `payment_status` / `payment_intent` — those are undefined here, which
+ * makes a "did this get paid?" check silently answer no and a genuinely
+ * charged card never settle. The webhook path is the opposite: it receives
+ * the RAW Stripe object and correctly uses snake_case.
+ *
  * @param {string} sessionId
- * @returns {Promise<{id:string, paymentStatus:string, paymentIntentId:string|null, amountTotal:number|null, currency:string|null}>}
+ * @returns {Promise<{id:string, status:string|null, paymentStatus:string,
+ *                    paymentIntentId:string|null, amountTotal:number|null,
+ *                    currency:string|null}>}
  */
 async function retrieveSession(sessionId) {
   const stripe = getClient();
   const s = await stripe.checkout.sessions.retrieve(sessionId);
   return {
     id: s.id,
+    // 'open' | 'complete' | 'expired'. Distinct from paymentStatus: a
+    // session can be complete with an unpaid async method still pending.
+    status: s.status || null,
     paymentStatus: s.payment_status,
     paymentIntentId:
       typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id || null,

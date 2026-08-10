@@ -263,7 +263,7 @@ function skipped(code, label, reason) {
  * @returns {{policy_version:string, outcome:'pass'|'refer'|'decline',
  *            metrics:object, rules:object[], reason_codes:string[]}}
  */
-function evaluateCreditPolicy({ applicant = {}, loan = {} } = {}) {
+function evaluateCreditPolicy({ applicant = {}, loan = {}, lease = null } = {}) {
   const m = computeMetrics({ applicant, loan });
   const rules = [];
 
@@ -558,6 +558,75 @@ function evaluateCreditPolicy({ applicant = {}, loan = {} } = {}) {
       { value: coverageRatio, threshold: POLICY.COLLATERAL_COVERAGE_REFER_BELOW }
     )
   );
+
+  // --- Leasing: loan-to-value and down payment -----------------------------
+  // Appended ONLY for a lease. A loan evaluation produces exactly the rule
+  // set it always did — these two rules are absent rather than 'skipped', so
+  // nothing about an existing loan verdict changes shape.
+  //
+  // These are the two checks a lease has that a loan does not, and they
+  // exist because the lessor OWNS the asset: if the agreement fails, what
+  // the institution can recover is the vehicle, not a claim on a borrower.
+  // So the exposure has to be judged against what the vehicle is worth, and
+  // the lessee has to have real money of their own in it.
+  if (lease) {
+    const ltv = lease.ltv || {};
+
+    if (!ltv.decidable) {
+      // A missing valuation is not a pass and not a fail — it means the
+      // question cannot be answered yet. 'refer' rather than 'skipped'
+      // because, unlike an undeclared CRIB score, this is a genuine blocker:
+      // no used vehicle may be approved without one.
+      rules.push(
+        rule(
+          "LEASE_LTV",
+          "Loan to value",
+          "refer",
+          ltv.reason === "valuation_required"
+            ? "An independent valuation is required before loan-to-value can be judged."
+            : "Loan-to-value could not be computed from the figures supplied.",
+          { value: null, threshold: null }
+        )
+      );
+    } else {
+      const withinPolicy = ltv.withinPolicy;
+      rules.push(
+        rule(
+          "LEASE_LTV",
+          "Loan to value",
+          withinPolicy ? "pass" : "fail",
+          `Financing ${ltv.ltv}% of the vehicle's ${ltv.baseSource} value ` +
+            `(LKR ${money(ltv.base)}); the cap is ${ltv.maxLtv}%.` +
+            (ltv.baseSource === "valuation"
+              ? " Measured against the independent valuation, which is lower than the invoice."
+              : ""),
+          { value: ltv.ltv, threshold: ltv.maxLtv }
+        )
+      );
+    }
+
+    // Down payment adequacy is enforced at intake too, but recorded here so
+    // the stored evaluation is a self-contained account of why the lease was
+    // acceptable — a reader should not have to infer it from what the intake
+    // did not reject.
+    const dp = lease.downPaymentPercent;
+    const dpMin = lease.minimumDownPaymentPercent;
+    if (dp === null || dp === undefined || dpMin === null || dpMin === undefined) {
+      rules.push(
+        skipped("LEASE_DOWN_PAYMENT", "Down payment", "Down payment not supplied.")
+      );
+    } else {
+      rules.push(
+        rule(
+          "LEASE_DOWN_PAYMENT",
+          "Down payment",
+          dp >= dpMin ? "pass" : "fail",
+          `Lessee is putting down ${dp}%; this vehicle requires at least ${dpMin}%.`,
+          { value: dp, threshold: dpMin }
+        )
+      );
+    }
+  }
 
   // The verdict is the worst status any single rule returned — one mandatory
   // breach declines the application however well everything else scored,

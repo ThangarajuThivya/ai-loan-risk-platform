@@ -557,7 +557,15 @@ exports.emiPreview = (req, res) => {
 // per field when a product has no translation (migration 012).
 exports.getProducts = async (req, res) => {
   try {
-    const products = await loanModel.findAllProducts({ lang: req.query.lang });
+    // ?include_inactive=true is for the admin catalogue screen, which has to
+    // show a retired product in order to manage it. This route is
+    // unauthenticated, so the flag is not access-controlled — acceptable
+    // because a product catalogue is not sensitive, and the only thing the
+    // flag reveals is that a product exists but is not on sale.
+    const products = await loanModel.findAllProducts({
+      lang: req.query.lang,
+      includeInactive: req.query.include_inactive === "true",
+    });
     return res.status(200).json({ products });
   } catch (err) {
     console.error("GET LOAN PRODUCTS ERROR:", err);

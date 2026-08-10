@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Navbar from "./components/Navbar";
 import About from "./pages/About";
-import Loans from "./pages/Loans";
 import Eligibility from "./pages/Eligibility";
 import EmiCalculator from "./pages/EmiCalculator";
 import Services from "./pages/Services";
@@ -28,7 +26,7 @@ function AppContent() {
   // no room for the public marketing Navbar/Footer. The customer portal is
   // lighter-weight by design and keeps the public header — it's still the
   // main site, just with an authenticated section added to it, so customers
-  // can still reach Home/Loans/Contact/etc. without leaving their dashboard.
+  // can still reach Home/Services/Contact/etc. without leaving their dashboard.
   const isFullShellPortal =
     location.pathname.startsWith("/admin") ||
     location.pathname.startsWith("/staff") ||
@@ -49,7 +47,6 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
-          <Route path="/loans" element={<Loans />} />
           <Route path="/eligibility" element={<Eligibility />} />
           <Route path="/emi-calculator" element={<EmiCalculator />} />
           <Route path="/services" element={<Services />} />

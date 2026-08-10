@@ -255,6 +255,53 @@ check("a fully repaid loan refuses every kind", () => {
   }
 });
 
+// --- dust residuals: the same LKR-0.36 bug as the lease side, mirrored ----
+// Confirmed live on the lease side (application #103): a rounding-off
+// offline receipt left a rental 0.36 short, "pay next" quoted exactly that,
+// and Stripe refused the checkout outright. nextInstallmentDue has the
+// identical shape of bug — an EMI that is a few cents short after a rounded
+// manual receipt — so it gets the identical fix.
+check("a residual below MIN_PAYMENT rolls forward into the next instalment", () => {
+  const rows = [
+    row({ id: 1, installment_no: 1, due_date: "2026-01-15", principal_paid: 9000, interest_paid: 999.64 }),
+    row({ id: 2, installment_no: 2, due_date: "2026-02-15" }),
+  ];
+  const next = nextInstallmentDue(rows);
+  assert.strictEqual(next.installmentNo, 1);
+  assert.strictEqual(next.throughInstallmentNo, 2);
+  // 0.36 residual on #1, plus the whole of #2 (10,000).
+  assert.strictEqual(next.amount, 10000.36);
+});
+
+check("an ordinary, non-dust instalment is unaffected by roll-forward", () => {
+  const next = nextInstallmentDue(schedule());
+  assert.strictEqual(next.throughInstallmentNo, undefined);
+  assert.strictEqual(next.amount, 10000);
+});
+
+check("dust on the FINAL instalment, with nothing to roll into, is refused not charged", () => {
+  const rows = [row({ id: 1, installment_no: 1, principal_paid: 9000, interest_paid: 999.64 })];
+  const next = nextInstallmentDue(rows);
+  assert.strictEqual(next.throughInstallmentNo, undefined);
+  assert.ok(next.amount < 1, "the raw residual is still tiny");
+
+  const res = resolvePayment({ installments: rows, kind: "installment", asOf: AS_OF });
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.reason, "BELOW_MINIMUM");
+  assert.ok(res.message.length > 0);
+});
+
+check("resolvePayment for 'installment' charges the rolled-forward figure, never the dust", () => {
+  const rows = [
+    row({ id: 1, installment_no: 1, principal_paid: 9000, interest_paid: 999.64 }),
+    row({ id: 2, installment_no: 2, due_date: "2026-02-15" }),
+  ];
+  const res = resolvePayment({ installments: rows, kind: "installment", asOf: AS_OF });
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(res.amount, 10000.36);
+  assert.ok(res.amount >= MIN_PAYMENT);
+});
+
 check("every rejection carries a message a customer could act on", () => {
   const rejections = [
     resolvePayment({ installments: schedule(), kind: "nope", asOf: AS_OF }),

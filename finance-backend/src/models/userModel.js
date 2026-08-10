@@ -167,6 +167,43 @@ exports.updateCustomerStatus = async (userId, status) => {
   return result.affectedRows > 0;
 };
 
+// Every FK from a customer's OWN records down to `users(user_id)` is
+// ON DELETE CASCADE (loan_applications, loan_accounts, lease_applications,
+// lease_agreements, bank_accounts, consents, ...), and everything hanging
+// off THOSE (repayments, rental schedules, decision-matrix rows, adverse
+// action records, credit policy evaluations...) cascades again from there.
+// A hard DELETE on `users` is therefore not just "remove this login" — for
+// a customer who ever applied for credit, it silently erases the audit
+// trail a lender is expected to retain (why someone was declined, what a
+// loan account's repayment history was), which no "delete my account"
+// button should be able to do by itself.
+//
+// So permanent deletion is gated on this count. Zero means the account is
+// a shell — registered, at most a rejected/withdrawn application with no
+// money ever attached — and CASCADE-deleting the rest of the shell (drafts,
+// consents, an unopened bank account) loses nothing worth keeping.
+exports.countCustomerFinancialRecords = async (userId) => {
+  const [[row]] = await db.promise().query(
+    `SELECT
+       (SELECT COUNT(*) FROM loan_applications  WHERE user_id   = ?) AS loan_applications,
+       (SELECT COUNT(*) FROM lease_applications WHERE lessee_id = ?) AS lease_applications
+     `,
+    [userId, userId],
+  );
+  return {
+    loanApplications: Number(row.loan_applications),
+    leaseApplications: Number(row.lease_applications),
+  };
+};
+
+exports.deleteCustomerPermanently = async (userId) => {
+  const [result] = await db.promise().query(
+    `DELETE FROM users WHERE user_id = ? AND role = 'customer'`,
+    [userId],
+  );
+  return result.affectedRows > 0;
+};
+
 exports.updateUserPassword = (user_id, hashedPassword) => {
   return new Promise((resolve, reject) => {
     db.query(

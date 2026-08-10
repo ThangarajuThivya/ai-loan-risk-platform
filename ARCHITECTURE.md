@@ -2,7 +2,7 @@
 
 **Project:** AI-Powered Loan Risk & Recommendation System (Sri Lankan banking context)
 **Repository:** `finance-application/` (monorepo — four modules)
-**Last updated:** 2026-08-08
+**Last updated:** 2026-08-10
 
 This document describes the **structural architecture** of the system: its
 components, technology stack, machine-learning models, data model,
@@ -16,9 +16,12 @@ instructions, see **[README.md](README.md)**.
 The system is a modular, service-oriented web application that classifies loan
 applicants into **Low / Medium / High** risk, produces loan recommendations,
 carries a loan through its full lifecycle from application to offer,
-disbursement, and repayment (including online card repayment), and surfaces
-currency exchange-rate analytics plus a bank-style FX exchange workflow. It
-is composed of five cooperating parts:
+disbursement, and repayment (including online card repayment), carries a
+**vehicle finance lease** — a distinct instrument from a loan, see §9.19 —
+through its own full lifecycle from application to valuation, quotation,
+down payment, vehicle purchase and registration, monthly rentals, and
+release, and surfaces currency exchange-rate analytics plus a bank-style FX
+exchange workflow. It is composed of five cooperating parts:
 
 1. A **Single-Page Application** (React) — the presentation layer for customers, staff, and admins, in English, Sinhala, and Tamil.
 2. An **API gateway** (Node/Express) — authentication, business logic, orchestration, and persistence.
@@ -138,9 +141,9 @@ flowchart LR
 - Auth session handling: in-memory access token + silent refresh via the gateway.
 - Role-based routing (`customer` / `staff` / `admin`), each with its own dashboard shell.
 - Full trilingual UI (English / Sinhala / Tamil) via `react-i18next`, headline-level translation — admin/staff tooling and database-sourced content (loan products, FAQ entries, etc.) stay English.
-- **Customer portal** — apply for a loan via a multi-step wizard that pre-fills stable personal details from the customer's profile and their most recent application for confirmation rather than re-entry (§9.12), auto-saves an in-progress application as a resumable draft, collects an optional guarantor/collateral declaration and supporting documents, and requires granting any still-missing data-processing/credit-bureau-check consent before submission (§9.18); view application history, status, and the full decision/event timeline; download a decision letter (PDF) once decided; view and accept/decline a loan offer, including its fee breakdown, net amount actually receivable, and effective APR alongside the nominal rate (§9.17); view the bank account(s) opened automatically in the customer's name (§9.13); once disbursed, view the live repayment schedule, outstanding balance, arrears, and early-settlement quote, pay online by card or view/download past payment receipts (§9.15), and download a full loan statement (CSV); submit/track NIC identity verification and edit profile (§9.11); a Currency tab (simplified quarterly exchange-rate outlook, live rate board, rate-history chart); a full FX exchange-request flow — quote in either the foreign currency or a target LKR amount (server inverts the rate either way), live per-transaction/daily limit headroom shown before committing, supporting-document upload when the exchange is over the admin-configured compliance threshold, submit, history, cancel, audit timeline, and a printable settlement slip once a request is approved or settled; a contact-support message thread; read-only FAQ.
-- **Staff portal** — a review queue of loan applications with processing-age/SLA badges (§9.16); review and decide (approve/reject/request more information) applications, issue and re-issue loan offers — waiving an individual fee on an offer with a mandatory recorded reason (§9.17) — and mark an accepted offer as disbursed; verify uploaded documents, NIC/KYC submissions, and pledged collateral (§9.11); look up a guarantor's total exposure across the system before relying on them again; record an offline repayment (cash/transfer/cheque/standing order) against a disbursed loan and waive a late fee, with a downloadable receipt for any payment (§9.14/§9.15); register a pre-existing bank account for a customer who already banks with this institution (§9.13); read-only customer/product views, standalone risk calculator, a Currency tab with the full forecast/trend/volatility breakdown and anomaly-alert log, an FX Exchange review queue (approve/reject/counter-quote/settle, with per-request compliance-document status and inventory-availability status, each with its own approval gate — see §9.7/§9.9), FAQ management (CRUD). Staff sign in to their own dedicated portal at `/staff` (a customer or admin account is redirected to `/unauthorized` if it reaches that route).
-- **Admin portal** — everything staff has, plus loan-product CRUD including per-product fee configuration (§9.17), staff account management, a bank-wide Portfolio Dashboard (approval rate, disbursement volume, portfolio-at-risk, product/risk distribution — §9.16), a Currency Analytics tab (model/cache status, currency activate/deactivate, cache refresh), FX configuration (spreads, limits, documentation threshold, bank-wide inventory, net position, live-feed refresh), an FX Reports tab (status-rate/volume/spread-revenue aggregates over a date range, plus CSV export of the underlying request rows), FAQ management (CRUD), and a Messages/contact-support inbox.
+- **Customer portal** — apply for a loan via a multi-step wizard that pre-fills stable personal details from the customer's profile and their most recent application for confirmation rather than re-entry (§9.12), auto-saves an in-progress application as a resumable draft, collects an optional guarantor/collateral declaration and supporting documents, and requires granting any still-missing data-processing/credit-bureau-check consent before submission (§9.18); view application history, status, and the full decision/event timeline; download a decision letter (PDF) once decided; view and accept/decline a loan offer, including its fee breakdown, net amount actually receivable, and effective APR alongside the nominal rate (§9.17); view the bank account(s) opened automatically in the customer's name (§9.13); once disbursed, view the live repayment schedule, outstanding balance, arrears, and early-settlement quote, pay online by card or view/download past payment receipts (§9.15), and download a full loan statement (CSV); submit/track NIC identity verification and edit profile (§9.11); a **Leasing** section — apply for a vehicle finance lease, track it on an eight-step progress tracker with a "what happens next" banner, review/accept a quotation, pay the down payment and monthly rentals online or view offline receipts, and download the lease agreement and (once complete) the letter of release (§9.19); a Currency tab (simplified quarterly exchange-rate outlook, live rate board, rate-history chart); a full FX exchange-request flow — quote in either the foreign currency or a target LKR amount (server inverts the rate either way), live per-transaction/daily limit headroom shown before committing, supporting-document upload when the exchange is over the admin-configured compliance threshold, submit, history, cancel, audit timeline, and a printable settlement slip once a request is approved or settled; a contact-support message thread; read-only FAQ.
+- **Staff portal** — a review queue of loan applications with processing-age/SLA badges (§9.16); review and decide (approve/reject/request more information) applications, issue and re-issue loan offers — waiving an individual fee on an offer with a mandatory recorded reason (§9.17) — and mark an accepted offer as disbursed; verify uploaded documents, NIC/KYC submissions, and pledged collateral (§9.11); look up a guarantor's total exposure across the system before relying on them again; record an offline repayment (cash/transfer/cheque/standing order) against a disbursed loan and waive a late fee, with a downloadable receipt for any payment (§9.14/§9.15); register a pre-existing bank account for a customer who already banks with this institution (§9.13); a **Leasing** section — a lease-application review queue with the same progress indicator, request/record independent valuations, credit decisioning, quotation issuance with fee waivers, down-payment/rental recording, dealer/CR/purchase tracking, and a dealer/valuer register (§9.19); read-only customer/product views, standalone risk calculator, a Currency tab with the full forecast/trend/volatility breakdown and anomaly-alert log, an FX Exchange review queue (approve/reject/counter-quote/settle, with per-request compliance-document status and inventory-availability status, each with its own approval gate — see §9.7/§9.9), FAQ management (CRUD). Staff sign in to their own dedicated portal at `/staff` (a customer or admin account is redirected to `/unauthorized` if it reaches that route).
+- **Admin portal** — everything staff has, plus loan-product CRUD including per-product fee configuration (§9.17), leasing-product CRUD, a dealer's payout bank account and dealer/valuer suspension (§9.19), staff account management, a bank-wide Portfolio Dashboard (approval rate, disbursement volume, portfolio-at-risk, product/risk distribution — §9.16) shown alongside a separate Leasing Portfolio view (vehicles owned, rentals collected/overdue — §9.19), a Currency Analytics tab (model/cache status, currency activate/deactivate, cache refresh), FX configuration (spreads, limits, documentation threshold, bank-wide inventory, net position, live-feed refresh), an FX Reports tab (status-rate/volume/spread-revenue aggregates over a date range, plus CSV export of the underlying request rows), FAQ management (CRUD), and a Messages/contact-support inbox.
 
 ### 6.2 Backend (API gateway)
 - **Authentication & authorization** — registration, login, JWT issuance/refresh, OTP-based forgot-password, RBAC.
@@ -160,6 +163,7 @@ flowchart LR
 - **Live FX rate feed & board** — polls a free public FX API hourly for a customer-facing LKR buy/sell board, kept as a separate, clearly-labelled data plane from the trained-model output (§9.5).
 - **FX exchange-request workflow** — customer requests a locked quote (in either the foreign currency or a target LKR amount), submits, staff review (approve/reject/counter-offer)/settle, admin configures spreads/limits/documentation threshold, all persisted with a full audit trail (see §9.6). Requests over the configured LKR threshold require an uploaded supporting document before staff can approve them (see §9.7). An admin-only reports endpoint aggregates status rates, settled volume, and spread revenue over a date range, with a matching CSV export (see §9.8).
 - **FX inventory** — bank-wide (no per-branch) foreign-currency stock, reserved atomically at approval and consumed/released at settlement or terminal rejection, with a single-writer append-only ledger (see §9.9).
+- **Vehicle leasing** — a distinct financing instrument with its own entity spine (application, vehicle, valuation, quotation, agreement, rental schedule, down payment, dealer payout, DMT registration), reusing the loan side's risk/credit-policy/Gemini/Stripe/consent services and fee-resolution/schedule-amortisation logic rather than its tables; a shared pure derivation drives an identical progress tracker and "what happens next" banner for the lessee and for staff, with staff copy always resolved in English regardless of the session's UI language — see §9.19.
 - **FAQ management** — public/customer read-only catalog; staff/admin CRUD, with optional Sinhala/Tamil translations per entry (English is the source of truth).
 - **Contact/support messaging** — public contact form persisted to the DB; admin inbox to triage and respond.
 - **Persistence** — all reads/writes to MySQL.
@@ -2069,6 +2073,283 @@ path), `controllers/consent.controller.js`, `routes/consent.routes.js`,
 
 ---
 
+### 9.19 Vehicle leasing module
+
+**A finance lease is not a loan.** It is a distinct instrument under Sri
+Lanka's Finance Leasing Act: the institution (the **lessor**) buys and owns
+the vehicle, the customer (the **lessee**) pays a monthly **rental** to use
+it, and legal ownership transfers to the lessee only after the final rental
+is paid. There is no borrower and no principal — the vocabulary a loan uses
+does not fit, and the schema and code below use lease vocabulary throughout
+(*lessee*, not borrower; *financed amount*, not principal; *rentals*, not
+instalments; an *agreement*, not an account) as a deliberate, enforced
+discipline.
+
+**This corrects an earlier design.** The first version of this module
+modelled leasing as a `Vehicle Leasing` row in `loan_products`, with leases
+stored as ordinary `loan_applications` drawing down into `loan_accounts`.
+That was structurally wrong in a way no amount of UI polish could fix — a
+lease has no borrower to disburse to and no principal to amortise the same
+way — and was corrected before it shipped. The misclassified product row
+still exists (`loan_products.id = 3`, `type = 'Leasing'`) but is
+**deactivated, not deleted**, since deleting it would cascade away fee and
+pricing rows other migrations hung off it; the customer-facing catalogue
+filters it out, and `findProductById` deliberately does not, so a lease
+history predating the correction still resolves.
+
+#### Entity spine vs. reused services
+
+Leasing gets its **own entity spine** but reuses shared *services* — never
+shared *entity tables*. Risk scoring, credit policy, the Gemini explanation
+service, Stripe, and consent capture are credit-decisioning and customer
+concerns, not "loan" concerns; they take arguments and return answers rather
+than reading `loan_applications` directly, so a lease application is scored,
+explained, and paid for through the exact same code a loan is:
+
+```
+Own spine (19 tables)               Reused services (unchanged)
+────────────────────                ───────────────────────────
+lease_products                      mlClient.service        (risk score)
+lease_applications                  creditPolicy.service     (+ LEASE_LTV rule)
+  └─ lease_vehicles                 gemini.service           (explanation)
+       └─ vehicle_valuations        stripe.service           (payment gateway)
+       └─ vehicle_registrations     consent.service
+lease_quotations (+ fees)           loanFees.service         (resolveFees/IRR)
+lease_agreements                    buildAmortizationSchedule (schedule maths)
+  └─ lease_rental_schedule
+  └─ lease_rentals
+lease_down_payments (+ intents)     Independent reference data
+lease_rental_intents                ───────────────────────────
+lease_supplier_payouts              lease_suppliers   (dealer register)
+lease_application_documents         lease_valuers     (valuer register)
+lease_risk_assessments
+lease_policy_evaluations
+lease_application_events
+```
+
+The middle column is the real cost of keeping the spine separate:
+`risk_assessments`, `credit_policy_evaluations`,
+`loan_application_documents`, the audit trail, and adverse actions are all
+keyed to `loan_applications` in the existing schema. Rather than making
+those tables polymorphic (able to point at either a loan or a lease), each
+was mirrored as a parallel `lease_*` table. That touches **no working loan
+code**, which is the entire reason it was chosen — a polymorphic refactor of
+tables the whole loan pipeline already depends on carries real regression
+risk for no benefit a lessee or lender would ever notice.
+
+**Verification, not assertion:** the lease spine has **zero foreign keys
+into any `loan_*` table**, checked directly against
+`information_schema` — the structural proof the separation actually holds,
+worth re-running after any future lease migration.
+
+#### Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> applied
+    applied --> under_review: staff/admin
+    under_review --> valuation: used/reconditioned vehicle
+    valuation --> approved: staff/admin (LTV re-evaluated against valuation)
+    under_review --> approved: staff/admin (brand new — no valuation needed)
+    under_review --> rejected: staff/admin
+    approved --> quoted: staff/admin issues terms
+    quoted --> accepted: customer
+    quoted --> declined: customer
+    accepted --> down_payment: card online, or staff-recorded offline
+    down_payment --> vehicle_purchased: institution pays the dealer
+    vehicle_purchased --> registered: DMT/CR names lessor as absolute owner
+    registered --> active: agreement activated, rental schedule generated
+    active --> active: monthly rentals, or early settlement
+    active --> released: every rental paid — letter of release issued
+    released --> [*]: DMT transfer — lessee becomes legal owner
+```
+
+Shown identically to the lessee, staff, and admin — a lessee ringing to ask
+"what's happening with my lease?" and the officer who answers must be
+looking at one description of the workflow, not two that can drift (see
+"Progress tracking and the next-action derivation" below). The order of the
+last three steps before rentals begin is itself
+the load-bearing rule, not an implementation detail: the down payment must
+settle **before** the dealer is paid (the institution's own money should
+never chase a commitment the lessee hasn't made), the dealer must be paid
+**before** the CR is lodged (you cannot register as absolute owner of a
+vehicle you don't yet own), and the CR must be registered **before** rentals
+begin (until title names the lessor, this would be a loan in all but name).
+Each gate is enforced in one pure module (`leaseRegistration.service.js`)
+and returns a *reason*, not a boolean, so a blocked step explains the
+exposure rather than citing a rule.
+
+#### Locked design decisions
+
+- **Down payment and rentals: both channels, one ledger.** A customer can
+  pay online by card through the same Stripe/payment-intent machinery loan
+  repayments use (§9.15), or have a payment recorded offline by staff — both
+  post to the same running total, so "how much is still owed?" always has
+  one answer regardless of which channel paid it.
+- **Dealers are admin-managed, with a separation of duties.** A staff member
+  may add a dealer's identity (name, contact details) from within an
+  application, but only an **administrator** may set or edit a dealer's
+  payout bank account — the account the institution's own purchase money is
+  wired to. A staff-created dealer is therefore *born unpayable*, and the
+  payout step is gated on exactly the fields staff cannot set; the person
+  processing a file still cannot redirect where the money goes.
+- **DMT/CR registration is a tracked workflow**, with reference numbers and
+  dates per stage, not a single status flag — matching how a real Sri
+  Lankan lessor's back office actually operates.
+- **Risk scoring reuses the existing model as-is.** No new model, nothing
+  added to the Python service (§7). A lease application is scored by
+  exactly the loan-risk model a loan is; loan-to-value enters only as an
+  additional credit-policy rule (`LEASE_LTV`, below), never as a model
+  feature.
+- **Navigation is a top-level section**, peer to Loans and Currency, with
+  its own customer/staff/admin sub-pages — not nested under Loans, since
+  doing so would reintroduce in the UI the exact misclassification the
+  schema was corrected of.
+
+#### Cost model: fees are payable up front, not deducted from a disbursement
+
+A loan's fees (§9.17) are deducted from what the borrower receives, because
+a loan disburses money to the borrower. **A lease disburses nothing to the
+lessee** — the money goes to the dealer — so lease fees are payable
+**up front, alongside the down payment**, and change only what is due at
+signing; the financed amount, monthly rental, and schedule are untouched.
+Percentage-based fees are charged on the **financed amount**, not the
+vehicle's price, since a larger down payment means a smaller facility and
+the fee is for the facility. Fee resolution itself — percentage/fixed
+calculation, min/max clamping, staff waivers, and the IRR-based effective
+APR solver — is **reused from the loan side** (`loanFees.service.js`)
+unchanged; only the vocabulary and the point in the flow at which the money
+is due are lease-specific.
+
+#### Payment architecture: reused patterns, one lease-specific addition
+
+Both the down payment and rental collection follow the **same
+exactly-once settlement pattern** loan repayments use (§9.15): a
+`SELECT … FOR UPDATE` on the payment intent, a status gate, a unique
+constraint behind it, and the checkout-return page reconciling through the
+identical function the Stripe webhook calls — so a webhook delivered
+multiple times, or a customer's browser returning after the fact, can never
+credit the ledger twice.
+
+One addition specific to leasing: because two people can be settling one
+signing amount at once (a card payment in flight while a clerk keys in an
+offline receipt), the settle transaction re-reads the balance under its own
+lock and, if a payment no longer fits because the balance moved underneath
+it, marks that attempt `failed` with an explanation **without rolling back**
+— real money already moved, and the only way anyone learns a refund is owed
+is if that record survives.
+
+**Every quoted rental figure is a top-up, never a face value.** The
+schedule keeps no per-row paid amount — a rental's status is re-derived from
+the *total* received against it, not incrementally allocated — so "pay the
+next rental" must combine with whatever partial amount already sits on that
+row. Left unhandled, this produces a genuine payment-gateway defect: three
+part-payments landing fractions of a cent short of a rental's face value
+quote a shortfall no card gateway will process (a real, reported case:
+LKR 0.36 outstanding on a schedule row, forever unpayable). Two defences
+close it, applied identically on the loan side once the same latent defect
+was found there: **roll-forward** (a top-up below the payment gateway's
+minimum combines with the following row(s) until the charge is real money,
+labelled to the customer as "Pay rentals 3–4" rather than mislabelling it as
+one rental), and a **final floor** inside the settlement function itself
+that refuses a payment below the minimum outright, before ever calling the
+gateway — catching dust on a schedule's last row, where there is nothing
+left to roll into.
+
+#### Progress tracking and the next-action derivation
+
+A lease has eight recognisable steps most customers have never encountered
+before (a down payment before anything is bought, the institution — not
+the customer — buying the vehicle, the CR naming it as absolute owner), and
+a bare status chip names only the current one. Two pure, framework-agnostic
+functions in `leaseProgress.js` — `deriveLeaseProgress()` (where a lease has
+got to) and `deriveNextAction()` (the single outstanding action, whose move
+it is, and which section holds the controls) — are the **single source**
+both the lessee's page and the staff review queue render from, so the two
+can never describe the same lease differently. Both are pure derivations
+over the six objects every lease surface already loads (application,
+quotations, down payment, purchase, agreement, valuation) rather than a
+stored column, because the underlying facts live across several tables and
+a status column attempting to summarise all of them would be a second
+source of truth to keep in step with the records it summarises.
+
+**One derivation, two audiences, enforced at the render layer.** The
+wording differs by who is looking — "Awaiting the down payment" for staff,
+"Pay your down payment" for the lessee describing the identical fact — so
+`deriveNextAction()` returns both, each as an i18n key with its parameters
+rather than a rendered sentence. The React components that consume it
+(`LeaseNextAction.jsx`, `LeaseProgressTracker.jsx`) resolve the customer copy
+through the ambient (possibly Sinhala/Tamil) translator, but resolve the
+**staff** copy through a translator fixed to English
+(`i18n.getFixedT("en")`) regardless of the ambient language — because staff
+and the public site share one `i18next` instance and one `localStorage` key,
+and nothing resets it between a customer browsing session and a staff login
+on the same machine. Gating on the fixed translator, rather than trusting
+that staff sessions simply never touch the language switcher, is what makes
+"staff/admin screens stay English" a property of the code rather than an
+assumption about user behaviour.
+
+#### Notifications
+
+Leasing follows the same event-driven notification design the rest of the
+system uses (§9.10), extended with one addition genuinely new to this
+module: a `dedupe_key` with a unique index on `notifications`. A reminder
+("rental due in 3 days") is a *condition* that stays true for days, so a
+periodic sweep re-evaluating it would otherwise re-send the same notice on
+every run; the unique key makes a given notice sendable exactly once,
+enforced by the schema rather than by application code remembering what it
+already sent — the same reasoning behind the payment intents' own unique
+settlement constraint. The sweep itself keeps no state between runs and is
+safe to run at any frequency, including twice at once, for the same reason.
+**Who is told what** mirrors `deriveNextAction()`'s own division exactly:
+the desk is notified when work arrives or is unblocked, the lessee about
+decisions, terms, money, and their vehicle — so the portal's own "your turn"
+indicator and the notification a person receives can never disagree.
+
+#### Policy knobs
+
+At the top of `leasing.service.js`, house policy rather than statute:
+
+| Knob | Brand new | Reconditioned | Used |
+|---|---|---|---|
+| Minimum down payment | 20% | 25% | 30% |
+| Maximum loan-to-value (LTV) | 80% | 75% | 70% |
+
+Two properties are worth preserving if these are retuned: **LTV is measured
+against the lower of invoice price and independent valuation**, never simply
+the valuation — defending against an inflated invoice (the lessee financing
+their own down payment) as much as an inflated valuation (a lenient valuer
+letting the lessor over-advance). And **a missing valuation returns "not yet
+decidable"**, never a pass and never a fail, since it is neither a reason to
+approve nor one to decline. Early settlement rebates unearned finance charge
+by sum-of-digits (Rule of 78) — a policy choice, not law, kept honest by the
+identity that settling before any rental is paid must cost exactly the
+financed amount.
+
+#### What it contributes, by role
+
+- **Customer** — apply for a lease, see an eight-step progress tracker and a
+  single "what happens next" banner, review and accept/decline a quotation,
+  pay the down payment and monthly rentals online or have them recorded by
+  staff, download the lease agreement and (once complete) the letter of
+  release, and receive notifications at every stage — all in English,
+  Sinhala, or Tamil (§9.19 draws on the same i18n infrastructure as the loan
+  side, §6.1).
+- **Staff** — a review queue with the same progress indicator, an
+  independent-valuation workflow, credit decisioning, quotation issuance
+  with fee waivers, down-payment/rental recording, dealer/CR/purchase
+  tracking, and a dealer/valuer register — all English-only, matching the
+  existing staff/admin i18n policy (§13).
+- **Admin** — everything staff has, plus leasing product configuration, a
+  dealer's payout banking details, suspending a dealer or valuer, and a
+  leasing portfolio dashboard reported **separately** from the loan
+  portfolio — combining the two would restate the very misclassification
+  this module was built to correct, this time in the reporting layer. The
+  line a lender has no equivalent of is *vehicles currently owned*: under a
+  finance lease the institution holds a real asset, not merely a claim, and
+  a completed lease stops counting as one the moment its release letter is
+  issued.
+
 ## 10. Data model
 
 ```mermaid
@@ -2483,6 +2764,59 @@ a server-side `storage_path`, never returned to a client), `fx_limits`
 ledger — see §9.9). Plus `faqs` (staff/admin-managed, optional Sinhala/Tamil
 columns) and `contact_messages` (public contact form → admin inbox).
 
+### 10.1 Vehicle leasing entity spine
+
+Its own spine, deliberately disconnected from the loan ERD above — **zero
+foreign keys into any `loan_*` table** (§9.19). Shown as relationships only;
+each table's own columns follow the same disciplined lease vocabulary
+(`lessee`, `financed_amount`, `rental`, `agreement`) rather than the loan
+schema's.
+
+```mermaid
+erDiagram
+    lease_products ||--o{ lease_applications : "applied for"
+    lease_products ||--o{ lease_product_fees : "charges"
+    users ||--o{ lease_applications : "submits as lessee"
+    lease_suppliers ||--o{ lease_applications : "sells vehicle for"
+    lease_applications ||--o| lease_vehicles : "finances"
+    lease_vehicles ||--o{ vehicle_valuations : "valued by"
+    lease_valuers ||--o{ vehicle_valuations : "performs"
+    lease_vehicles ||--o| vehicle_registrations : "registered as"
+    lease_applications ||--o{ lease_risk_assessments : "scored by"
+    lease_applications ||--o{ lease_policy_evaluations : "screened by"
+    lease_applications ||--o{ lease_application_documents : "supported by"
+    lease_applications ||--o{ lease_application_events : "audited by"
+    lease_applications ||--o{ lease_quotations : "quoted via"
+    lease_quotations ||--o{ lease_quotation_fees : "charged"
+    lease_applications ||--o| lease_down_payments : "settled via"
+    lease_down_payments ||--o{ lease_down_payment_intents : "attempted via"
+    lease_applications ||--o| lease_supplier_payouts : "paid out as"
+    lease_applications ||--o| lease_agreements : "activated as"
+    lease_agreements ||--o{ lease_rental_schedule : "scheduled as"
+    lease_agreements ||--o{ lease_rentals : "paid via"
+    lease_agreements ||--o{ lease_rental_intents : "attempted via"
+```
+
+| Table | Role |
+|---|---|
+| `lease_products` / `lease_product_fees` | Product catalogue (vehicle class, financed-amount and term ranges, base rate) and its configured fees — the lease-side counterparts of `loan_products`/`loan_product_fees`, never rows in either. |
+| `lease_applications` | The intake record: lessee, product, financed amount, term, self-declared credit fields — the lease counterpart of `loan_applications`, with its own independent status machine (no `disbursed`/`closed`, since a lease has no disbursement; see §9.19's lifecycle diagram). |
+| `lease_vehicles` | One row per application: make, model, year, condition, invoice price — required, unlike a loan's optional collateral, because a lease without a vehicle is not a lease. |
+| `vehicle_valuations` | An independent valuer's assessment of a used/reconditioned vehicle; a `completed` row is immutable (a correction is a fresh valuation, never an edit) and is what unlocks approval (§9.19). |
+| `vehicle_registrations` | The DMT/CR workflow — reference numbers and dates per stage, naming the lessor as absolute owner and lessee as registered user. |
+| `lease_risk_assessments` / `lease_policy_evaluations` | The lease-side mirrors of `risk_assessments`/`credit_policy_evaluations`, storing the SAME shared model's/policy engine's output (§9.19) against a lease rather than a loan. |
+| `lease_application_documents` / `lease_application_events` | Supporting-document metadata and the append-only audit trail, mirroring `loan_application_documents`/`loan_application_events`. |
+| `lease_quotations` / `lease_quotation_fees` | A snapshotted, staff-issued offer (rental, down payment, term, rate) and its fee lines, with `accepted`/`declined`/`superseded` status — the lease counterpart of `loan_offers`/`loan_offer_fees`. |
+| `lease_down_payments` / `lease_down_payment_intents` | The signing-amount ledger and its Stripe/offline payment attempts — exactly-once settlement, mirroring `loan_payment_intents` (§9.15), but application-scoped rather than account-scoped since no agreement exists yet at this stage. |
+| `lease_supplier_payouts` | The institution's payment to the dealer for the vehicle, gated on the down payment having settled (§9.19); `UNIQUE(application_id)` makes a double purchase impossible at the schema level. |
+| `lease_agreements` | Created on activation (once the vehicle is registered); holds the live financed amount, rate, term, and monthly rental the schedule below is generated from. |
+| `lease_rental_schedule` / `lease_rentals` / `lease_rental_intents` | The amortisation schedule (built by the same `buildAmortizationSchedule` a loan uses, with lease vocabulary at the persistence boundary — §9.19), the payment ledger against it, and its Stripe/offline payment attempts — the lease counterparts of `repayment_schedule`/`loan_payments`/`loan_payment_intents`. |
+
+Independent reference data, referenced by `lease_applications`/
+`vehicle_valuations` but owned by neither: `lease_suppliers` (the admin-managed
+dealer register — identity is staff-editable, payout banking is admin-only,
+§9.19) and `lease_valuers` (the independent valuer register).
+
 **Superseded columns, kept rather than dropped:** `customer_profiles`
 still carries `beneficiary_branch`/`beneficiary_account_number`/
 `beneficiary_account_holder` (038) from an earlier design where a customer
@@ -2568,7 +2902,12 @@ correctly with no webhook configured at all.
 - **Frontend API base URL is hard-coded**, not read from a `VITE_API_URL` env var (`finance-frontend/src/api/axios.js`).
 - **H.10 refresh is manual** — `currency-forecast-model/src/data_fetcher.py` pulls the current FRED series and splices it onto the bundled export, but nothing runs it on a schedule; model forecasts are anchored "as of" the last run (2026-07-24), not "today" (see §8.7).
 - **No retraining trigger** — retraining is a manual Kaggle round-trip (see [README.md](README.md#4-currency-forecast-ml-service-8100)), not an in-app admin action.
-- **Pawning and Vehicle Leasing are modelled as plain instalment loans** — both exist only as `loan_products` catalog entries and go through the exact same assessment/offer/disbursement/repayment flow as a personal loan; there is no gold-appraisal/redemption/auction mechanic for pawning, and no asset/down-payment/residual-value mechanic for leasing.
+- **Pawning is modelled as a plain instalment loan** — it exists only as a `loan_products` catalog entry and goes through the exact same assessment/offer/disbursement/repayment flow as a personal loan; there is no gold-appraisal/redemption/auction mechanic. (Vehicle leasing was modelled this way too until it was rebuilt as its own module — see §9.19 and the leasing-specific gaps below.)
+- **Vehicle leasing has no adverse-action or decision-matrix parallel** (§9.1.2/§9.1.4) — a lease application is never auto-rejected; a policy `decline` routes to `under_review` for a human instead, the conservative direction until those parallels are built.
+- **The lease agreement PDF is not a signed instrument** — execution is the recorded acceptance of a quotation, and the document says so rather than drawing a signature line for a witnessing that never happened.
+- **Vehicle leasing has no guarantor mechanic, no joint-lessee applications, and only one lease structure** — a full-payout finance lease ending in mandatory ownership transfer; there is no operating-lease/optional-return-the-vehicle variant.
+- **Vehicle leasing approval is not gated on documents** — an application can be approved with nothing on file; the review panel prompts for uploads and flags an empty set, but nothing refuses.
+- **Leasing notifications and staff/admin leasing screens are English-only**, matching the existing i18n policy — translating notification text would mean storing a key plus parameters instead of prose for every notification in the system, not a change scoped to leasing alone.
 - **No real CRIB bureau integration** — the loan-risk model's CRIB fields are self-declared or neutral-default, not pulled from a live bureau API.
 - **Loan-risk dataset is synthetic**, not real applicant data (see §7.1).
 - **i18n is headline-level** — admin/staff tooling and DB-sourced content (loan products, most FAQ entries unless translated) stay English by design, not a gap to close.

@@ -10,6 +10,7 @@ const bankAccountModel = require("../models/bankAccountModel");
 // by the bank and lives in bank_accounts. See getProfile's `accounts` below.
 const PROFILE_SELECT = `
   SELECT u.user_id, u.first_name, u.last_name, u.email, u.phone, u.role,
+         u.profile_image, u.created_at,
          cp.date_of_birth, cp.gender, cp.address, cp.employment_type,
          cp.company_name, cp.monthly_income, cp.monthly_expense,
          cp.national_id, cp.kyc_status, cp.kyc_verified_at, cp.kyc_notes,

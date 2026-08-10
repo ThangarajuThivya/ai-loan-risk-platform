@@ -26,6 +26,9 @@ const loanModel = require("../models/loanModel");
 const paymentIntentModel = require("../models/paymentIntentModel");
 const notificationModel = require("../models/notificationModel");
 const stripeService = require("../services/stripe.service");
+// Only for the webhook's lease branch — see stripeWebhook.
+const leaseDownPaymentController = require("./leaseDownPayment.controller");
+const leaseRentalController = require("./leaseRental.controller");
 const {
   buildQuoteOptions,
   resolvePayment,
@@ -85,6 +88,11 @@ exports.getRepaymentOptions = async (req, res) => {
       next_installment: options.nextInstallment
         ? {
             installment_no: options.nextInstallment.installmentNo,
+            // Present only when a tiny residual rolled forward into a
+            // following instalment — see nextInstallmentDue. Lets the UI
+            // say "Pay instalments 3–4" instead of quietly mislabelling a
+            // combined charge as a single instalment.
+            through_installment_no: options.nextInstallment.throughInstallmentNo,
             due_date: toDateOnly(options.nextInstallment.dueDate),
             amount: options.nextInstallment.amount,
           }
@@ -387,6 +395,26 @@ exports.stripeWebhook = async (req, res) => {
 
   try {
     const session = event.data?.object;
+
+    // L5 — this is the ONLY place a webhook signature is verified, so the
+    // lease branch dispatches from here rather than owning a second endpoint
+    // with its own (inevitably drifting) verification. `kind` rides in the
+    // signed metadata, so it is trustworthy in a way a query parameter would
+    // not be. Sessions created before this field existed have no `kind` and
+    // fall through to the loan path, which is where they belong.
+    if (session?.metadata?.kind === "lease_down_payment") {
+      await leaseDownPaymentController.handleWebhookEvent(event.type, session);
+      return res.status(200).json({ received: true });
+    }
+
+    // L10 — the same dispatch for a monthly rental. A separate ledger and a
+    // separate intent table, so a separate branch; what they share is this
+    // one verified entry point.
+    if (session?.metadata?.kind === "lease_rental") {
+      await leaseRentalController.handleWebhookEvent(event.type, session);
+      return res.status(200).json({ received: true });
+    }
+
     switch (event.type) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded": {

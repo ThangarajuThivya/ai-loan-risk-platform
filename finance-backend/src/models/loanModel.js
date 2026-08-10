@@ -208,11 +208,23 @@ async function findProductById(productId, { lang } = {}) {
 
 /**
  * All loan products, for populating an "apply" form's product picker.
+ *
+ * Retired products (active = 0) are excluded by default — 047 retires the
+ * misclassified 'Vehicle Leasing' row that way, since a finance lease is not
+ * a loan and must not be applied for through the loan wizard. Admin product
+ * management passes includeInactive so a retired product stays visible and
+ * reactivatable rather than vanishing from the screen that governs it.
+ *
+ * NOTE findProductById is deliberately NOT filtered: an existing application
+ * referencing a since-retired product must still resolve it, or its history
+ * stops rendering.
+ *
  * @param {object} [opts]
  * @param {string} [opts.lang] "si" | "ta" | anything else → English
+ * @param {boolean} [opts.includeInactive] include retired products
  * @returns {Promise<object[]>}
  */
-async function findAllProducts({ lang } = {}) {
+async function findAllProducts({ lang, includeInactive = false } = {}) {
   const suffix = langSuffix(lang);
   // Ordered by the English name in every language: the alias shadows `name`,
   // so ordering by it would reorder the catalogue per language for no reason.
@@ -220,9 +232,10 @@ async function findAllProducts({ lang } = {}) {
     `SELECT id, ${localizedColumn("name", suffix)}, type,
             min_amount, max_amount, min_tenure_months,
             max_tenure_months, interest_rate,
-            min_interest_rate, max_interest_rate, rate_type,
+            min_interest_rate, max_interest_rate, rate_type, active,
             ${localizedColumn("description", suffix)}
        FROM loan_products
+      ${includeInactive ? "" : "WHERE active = 1"}
       ORDER BY loan_products.name`
   );
   return rows;
