@@ -40,21 +40,20 @@ const LEASE_FEE_TYPES = [
 /**
  * Fees that only apply when the vehicle is physically inspected.
  *
- * A brand-new vehicle is bought from a franchise dealer against a printed
- * invoice and is never inspected or valued, so charging an inspection fee
- * would be charging for work nobody did. Enforced here rather than left to
- * an admin to remember to waive per quotation.
- */
-const INSPECTION_ONLY_FEES = ["vehicle_inspection"];
-
-/**
+ * Every vehicle now gets an independent valuation before approval
+ * (leasing.service.js#requiresValuation), brand new included, so the
+ * inspection this fee pays for genuinely happens on every application —
+ * there is currently no condition this filters out. Kept as a named,
+ * explicit filter rather than deleted: fee applicability should stay tied
+ * to whether the underlying work happens, not be assumed unconditional, in
+ * case a future vehicle class is ever exempted from valuation again.
+ *
  * @param {object[]} configs   lease_product_fees rows
  * @param {string} condition   brand_new | reconditioned | used
  * @returns {object[]} the configs that actually apply to this vehicle
  */
-function applicableFeeConfigs(configs, condition) {
-  if (condition !== "brand_new") return configs;
-  return configs.filter((c) => !INSPECTION_ONLY_FEES.includes(c.fee_type));
+function applicableFeeConfigs(configs, _condition) {
+  return configs;
 }
 
 /**
@@ -114,7 +113,6 @@ function summarizeLeaseFees({ fees = [], downPaymentAmount = 0, financedAmount, 
 
 module.exports = {
   LEASE_FEE_TYPES,
-  INSPECTION_ONLY_FEES,
   applicableFeeConfigs,
   resolveLeaseFees,
   summarizeLeaseFees,

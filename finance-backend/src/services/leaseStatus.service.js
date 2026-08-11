@@ -152,14 +152,13 @@ function targetStatusesForRoles(...roles) {
 /**
  * THE VALUATION GATE.
  *
- * A used or reconditioned vehicle may not be approved until an independent
- * valuation has come back. This is not a nicety: loan-to-value is measured
- * against the LOWER of invoice and valuation, so without one the
+ * No vehicle — brand new, reconditioned, or used — may be approved until an
+ * independent valuation has come back. This is not a nicety: loan-to-value
+ * is measured against the LOWER of invoice and valuation, so without one the
  * institution's actual exposure on an asset it is about to own is unknown.
- * Approving anyway would mean approving a number nobody has checked.
- *
- * A brand-new vehicle needs no valuation — a franchise invoice IS the market
- * value — so it passes this gate immediately.
+ * Approving anyway would mean approving a number nobody has checked, and a
+ * franchise invoice is a price the dealer set, not a value anyone here has
+ * verified.
  *
  * Returns a reason rather than a bare boolean so the caller can say WHY
  * rather than emitting a generic refusal.
@@ -172,7 +171,6 @@ function targetStatusesForRoles(...roles) {
  */
 function checkValuationGate({ targetStatus, conditionType, hasCompletedValuation }) {
   if (targetStatus !== "approved") return { ok: true };
-  if (conditionType === "brand_new") return { ok: true };
   if (hasCompletedValuation) return { ok: true };
   return {
     ok: false,

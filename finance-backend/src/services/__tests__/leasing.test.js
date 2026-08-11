@@ -54,8 +54,8 @@ console.log("leasing.service — down payment, LTV, quote, early settlement");
  * Valuation requirement
  * ------------------------------------------------------------------ */
 
-check("brand-new vehicles need no valuation; used and reconditioned do", () => {
-  assert.strictEqual(requiresValuation("brand_new"), false);
+check("every condition needs an independent valuation, brand new included", () => {
+  assert.strictEqual(requiresValuation("brand_new"), true);
   assert.strictEqual(requiresValuation("reconditioned"), true);
   assert.strictEqual(requiresValuation("used"), true);
 });
@@ -147,8 +147,17 @@ check("financed amount is price minus down payment, and guards its inputs", () =
  * Valuation base — the anti-inflation rule
  * ------------------------------------------------------------------ */
 
-check("a brand-new vehicle is valued at its invoice", () => {
+check("a brand-new vehicle with no valuation yet has no base at all", () => {
   const b = valuationBase({ condition: "brand_new", invoicePrice: 5000000 });
+  assert.strictEqual(b, null);
+});
+
+check("a brand-new vehicle's invoice can still be its base, once valued", () => {
+  const b = valuationBase({
+    condition: "brand_new",
+    invoicePrice: 5000000,
+    valuationAmount: 5200000, // a valuation ABOVE invoice never inflates the base
+  });
   assert.deepStrictEqual(b, { base: 5000000, source: "invoice" });
 });
 
@@ -189,10 +198,21 @@ check("LTV is financed over base, as a percentage", () => {
   assert.strictEqual(computeLtv(4000000, 0), null);
 });
 
-check("a compliant brand-new lease is within policy", () => {
+check("a brand-new lease is undecidable before its own valuation is back", () => {
   const a = assessLtv({
     condition: "brand_new",
     invoicePrice: 5000000,
+    financedAmount: 4000000, // 20% down
+  });
+  assert.strictEqual(a.decidable, false);
+  assert.strictEqual(a.reason, "valuation_required");
+});
+
+check("a compliant brand-new lease is within policy, once valued", () => {
+  const a = assessLtv({
+    condition: "brand_new",
+    invoicePrice: 5000000,
+    valuationAmount: 5000000,
     financedAmount: 4000000, // 20% down
   });
   assert.strictEqual(a.decidable, true);

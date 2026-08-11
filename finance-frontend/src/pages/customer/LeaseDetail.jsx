@@ -586,6 +586,22 @@ export default function LeaseDetail() {
                   </p>
                 </div>
               )}
+
+              {/* Informational only — the duplicate key is surrendered and
+                  held in our custody for the tenure, alongside the CR. This
+                  never blocks anything on the lessee's side; it just answers
+                  "where is my spare key right now?" */}
+              {purchase.registration?.duplicate_key_returned ? (
+                <p className="text-[11px] text-slate-500">
+                  {t("customer.leasing.duplicateKeyReturned", {
+                    date: fmtDate(purchase.registration.duplicate_key_returned_at),
+                  })}
+                </p>
+              ) : (
+                purchase.registration?.duplicate_key_received && (
+                  <p className="text-[11px] text-slate-500">{t("customer.leasing.duplicateKeyHeld")}</p>
+                )
+              )}
             </div>
           )}
     </>

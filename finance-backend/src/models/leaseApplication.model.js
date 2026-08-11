@@ -882,6 +882,43 @@ async function advanceRegistration(vehicleId, { from, to, fields = {}, updatedBy
 }
 
 /**
+ * Log custody of the vehicle's duplicate (spare) key — a soft fact, not a
+ * status transition. Unlike `advanceRegistration`, this never gates
+ * anything downstream, so it needs no `from`/`to` guard: staff can correct
+ * a mis-logged date, and there is no invalid order to defend against
+ * (`returned` before `received` is unusual but not unsafe to record — the
+ * institution physically either has the key or it doesn't, and refusing to
+ * let staff log what actually happened would be worse than a slightly odd
+ * timeline).
+ *
+ * @param {number} vehicleId
+ * @param {"received"|"returned"} event
+ * @param {object} p
+ * @param {string} [p.date]      ISO date; defaults to today
+ * @param {number} p.loggedBy    staff/admin user_id
+ * @returns {Promise<object>} the updated registration row
+ */
+async function recordDuplicateKeyCustody(vehicleId, event, { date, loggedBy }) {
+  // Lazily create the row, exactly as advanceRegistration does, so logging
+  // custody never requires a separate "start the title record" call first.
+  await pool.query(
+    `INSERT IGNORE INTO vehicle_registrations (vehicle_id, status) VALUES (?, 'not_started')`,
+    [vehicleId]
+  );
+
+  const on = date || new Date().toISOString().slice(0, 10);
+  const column = event === "returned" ? "duplicate_key_returned" : "duplicate_key_received";
+  await pool.query(
+    `UPDATE vehicle_registrations
+        SET ${column} = 1, ${column}_at = ?, ${column}_by = ?
+      WHERE vehicle_id = ?`,
+    [on, loggedBy, vehicleId]
+  );
+
+  return findRegistration(vehicleId);
+}
+
+/**
  * The four aggregate reads the portfolio is built from (L8.1).
  *
  * Deliberately four queries rather than one join: the questions are
@@ -1074,6 +1111,7 @@ module.exports = {
   setVehicleSupplier,
   findRegistration,
   advanceRegistration,
+  recordDuplicateKeyCustody,
   createLeaseDocument,
   findLeaseDocuments,
   findLeaseDocumentById,

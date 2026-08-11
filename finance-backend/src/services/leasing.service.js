@@ -60,15 +60,17 @@ function isPositiveFinite(n) {
 }
 
 /**
- * Brand-new vehicles are bought from a franchise dealer against a printed
- * invoice, so that invoice IS the market value and a valuation would be
- * theatre. Everything else needs an independent opinion before approval.
+ * Every vehicle — brand new, reconditioned, or used — needs an independent
+ * valuation before approval. A franchise invoice is a price the dealer set,
+ * not a value the institution has verified, and LTV is measured against the
+ * lower of invoice and valuation precisely so an invoice alone is never
+ * enough to establish exposure on an asset the institution is about to own.
  *
  * @param {string} condition
  * @returns {boolean}
  */
-function requiresValuation(condition) {
-  return condition !== "brand_new";
+function requiresValuation(_condition) {
+  return true;
 }
 
 /**

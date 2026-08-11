@@ -552,24 +552,6 @@ export default function CustomerCurrency() {
               )}
             </div>
 
-            {/* The page-level not-financial-advice notice. Wording is
-                UNCHANGED by Phase 23 (§24) and deliberately stays here, at
-                page level and always visible, rather than being folded into
-                either the live block above or the collapsed model section —
-                relocating a legal notice into a section that is closed by
-                default would hide it, which is a weakening dressed up as
-                de-duplication.
-
-                Its "live trend estimate" clause is currently dormant: that
-                series is off by default (§21) and the customer variant has
-                no toggle to enable it (§22), so nothing on this page renders
-                it today. The clause is left in place because it costs
-                nothing and becomes accurate again the moment the series is
-                re-enabled — see the gated LiveTrendBadge above. */}
-            <div className="flex items-start space-x-2 bg-amber-50 border border-amber-100 text-amber-800 rounded-xl p-4 text-xs leading-relaxed">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{t("customer.currencyAnalytics.adviceDisclaimer")}</span>
-            </div>
           </div>
         )}
       </div>

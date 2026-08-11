@@ -5,11 +5,11 @@
  * around it.
  *
  * THE POINT OF THIS FILE is that almost nothing in it is lease-specific.
- * The risk model, the credit-policy engine, the consent gate and the
- * behavioural-feature derivation are the SAME services the loan path calls,
- * invoked with the same arguments. A lease is underwritten exactly like any
- * other credit exposure; what differs is the asset behind it, and that shows
- * up in precisely three places:
+ * The credit-policy engine and the consent gate are the SAME services the
+ * loan path calls, invoked with the same arguments. A lease is underwritten
+ * against the bank's fixed lending rules exactly like any other credit
+ * exposure; what differs is the asset behind it, and that shows up in
+ * precisely three places:
  *
  *   1. The vehicle is required, and its price is what the financed amount is
  *      derived against.
@@ -18,8 +18,10 @@
  *   3. The rental is flat-rate by convention (leasing.service), not the
  *      reducing-balance EMI a loan quotes.
  *
- * Everything else is deliberately shared, because duplicating a credit
- * decisioning pipeline is how the two drift apart.
+ * UNLIKE THE LOAN PATH, a lease is never scored by the AI risk model — see
+ * the note above `apply()` for why. Everything else is deliberately shared,
+ * because duplicating a credit decisioning pipeline is how the two drift
+ * apart.
  */
 
 const fs = require("fs");
@@ -33,16 +35,12 @@ const consentModel = require("../models/consentModel");
 const leaseNotifier = require("../services/leaseNotifier.service");
 
 const {
-  mapProfileToModelFields,
-  predictRisk,
   ageFromDob,
   isProvided,
   DECLARABLE_FIELDS,
   PROFILE_BACKED_FIELDS,
 } = require("../services/mlClient.service");
 const { evaluateCreditPolicy } = require("../services/creditPolicy.service");
-const { deriveBehaviouralFeatures } = require("../services/behaviouralFeatures.service");
-const { priceInterestRate } = require("../services/interestPricing.service");
 const { findMissingConsents } = require("../services/consent.service");
 const {
   assessLtv,
@@ -139,8 +137,8 @@ exports.apply = async (req, res) => {
       });
     }
 
-    // Stop a lessee stacking undecided applications before spending an ML
-    // call and a persisted row.
+    // Stop a lessee stacking undecided applications before spending a
+    // persisted row.
     const undecided = await leaseAppModel.countUndecidedLeaseApplications(lesseeId);
     if (undecided >= MAX_PENDING_LEASE_APPLICATIONS) {
       return res.status(409).json({
@@ -148,9 +146,13 @@ exports.apply = async (req, res) => {
       });
     }
 
-    // Declared model inputs, falling back to the profile — same resolution
-    // order the loan path uses, so the same customer is described the same
-    // way to the model whichever product they apply for.
+    // Declared inputs, falling back to the profile — same resolution order
+    // the loan path uses, so the same customer is described the same way on
+    // every application regardless of product. Still collected here even
+    // though no risk model consumes them: the credit policy engine below
+    // reads several of these fields directly (crib_score, previous_defaults,
+    // guarantor_defaults, existing_loans), and they are stored on the
+    // application as its permanent declaration either way.
     const declared = {};
     for (const field of DECLARABLE_FIELDS) {
       if (isProvided(req.body[field])) declared[field] = req.body[field];
@@ -161,41 +163,18 @@ exports.apply = async (req, res) => {
       }
     }
 
-    // Behavioural features from this customer's own record with us, read
-    // BEFORE the intake transaction so the application being scored cannot
-    // contaminate its own history.
-    const creditHistory = await loanModel.findBorrowerCreditHistory(lesseeId);
-    const { fields: behaviouralFields, meta: behaviouralMeta } =
-      deriveBehaviouralFeatures(creditHistory);
-
-    // --- SHARED SERVICE: the risk model ------------------------------------
-    // Fed the product's BASE rate, exactly as the loan path does: a
-    // risk-based price is an OUTPUT of the assessment, never an input to it.
+    // No AI risk assessment for a lease. A lease is underwritten on the
+    // bank's fixed lending rules (credit policy, below) plus loan-to-value —
+    // never on a probability-of-default score — so every lease prices at the
+    // product's one standard rate. This also means a lease application no
+    // longer depends on the risk-model service being reachable at all.
     const baseRate = Number(product.interest_rate);
-    const modelFields = mapProfileToModelFields(
-      profile,
-      {
-        requested_amount: financed_amount,
-        tenure_months: term_months,
-        interest_rate: baseRate,
-      },
-      declared,
-      behaviouralFields
-    );
-    const risk = await predictRisk(modelFields);
 
-    const pricing = priceInterestRate({
-      baseRate,
-      minRate: product.min_interest_rate,
-      maxRate: product.max_interest_rate,
-      riskLabel: risk.risk_label,
-    });
-
-    // The rental the lessee would actually pay, quoted at the priced rate.
+    // The rental the lessee would actually pay, quoted at the standard rate.
     const quote = buildLeaseQuote({
       vehiclePrice: vehicle.invoicePrice,
       condition: vehicle.conditionType,
-      annualRatePct: pricing.rate,
+      annualRatePct: baseRate,
       tenureMonths: term_months,
       rateType: product.rate_type,
       downPaymentAmount: down.amount,
@@ -250,16 +229,10 @@ exports.apply = async (req, res) => {
       termMonths: term_months,
       vehicle,
       declared,
-      pricedInterestRate: pricing.rate,
-      risk: {
-        risk_label: risk.risk_label,
-        risk_category: risk.risk_category,
-        probLow: risk.probabilities?.["Low Risk"],
-        probMedium: risk.probabilities?.["Medium Risk"],
-        probHigh: risk.probabilities?.["High Risk"],
-        model_version: risk.model_version,
-        behaviouralSnapshot: behaviouralMeta,
-      },
+      pricedInterestRate: baseRate,
+      // No `risk` — runLeaseApplicationTransaction only writes a
+      // lease_risk_assessments row when one is passed, so this application
+      // simply gets none, exactly like every lease from now on.
       policy,
       ltv,
       downPaymentPercent: down.percent,
@@ -277,11 +250,6 @@ exports.apply = async (req, res) => {
     return res.status(201).json({
       application_id: result.applicationId,
       status: result.status,
-      risk: {
-        label: risk.risk_label,
-        category: risk.risk_category,
-        probabilities: risk.probabilities,
-      },
       policy: {
         outcome: policy.outcome,
         reason_codes: policy.reason_codes,
@@ -294,20 +262,12 @@ exports.apply = async (req, res) => {
         minimum_percent: down.minimumPercent,
       },
       valuation_required: requiresValuation(vehicle.conditionType),
-      interest_rate: pricing.rate,
+      interest_rate: baseRate,
     });
   } catch (err) {
     console.error("LEASE APPLY ERROR:", err);
-    // A model-service failure is an upstream problem, not the applicant's.
-    // Reported the same way the loan path reports it (loan.controller.js
-    // assess) — a lessee and a borrower hitting the same dead dependency
-    // must not be told two different stories, and "Failed to submit your
-    // application" invites someone to blame their own form.
-    const isModelError = /risk model/i.test(err.message || "");
-    return res.status(isModelError ? 502 : 500).json({
-      message: isModelError
-        ? "The risk assessment service is unavailable. Please try again shortly."
-        : "Failed to submit the lease application.",
+    return res.status(500).json({
+      message: "Failed to submit the lease application.",
       error: err.message,
     });
   }
