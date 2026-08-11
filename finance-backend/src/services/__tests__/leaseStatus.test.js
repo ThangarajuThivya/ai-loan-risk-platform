@@ -174,13 +174,22 @@ check("a reconditioned vehicle is gated the same way", () => {
   );
 });
 
-check("a brand-new vehicle passes the gate immediately", () => {
-  // Its franchise invoice IS the market value; a valuation would be theatre.
+check("a brand-new vehicle is gated the same way as any other condition", () => {
+  // A franchise invoice is a price the dealer set, not a value anyone here
+  // has verified — brand new gets no exemption from the valuation gate.
   assert.strictEqual(
     checkValuationGate({
       targetStatus: "approved",
       conditionType: "brand_new",
       hasCompletedValuation: false,
+    }).ok,
+    false
+  );
+  assert.strictEqual(
+    checkValuationGate({
+      targetStatus: "approved",
+      conditionType: "brand_new",
+      hasCompletedValuation: true,
     }).ok,
     true
   );

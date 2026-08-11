@@ -906,6 +906,40 @@ exports.updateRegistration = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /:id/purchase/duplicate-key — log receiving or returning the
+ * vehicle's duplicate (spare) key.
+ *
+ * A soft fact, not a gate. Sri Lankan finance-lease practice requires the
+ * duplicate key to be surrendered alongside the CR and held in the
+ * institution's custody for the tenure, as an extra physical control
+ * against unauthorised use of an asset the institution owns — but that
+ * control operates DURING the lease. Whether it has been logged has no
+ * bearing on whether the lessee has EARNED release, which is a pure
+ * function of rentals paid (issueRelease, below), so this never blocks
+ * approval, activation, or the release letter.
+ */
+exports.recordDuplicateKey = async (req, res) => {
+  if (rejectInvalid(req, res)) return;
+  try {
+    const application = await leaseAppModel.findLeaseApplicationById(req.params.id);
+    if (!application) return res.status(404).json({ message: "Lease application not found." });
+    if (!application.vehicle_id) {
+      return res.status(409).json({ message: "This application has no vehicle to log a key against." });
+    }
+
+    const registration = await leaseAppModel.recordDuplicateKeyCustody(
+      application.vehicle_id,
+      req.body.event,
+      { date: req.body.date, loggedBy: req.user.user_id }
+    );
+    return res.status(200).json({ registration });
+  } catch (err) {
+    console.error("RECORD DUPLICATE KEY ERROR:", err);
+    return res.status(500).json({ message: "Failed to log the duplicate key." });
+  }
+};
+
 /* ------------------------------------------------------------------ *
  * The agreement, rentals and release of title (L7)
  * ------------------------------------------------------------------ */

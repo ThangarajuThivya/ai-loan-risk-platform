@@ -971,8 +971,7 @@
       "volatility": "Volatility",
       "asOf": "As of {{date}}",
       "studyModeSubtitle": "Full series: Fed H.10 history through 2017 plus the model's forecast from that anchor.",
-      "recentRatesSubtitle": "Recent window — live rate feed, labelled demo-bridge data, and a short-term trend estimate.",
-      "adviceDisclaimer": "These figures are AI-generated, illustrative statistical projections computed from historical Federal Reserve exchange-rate data — for informational and educational purposes only. The chart's separate \"live trend estimate\" is a naive statistical extrapolation from recent live rates, not the trained forecasting model. Neither is financial advice, a live market forecast/prediction, or a guarantee of future rates. Please consult a qualified advisor before making any financial decisions."
+      "recentRatesSubtitle": "Recent window — live rate feed, labelled demo-bridge data, and a short-term trend estimate."
     },
     "exchangeRequests": {
       "pageEyebrow": "Currency Exchange",
@@ -1138,7 +1137,9 @@
       "purchasedOn": "We purchased the vehicle on {{date}}.",
       "registeredWithCr": "Registered · CR {{number}}",
       "absoluteOwnerNote": "{{owner}} is the absolute owner and you are the registered user, until your final rental is paid.",
-      "progressHeading": "Progress"
+      "progressHeading": "Progress",
+      "duplicateKeyHeld": "We are holding your vehicle's duplicate key in safe custody for the lease term.",
+      "duplicateKeyReturned": "Your duplicate key was returned to you on {{date}}."
     },
     "leaseDash": {
       "history": "Lease history",
@@ -1222,7 +1223,7 @@
       "vehicleHeading": "The Vehicle",
       "conditionLabel": "Condition",
       "conditionBrandNew": "Brand new",
-      "conditionBrandNewHint": "No valuation needed",
+      "conditionBrandNewHint": "Valuation required",
       "conditionReconditioned": "Reconditioned",
       "conditionReconditionedHint": "Valuation required",
       "conditionUsed": "Used (registered)",
@@ -1267,10 +1268,11 @@
       "resultDownPayment": "Down Payment",
       "resultRate": "Rate",
       "resultRateFlat": "{{rate}}% flat",
-      "resultRisk": "Risk",
       "resultValuationNote": "An independent valuation of this vehicle is required before we can approve it. We'll arrange one and be in touch.",
       "resultIndicativeNote": "These figures are indicative. A formal quotation follows once your application has been reviewed.",
-      "viewMyLeases": "View My Leases"
+      "viewMyLeases": "View My Leases",
+      "resultTerm": "Term",
+      "resultTermMonths": "{{term}} months"
     }
   },
   "fxDocuments": {
@@ -1390,7 +1392,7 @@
       },
       "review": {
         "label": "Under review",
-        "hint": "We check your documents and, for a used or reconditioned vehicle, arrange an independent valuation."
+        "hint": "We check your documents and arrange an independent valuation of the vehicle."
       },
       "approved": {
         "label": "Approved",

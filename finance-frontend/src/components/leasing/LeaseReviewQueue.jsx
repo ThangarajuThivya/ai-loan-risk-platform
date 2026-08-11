@@ -53,9 +53,9 @@ const TABS = [
   {
     key: "valuation",
     label: "Valuation",
-    // Only a used or reconditioned vehicle is ever valued.
-    enabled: ({ detail }) => detail?.condition_type !== "brand_new",
-    lockedHint: "A brand-new vehicle needs no independent valuation.",
+    // Every condition — brand new included — needs an independent
+    // valuation before approval, so this tab is never condition-gated.
+    enabled: () => true,
   },
   {
     key: "decision",
@@ -603,6 +603,30 @@ export default function LeaseReviewQueue() {
     }
   };
 
+  const logDuplicateKey = async (event) => {
+    setActing(`key-${event}`);
+    try {
+      await api.patch(`/leases/${selected.id}/purchase/duplicate-key`, { event });
+      await refreshDetail(selected.id);
+      showToast({
+        type: "success",
+        title: event === "received" ? "Duplicate Key Logged" : "Duplicate Key Returned",
+        message:
+          event === "received"
+            ? "Recorded as held in our custody."
+            : "Recorded as returned to the lessee.",
+      });
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Couldn't Log the Duplicate Key",
+        message: err.response?.data?.message || "Please try again.",
+      });
+    } finally {
+      setActing("");
+    }
+  };
+
   const leaseAction = async (key, fn, successTitle, successMessage) => {
     setActing(key);
     try {
@@ -657,10 +681,12 @@ export default function LeaseReviewQueue() {
     }
   };
 
-  const needsValuation = detail && detail.condition_type !== "brand_new";
+  // Every condition needs an independent valuation before approval — brand
+  // new included, since a franchise invoice is a price the dealer set, not
+  // a value anyone here has verified.
   const hasCompletedValuation = valuations.some((v) => v.status === "completed");
   const approvalBlockedReason =
-    detail && needsValuation && !hasCompletedValuation
+    detail && !hasCompletedValuation
       ? "An independent valuation must be completed before this vehicle can be approved."
       : null;
 
@@ -710,7 +736,6 @@ export default function LeaseReviewQueue() {
             </thead>
             <tbody>
               {applications.map((a) => {
-                const valuationNeeded = a.condition_type !== "brand_new";
                 const done = Number(a.completed_valuations) > 0;
                 const pendingVal = Number(a.pending_valuations) > 0;
                 return (
@@ -734,9 +759,7 @@ export default function LeaseReviewQueue() {
                       {lkr(a.financed_amount)}
                     </td>
                     <td className="px-4 py-3">
-                      {!valuationNeeded ? (
-                        <span className="text-slate-400">Not required</span>
-                      ) : done ? (
+                      {done ? (
                         <span className="text-emerald-700 font-semibold">Completed</span>
                       ) : pendingVal ? (
                         <span className="text-amber-700 font-semibold">Awaiting report</span>
@@ -997,14 +1020,6 @@ export default function LeaseReviewQueue() {
                       <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
                         <ClipboardCheck className="w-3.5 h-3.5" /> Valuation
                       </p>
-
-                      {!needsValuation && (
-                        <p className="text-xs text-slate-500 flex items-start gap-1.5">
-                          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
-                          A brand-new vehicle needs no valuation — the franchise invoice is its market
-                          value.
-                        </p>
-                      )}
 
                       {valuations.length > 0 && (
                         <ul className="space-y-2">
@@ -1409,6 +1424,54 @@ export default function LeaseReviewQueue() {
                           {purchase.nextStep?.label}
                         </p>
 
+                        {/* Duplicate (spare) key custody — Sri Lankan lease
+                            practice requires it alongside the CR, valuation
+                            report and supplier invoice as part of the
+                            application paperwork, so it belongs here from
+                            the moment this tab is reachable, not gated
+                            behind the payout below. A recorded fact, not a
+                            gate: it secures the asset DURING the lease and
+                            has no bearing on whether the lessee has EARNED
+                            release, so it never blocks approval, activation,
+                            or the release letter. */}
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <KeyRound className="w-3 h-3" /> Duplicate key
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            {purchase.registration?.duplicate_key_returned ? (
+                              <>Returned to the lessee {fmtDate(purchase.registration.duplicate_key_returned_at)}.</>
+                            ) : purchase.registration?.duplicate_key_received ? (
+                              <>In our custody since {fmtDate(purchase.registration.duplicate_key_received_at)}.</>
+                            ) : (
+                              "Not yet logged as received."
+                            )}
+                          </p>
+                          {!purchase.registration?.duplicate_key_received && (
+                            <button
+                              type="button"
+                              onClick={() => logDuplicateKey("received")}
+                              disabled={Boolean(acting)}
+                              className="px-3 py-2 text-[11px] font-bold text-white bg-brand-primary hover:bg-brand-primary/90 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              {acting === "key-received" && <Loader2 className="w-3 h-3 animate-spin" />}
+                              Log Key Received
+                            </button>
+                          )}
+                          {purchase.registration?.duplicate_key_received &&
+                            !purchase.registration?.duplicate_key_returned && (
+                              <button
+                                type="button"
+                                onClick={() => logDuplicateKey("returned")}
+                                disabled={Boolean(acting)}
+                                className="px-3 py-2 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+                              >
+                                {acting === "key-returned" && <Loader2 className="w-3 h-3 animate-spin" />}
+                                Log Key Returned
+                              </button>
+                            )}
+                        </div>
+
                         {/* Who we are buying from (L17). Editable until the
                             money leaves; after that the supplier on the
                             vehicle is the counterparty a real payment went
@@ -1580,6 +1643,7 @@ export default function LeaseReviewQueue() {
                             )}
                           </div>
                         )}
+
                       </div>
                     )}
 

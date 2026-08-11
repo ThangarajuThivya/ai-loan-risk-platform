@@ -380,8 +380,10 @@ export function deriveNextAction(input = {}) {
     );
   }
 
-  const needsValuation =
-    application?.condition_type && application.condition_type !== "brand_new";
+  // Every condition needs an independent valuation before approval, brand
+  // new included — a franchise invoice is a price the dealer set, not a
+  // value anyone has verified.
+  const needsValuation = Boolean(application?.condition_type);
   const valuationDone = Boolean(input.valuationCompleted);
   if (needsValuation && !valuationDone) {
     return act(

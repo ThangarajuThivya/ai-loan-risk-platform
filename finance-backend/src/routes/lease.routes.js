@@ -438,6 +438,27 @@ router.patch(
   review.updateRegistration
 );
 
+/**
+ * PATCH /:id/purchase/duplicate-key — log receiving or returning the
+ * vehicle's spare key. A recorded fact, not a status the CR machine above
+ * governs — see the controller for why it never gates approval or release.
+ */
+router.patch(
+  "/:id/purchase/duplicate-key",
+  verifyToken,
+  allowRoles("admin", "staff"),
+  [
+    ...idParam,
+    body("event")
+      .exists({ checkFalsy: true })
+      .withMessage("event is required")
+      .isIn(["received", "returned"])
+      .withMessage("event must be one of: received, returned"),
+    body("date").optional({ nullable: true, checkFalsy: true }).isISO8601(),
+  ],
+  review.recordDuplicateKey
+);
+
 // --- Agreement, rentals and release of title (L7) -------------------------
 
 router.get("/:id/agreement", verifyToken, idParam, review.getAgreement);

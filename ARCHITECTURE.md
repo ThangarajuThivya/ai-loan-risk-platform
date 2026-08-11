@@ -2,7 +2,7 @@
 
 **Project:** AI-Powered Loan Risk & Recommendation System (Sri Lankan banking context)
 **Repository:** `finance-application/` (monorepo — four modules)
-**Last updated:** 2026-08-10
+**Last updated:** 2026-08-11
 
 This document describes the **structural architecture** of the system: its
 components, technology stack, machine-learning models, data model,
@@ -2100,20 +2100,22 @@ history predating the correction still resolves.
 #### Entity spine vs. reused services
 
 Leasing gets its **own entity spine** but reuses shared *services* — never
-shared *entity tables*. Risk scoring, credit policy, the Gemini explanation
-service, Stripe, and consent capture are credit-decisioning and customer
-concerns, not "loan" concerns; they take arguments and return answers rather
-than reading `loan_applications` directly, so a lease application is scored,
-explained, and paid for through the exact same code a loan is:
+shared *entity tables*. Credit policy, the Gemini explanation service,
+Stripe, and consent capture are credit-decisioning and customer concerns, not
+"loan" concerns; they take arguments and return answers rather than reading
+`loan_applications` directly, so a lease application is underwritten,
+explained, and paid for through the exact same code a loan is — with one
+deliberate exception, the AI risk model, which a lease never calls at all
+(see "Locked design decisions" below):
 
 ```
 Own spine (19 tables)               Reused services (unchanged)
 ────────────────────                ───────────────────────────
-lease_products                      mlClient.service        (risk score)
-lease_applications                  creditPolicy.service     (+ LEASE_LTV rule)
-  └─ lease_vehicles                 gemini.service           (explanation)
-       └─ vehicle_valuations        stripe.service           (payment gateway)
-       └─ vehicle_registrations     consent.service
+lease_products                      creditPolicy.service     (+ LEASE_LTV rule)
+lease_applications                  gemini.service           (explanation)
+  └─ lease_vehicles                 stripe.service           (payment gateway)
+       └─ vehicle_valuations        consent.service
+       └─ vehicle_registrations
 lease_quotations (+ fees)           loanFees.service         (resolveFees/IRR)
 lease_agreements                    buildAmortizationSchedule (schedule maths)
   └─ lease_rental_schedule
@@ -2122,10 +2124,12 @@ lease_down_payments (+ intents)     Independent reference data
 lease_rental_intents                ───────────────────────────
 lease_supplier_payouts              lease_suppliers   (dealer register)
 lease_application_documents         lease_valuers     (valuer register)
-lease_risk_assessments
+lease_risk_assessments*
 lease_policy_evaluations
 lease_application_events
 ```
+<sub>* kept in the spine and still readable on old applications, but no
+longer written to — see "Locked design decisions".</sub>
 
 The middle column is the real cost of keeping the spine separate:
 `risk_assessments`, `credit_policy_evaluations`,
@@ -2148,9 +2152,8 @@ worth re-running after any future lease migration.
 stateDiagram-v2
     [*] --> applied
     applied --> under_review: staff/admin
-    under_review --> valuation: used/reconditioned vehicle
+    under_review --> valuation: every vehicle, brand new included
     valuation --> approved: staff/admin (LTV re-evaluated against valuation)
-    under_review --> approved: staff/admin (brand new — no valuation needed)
     under_review --> rejected: staff/admin
     approved --> quoted: staff/admin issues terms
     quoted --> accepted: customer
@@ -2196,11 +2199,32 @@ exposure rather than citing a rule.
 - **DMT/CR registration is a tracked workflow**, with reference numbers and
   dates per stage, not a single status flag — matching how a real Sri
   Lankan lessor's back office actually operates.
-- **Risk scoring reuses the existing model as-is.** No new model, nothing
-  added to the Python service (§7). A lease application is scored by
-  exactly the loan-risk model a loan is; loan-to-value enters only as an
-  additional credit-policy rule (`LEASE_LTV`, below), never as a model
-  feature.
+- **The duplicate (spare) key is tracked custody, never a gate.** Sri Lankan
+  lease practice requires the lessee's spare key alongside the CR, valuation
+  report and supplier invoice, held by the institution as a physical control
+  against unauthorised use of an asset it owns until the final rental clears.
+  `vehicle_registrations` carries `duplicate_key_received`/`_returned` (plus
+  who logged each and when), staff log both from the same panel as the CR —
+  but neither flag gates approval, activation, or the release letter. The
+  key secures the asset *during* the lease; whether the lessee has *earned*
+  release is a pure function of rentals paid, and conditioning legally-owed
+  paperwork on an internal custody step nobody is required to log promptly
+  would be exactly the kind of implied condition the release letter is
+  written to avoid.
+- **A lease is never scored by the AI risk model.** Unlike every other
+  reused decisioning service, `mlClient.service` (§7) is deliberately never
+  called for a lease application — underwriting rests entirely on the fixed
+  credit-policy rules (age, income, DTI, CRIB score, existing obligations)
+  plus loan-to-value (`LEASE_LTV`, fed by the vehicle's own valuation, never
+  a model feature). The reasoning: a lease is asset-backed and the
+  institution holds the vehicle as absolute owner until the final rental, so
+  LTV and the fixed affordability rules already carry the real underwriting
+  weight — a probability-of-default score adds the most value exactly where
+  a lender has nothing but the borrower's promise to fall back on, which is
+  the loan case, not this one. `lease_risk_assessments` remains in the
+  schema and is still read for applications scored before this decision, but
+  nothing writes to it any more. Every lease now prices at its product's one
+  standard rate rather than a risk-tiered rate, for the same reason.
 - **Navigation is a top-level section**, peer to Loans and Currency, with
   its own customer/staff/admin sub-pages — not nested under Loans, since
   doing so would reintroduce in the UI the exact misclassification the
@@ -2336,10 +2360,11 @@ financed amount.
   Sinhala, or Tamil (§9.19 draws on the same i18n infrastructure as the loan
   side, §6.1).
 - **Staff** — a review queue with the same progress indicator, an
-  independent-valuation workflow, credit decisioning, quotation issuance
+  independent-valuation workflow (every vehicle, brand new included),
+  policy-and-LTV credit decisioning (no AI risk score), quotation issuance
   with fee waivers, down-payment/rental recording, dealer/CR/purchase
-  tracking, and a dealer/valuer register — all English-only, matching the
-  existing staff/admin i18n policy (§13).
+  tracking, duplicate-key custody logging, and a dealer/valuer register —
+  all English-only, matching the existing staff/admin i18n policy (§13).
 - **Admin** — everything staff has, plus leasing product configuration, a
   dealer's payout banking details, suspending a dealer or valuer, and a
   leasing portfolio dashboard reported **separately** from the loan
@@ -2782,7 +2807,7 @@ erDiagram
     lease_vehicles ||--o{ vehicle_valuations : "valued by"
     lease_valuers ||--o{ vehicle_valuations : "performs"
     lease_vehicles ||--o| vehicle_registrations : "registered as"
-    lease_applications ||--o{ lease_risk_assessments : "scored by"
+    lease_applications ||--o{ lease_risk_assessments : "scored by (legacy — no longer written)"
     lease_applications ||--o{ lease_policy_evaluations : "screened by"
     lease_applications ||--o{ lease_application_documents : "supported by"
     lease_applications ||--o{ lease_application_events : "audited by"
@@ -2803,8 +2828,9 @@ erDiagram
 | `lease_applications` | The intake record: lessee, product, financed amount, term, self-declared credit fields — the lease counterpart of `loan_applications`, with its own independent status machine (no `disbursed`/`closed`, since a lease has no disbursement; see §9.19's lifecycle diagram). |
 | `lease_vehicles` | One row per application: make, model, year, condition, invoice price — required, unlike a loan's optional collateral, because a lease without a vehicle is not a lease. |
 | `vehicle_valuations` | An independent valuer's assessment of a used/reconditioned vehicle; a `completed` row is immutable (a correction is a fresh valuation, never an edit) and is what unlocks approval (§9.19). |
-| `vehicle_registrations` | The DMT/CR workflow — reference numbers and dates per stage, naming the lessor as absolute owner and lessee as registered user. |
-| `lease_risk_assessments` / `lease_policy_evaluations` | The lease-side mirrors of `risk_assessments`/`credit_policy_evaluations`, storing the SAME shared model's/policy engine's output (§9.19) against a lease rather than a loan. |
+| `vehicle_registrations` | The DMT/CR workflow — reference numbers and dates per stage, naming the lessor as absolute owner and lessee as registered user — plus `duplicate_key_received`/`_returned` (with who logged each and when, migration 053): custody of the vehicle's spare key, tracked but never gating anything (see "Locked design decisions"). |
+| `lease_risk_assessments` | The lease-side mirror of `risk_assessments`. Legacy: applications scored before the decision to never AI-score a lease (§9.19) still have a row here, but nothing writes to this table any more. |
+| `lease_policy_evaluations` | The lease-side mirror of `credit_policy_evaluations`, storing the SAME shared credit-policy engine's output (§9.19) against a lease rather than a loan — still actively written on every application, unlike its risk-assessment sibling above. |
 | `lease_application_documents` / `lease_application_events` | Supporting-document metadata and the append-only audit trail, mirroring `loan_application_documents`/`loan_application_events`. |
 | `lease_quotations` / `lease_quotation_fees` | A snapshotted, staff-issued offer (rental, down payment, term, rate) and its fee lines, with `accepted`/`declined`/`superseded` status — the lease counterpart of `loan_offers`/`loan_offer_fees`. |
 | `lease_down_payments` / `lease_down_payment_intents` | The signing-amount ledger and its Stripe/offline payment attempts — exactly-once settlement, mirroring `loan_payment_intents` (§9.15), but application-scoped rather than account-scoped since no agreement exists yet at this stage. |
@@ -2904,6 +2930,7 @@ correctly with no webhook configured at all.
 - **No retraining trigger** — retraining is a manual Kaggle round-trip (see [README.md](README.md#4-currency-forecast-ml-service-8100)), not an in-app admin action.
 - **Pawning is modelled as a plain instalment loan** — it exists only as a `loan_products` catalog entry and goes through the exact same assessment/offer/disbursement/repayment flow as a personal loan; there is no gold-appraisal/redemption/auction mechanic. (Vehicle leasing was modelled this way too until it was rebuilt as its own module — see §9.19 and the leasing-specific gaps below.)
 - **Vehicle leasing has no adverse-action or decision-matrix parallel** (§9.1.2/§9.1.4) — a lease application is never auto-rejected; a policy `decline` routes to `under_review` for a human instead, the conservative direction until those parallels are built.
+- **Vehicle leasing never calls the AI risk model** — a deliberate design boundary (§9.19), not a gap: underwriting rests on the fixed credit-policy rules and loan-to-value alone, so `lease_risk_assessments` is never written for a new application and every lease prices at its product's one standard rate rather than a risk-tiered rate. Contrast with a loan, which is both scored and risk-priced.
 - **The lease agreement PDF is not a signed instrument** — execution is the recorded acceptance of a quotation, and the document says so rather than drawing a signature line for a witnessing that never happened.
 - **Vehicle leasing has no guarantor mechanic, no joint-lessee applications, and only one lease structure** — a full-payout finance lease ending in mandatory ownership transfer; there is no operating-lease/optional-return-the-vehicle variant.
 - **Vehicle leasing approval is not gated on documents** — an application can be approved with nothing on file; the review panel prompts for uploads and flags an empty set, but nothing refuses.

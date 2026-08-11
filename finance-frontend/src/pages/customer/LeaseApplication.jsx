@@ -11,8 +11,6 @@ import {
   X,
   ArrowRight,
   ShieldCheck,
-  ShieldQuestion,
-  ShieldAlert,
 } from "lucide-react";
 import api from "../../api/axios";
 import { useToast } from "../../components/toast/useToast";
@@ -48,12 +46,6 @@ const CONDITION_KEYS = [
 
 const FUEL_TYPES = ["petrol", "diesel", "hybrid", "electric", "other"];
 const TRANSMISSIONS = ["manual", "automatic"];
-
-const RISK_STYLES = {
-  0: { icon: ShieldCheck, wrap: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  1: { icon: ShieldQuestion, wrap: "bg-amber-500", badge: "bg-amber-100 text-amber-800 border-amber-200" },
-  2: { icon: ShieldAlert, wrap: "bg-rose-500", badge: "bg-rose-100 text-rose-800 border-rose-200" },
-};
 
 const lkr = (v) => `LKR ${Number(v || 0).toLocaleString("en-LK", { maximumFractionDigits: 0 })}`;
 
@@ -267,9 +259,6 @@ export default function LeaseApplication() {
       </div>
     );
   }
-
-  const riskStyle = result ? RISK_STYLES[result.risk?.label] : null;
-  const RiskIcon = riskStyle?.icon;
 
   return (
     <div className="pb-16 px-4 sm:px-6 lg:px-8 pt-6 bg-brand-bg min-h-screen">
@@ -554,8 +543,8 @@ export default function LeaseApplication() {
             >
               <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-slate-100 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`${riskStyle?.wrap} text-white p-2 rounded-full shrink-0`}>
-                    {RiskIcon ? <RiskIcon className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                  <div className="bg-emerald-500 text-white p-2 rounded-full shrink-0">
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-display font-bold text-base text-slate-900">
@@ -595,10 +584,10 @@ export default function LeaseApplication() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{lt("resultRisk")}</p>
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold uppercase border ${riskStyle?.badge}`}>
-                      {result.risk?.category}
-                    </span>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{lt("resultTerm")}</p>
+                    <p className="font-mono font-bold text-slate-800">
+                      {lt("resultTermMonths", { term: result.quote?.tenureMonths })}
+                    </p>
                   </div>
                 </div>
 
