@@ -129,6 +129,7 @@ flowchart LR
 | Email | — | nodemailer (forgot-password OTP, major loan-status-change emails) | — | — |
 | Payments | Stripe Checkout (hosted redirect) | `stripe` SDK — Checkout session creation, webhook signature verification (see §9.15) | — | — |
 | PDF generation | — | `pdfkit` — decision letters, payment receipts (see §9.11/§9.15) | — | — |
+| Document OCR / extraction | — | `axios` call to Gemini Vision for scanned documents/images; `pdf-parse` for a direct text-layer read on born-digital PDFs (no AI call); `puppeteer` is a **dev-only** dependency used solely by the OCR evaluation harness (`scripts/ocrEval/`) to render synthetic test documents, never loaded in the running server — see §9.11.1. |
 | Charts | Recharts (currency rate/forecast charts) | — | — | — |
 | Serialization | — | — | joblib | joblib |
 
@@ -153,6 +154,7 @@ flowchart LR
 - **Explanation service** — call Gemini with structured risk factors, return/store a natural-language explanation (with a deterministic fallback if Gemini is unavailable), optionally localized (Sinhala/Tamil).
 - **Applicant experience** — pre-fills a new application from the customer's profile and their most recent application; promotes stable personal attributes (marital status, education, occupation, employer type, years employed) onto the customer's profile so they persist across applications instead of being re-declared each time; auto-saves an abandoned application as a resumable draft (see §9.12).
 - **Document management & KYC** — secure upload/verification of loan-supporting documents (identity, payslip, bank statement) and of a customer's declared NIC, both advisory (visible to staff, not a hard gate on the credit decision) — see §9.11.
+- **OCR + rule-based document extraction & validation** — background field extraction (NIC number, chassis number, account number, ...) from an uploaded document via a pretrained vision model, cross-checked against declared applicant data by deterministic rules; advisory only, never writes `verification_status` — see §9.11.1.
 - **Loan offers & disbursement** — a binding offer (amount, tenure, rate, EMI, expiry) the applicant must explicitly accept before funds move; on acceptance, an account at this bank is opened automatically in the customer's name (or an existing one reused/registered by staff) to receive the disbursed funds — see §9.10/§9.13.
 - **Fees, net disbursement & effective APR** — admin-configured product fees (processing, documentation, credit-life insurance) resolved and snapshotted onto each offer, waivable by staff with a mandatory reason, deducted from disbursement rather than capitalised onto the loan, with an IRR-based effective APR disclosed alongside the nominal rate — see §9.17.
 - **Consent management** — an append-only, versioned audit log of data-processing and credit-bureau-check consent; the loan assessment endpoint is gated on it server-side before any personal data is processed — see §9.18.
@@ -1340,6 +1342,7 @@ source precedence, shrinkage, and the `previous_defaults` defect).
 ### 9.3 Gemini API (explanation)
 - Called from the gateway only (`finance-backend/src/services/gemini.service.js`), key held server-side. Input: risk category + probabilities + structured factors (DTI, CRIB score, guarantor exposure, savings ratio — each flagged as applicant-declared or a neutral default so the prompt never asserts a default as fact). Output: 3-5 sentence plain-language explanation, optionally in Sinhala or Tamil.
 - If `GEMINI_API_KEY` is unset, the call fails, or the response is empty, `explainRisk()` returns a deterministic fallback built from the same factors — the assess flow never fails because of Gemini.
+- This is one of two independent Gemini call sites in the system, sharing only the API key and the resilience pattern (never throws, always a usable fallback) — not any code. The other is document-image OCR (§9.11.1), a materially different use: text-in/text-out explanation generation here, vs. image-in/text-out recognition there, with its own service (`ocr.service.js`), its own model constant, and its own timeout.
 
 ### 9.4 Currency analytics
 
@@ -1714,6 +1717,77 @@ Implementation: `db/migrations/034_loan_application_documents.sql`,
 `035_customer_kyc_verification.sql`, `services/loanDocument.service.js`,
 `user.controller.js#updateProfile`, `admin.controller.js#verifyCustomerKyc`,
 `loan.controller.js` (document upload/list/download/delete, `verifyDocument`).
+
+### 9.11.1 OCR + rule-based document extraction & validation
+
+**Pretrained AI-based text recognition, with a rule-based field-extraction
+and validation layer on top** — not a rule-based recognition engine, and
+not a trained/fine-tuned model. Full detail, evaluation methodology, and
+the PDPA analysis behind this design live in
+[OCR_FEATURE.md](OCR_FEATURE.md); this section covers where it sits in the
+system.
+
+```mermaid
+flowchart LR
+    U["Document upload<br/>(loan or lease)"] --> S["File stored /<br/>DB row created"]
+    S --> R["HTTP response<br/>sent to client"]
+    S -.background.-> P["documentPipeline.service.js"]
+    P --> OCR["ocr.service.js<br/>(recognition — Gemini Vision<br/>or PDF text layer)"]
+    OCR --> EX["documentExtraction.service.js<br/>(rule-based field extraction)"]
+    EX --> VA["documentValidation.service.js<br/>(rule-based cross-doc validation)"]
+    VA --> PER["document_extractions row<br/>(advisory only)"]
+    PER -.never writes.-> VS["verification_status"]
+    Staff["Staff reviewer"] -->|explicit verify/reject| VS
+```
+
+- **Runs after the upload, not inside it.** `documentPipeline.service.js`
+  is triggered once the file is stored and the upload's HTTP response has
+  already been sent — OCR/Gemini latency never blocks an upload, and a
+  recognition or extraction failure can never fail one either (both
+  `ocr.service.js` and `documentPipeline.service.js` are written to never
+  throw, mirroring `gemini.service.js`'s own resilience contract, §9.3).
+- **Recognition** (`ocr.service.js`, the only I/O in this feature): a
+  born-digital PDF with an extractable text layer is read directly
+  (`pdf-parse`, no AI call); a scanned PDF or an image goes to Gemini
+  Vision, called zero-shot with a fixed transcription prompt — no
+  fine-tuning, no training data, no examples.
+- **Extraction** (`documentExtraction.service.js`, pure, no I/O): label-
+  anchored regex rules currently cover `national_id` (NIC number),
+  `cr_copy` (chassis number, registration number, make/model/year,
+  absolute owner), and `bank_statement` (account number, holder, balances)
+  — `payslip` has no extractor yet (falls through to an empty result), a
+  known, documented gap (OCR_FEATURE.md §6).
+- **Validation** (`documentValidation.service.js`, pure, no I/O):
+  cross-checks NIC-derived date of birth/gender against declared applicant
+  data, fuzzy name-matches across documents, corroborates income figures
+  within tolerance, and (lease only) checks chassis-number consistency
+  across the vehicle document set. Every finding is `info` (corroborated),
+  `warning` (noisy — OCR variance or formatting alone can trigger it), or
+  `blocker` (identity/collateral integrity — needs a human).
+- **Advisory only — structurally, not just by convention.** No code path
+  in this feature writes `loan_application_documents.verification_status`
+  or `lease_application_documents.verification_status` (§9.11); the
+  `document_extractions` table (§10.2) has no FK or trigger connecting the
+  two, and this is unit-tested directly ("never writes verification_status,
+  on any path"). Staff verify/reject remains the sole authority.
+- **Admin-controlled.** `system_settings.ocr_auto_extraction` (§10.2, Admin
+  Settings → "Automatic Document Extraction") gates whether extraction runs
+  automatically on upload at all — checked before a `document_extractions`
+  row is even claimed, so disabling it leaves zero trace. It does not, and
+  structurally cannot, affect staff's own verify/reject action.
+- **Staff-facing UI**: `LoanDocumentPanel.jsx`/`LeaseDocumentPanel.jsx`
+  (via a shared `ExtractionResult.jsx`) show extracted fields, confidence,
+  and severity-differentiated findings per document, with an explicit
+  "assistive, not automated" disclaimer — extracted content itself is
+  never translated (§6.1's i18n policy), only the surrounding UI chrome.
+- **API**: `GET /loan/:id/documents/:docId/extraction` and the lease
+  equivalent, same ownership/role checks as the existing document routes.
+
+Implementation: `db/migrations/054_document_extraction.sql`,
+`055_system_settings.sql`, `services/{ocr,documentExtraction,
+documentValidation,documentPipeline,nicValidation,systemSettings.model}.js`,
+`{loan,leaseApplication}.controller.js` (`uploadDocument`,
+`getDocumentExtraction`), `admin.controller.js` (OCR-setting endpoints).
 
 ### 9.12 Applicant experience: pre-fill, stable attributes, and drafts
 
@@ -2860,6 +2934,25 @@ superseded design never existed.
 `finance-backend/db/migrations/` — new tables are always added as a new
 migration file, never by editing a past one.
 
+### 10.2 Document extraction & system settings
+
+```mermaid
+erDiagram
+    loan_application_documents ||--o| document_extractions : "extracted as (document_source='loan')"
+    lease_application_documents ||--o| document_extractions : "extracted as (document_source='lease')"
+```
+
+| Table | Role |
+|---|---|
+| `document_extractions` | One row per `(document_source, document_id)` — a document is re-extracted **in place** (the row is updated, status flips back to `pending`) rather than accumulating a history, since only the latest run is ever actionable, mirroring `verification_status`'s own one-current-state design. Serves both `loan_application_documents` and `lease_application_documents` from a single table rather than two near-identical ones, since extraction's output shape (status/engine/raw text/fields/findings/confidence) doesn't depend on which application type the document belongs to (§9.11.1). No `FOREIGN KEY` into either document table — which table `document_id` points into is data (`document_source`), not something one FK constraint can express, so referential integrity here is enforced at the application layer, the same reasoning as the `_by` custody columns in migration 053. |
+| `system_settings` | Generic key/value table for admin toggles that actually control backend behaviour, added specifically so a new setting never needs a schema migration — just a new row. Currently holds exactly one key, `ocr_auto_extraction` (§9.11.1); the rest of Admin Settings remains intentionally local-only/mocked, a page that graduates one toggle out of "preview only" at a time rather than a blanket settings backend built ahead of need. |
+
+Both tables are additive-only (migrations 054/055) and touch nothing in
+§10's main ERD or §10.1's leasing spine — `document_extractions` is the
+only table in the whole schema that references rows across two otherwise-
+unrelated tables (`loan_application_documents`/`lease_application_documents`)
+by a discriminator column instead of a normal FK.
+
 ---
 
 ## 11. Security architecture
@@ -2881,6 +2974,7 @@ migration file, never by editing a past one.
 | Payment idempotency | A payment can be posted to the ledger at most once per attempt, enforced both in application logic (a locked "settle once" gate) and at the database level (a uniqueness constraint), so a retried or duplicated confirmation can never credit a loan twice (§9.15). |
 | Amount integrity | The amount charged for an online repayment is always computed server-side from the live loan balance; a request can choose *which* payment to make, never *how much*, closing off under-payment by request tampering (§9.15). |
 | Identity/decision integrity | A verified NIC is locked against silent customer edits (re-verification is required on any change); every credit decision and status change is written to an append-only audit trail that is never edited retroactively (§9.10/§9.11). |
+| Document-image OCR (PDPA) | A document image (potentially containing a NIC, bank account number, or salary figures) sent to Gemini Vision for recognition is personal data processed by a third party, potentially offshore (Sri Lanka's PDPA No. 9 of 2022) — mitigated by keeping extraction advisory-only (never an automated decision), server-side-only API key, and an isolated recognition seam (`ocr.service.js`'s `recognizeDocument()`) that a future self-hosted OCR/VLM engine could sit behind without changing anything downstream — see OCR_FEATURE.md §7 for the full analysis (§9.11.1). |
 
 ---
 
@@ -2950,6 +3044,8 @@ correctly with no webhook configured at all.
 - **Guarantor consent is not captured** — an applicant names a guarantor and the system tracks that guarantor's exposure (§9.1.5/D5), but the guarantor themselves is never notified or asked to confirm they agreed to be named.
 - **No maker-checker (dual authorisation)** — a single staff member's approval, offer, or disbursement action is final; there is no second-reviewer sign-off step for high-value decisions.
 - **No document or identity expiry** — a document or NIC verified once (§9.11) stays verified indefinitely; there is no re-verification prompt after a period of time.
+- **OCR field extraction has no payslip extractor** — `documentExtraction.service.js` covers `national_id`, `cr_copy`, and `bank_statement`; `payslip` (net salary and related fields) is a documented, deliberate gap, not an oversight — see §9.11.1 and OCR_FEATURE.md §6.
+- **OCR's evaluation set is small and synthetic-heavy** — 52 programmatically-generated documents plus 14 scored real-world/sample documents; both evaluations establish a reproducible baseline and regression check, not a production accuracy claim (OCR_FEATURE.md §5/§6). The real-document run additionally surfaced label-anchored extraction gaps against real form layouts (two-column form reflow, colon-less labels, label/value split across lines) that remain unfixed — future extraction work.
 - **Consent covers two types only, and has no withdrawal path** — `user_consents` (J1) gates `data_processing` and `credit_bureau_check` before an assessment can run, but there is no marketing/communications consent, and a grant, once given, cannot be revoked through the product (only a fresh, superseding grant is possible — see §9.18). There is also still no access log recording who viewed a specific customer's KYC/NIC or uploaded documents.
 - **Fees are one-time and non-refundable** (I1) — `loan_offer_fees` is charged once at disbursement and never revisited; an early settlement (§9.14) recomputes the remaining interest but never refunds any portion of a processing/documentation/insurance fee already deducted. There is no discount/promo-code mechanism.
 - **Webhook delivery on a local machine requires the Stripe CLI** to be running (§12); without it, online repayments still complete correctly — the dashboard's own return page reconciles directly with Stripe (§9.15) — but only once the customer's browser returns, not the instant Stripe processes the charge.

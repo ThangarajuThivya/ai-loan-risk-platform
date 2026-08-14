@@ -1036,6 +1036,101 @@ async function verifyLeaseDocument(
   return rows[0] || null;
 }
 
+/**
+ * Record (or re-record) rule-based OCR extraction/validation output for one
+ * lease document (054). One row per document — re-extracting overwrites the
+ * previous attempt rather than accumulating history, since only the latest
+ * run is ever actionable. Mirrors loanModel.upsertLoanDocumentExtraction.
+ *
+ * ADVISORY ONLY: this never touches lease_application_documents.
+ * verification_status. Staff sign-off via verifyLeaseDocument remains the
+ * sole authority on verification_status — same advisory-only KYC design as
+ * the loan side.
+ *
+ * @param {object} p
+ * @param {number} p.documentId lease_application_documents.id
+ * @param {'pending'|'succeeded'|'failed'|'skipped'} p.extractionStatus
+ * @param {string|null} [p.engine]
+ * @param {string|null} [p.rawText]
+ * @param {object|null} [p.extractedFields] documentExtraction.service.js's extractFields() output
+ * @param {Array|null} [p.validationFindings] documentValidation.service.js's validateApplication() output
+ * @param {number|null} [p.confidenceScore] 0..1
+ * @returns {Promise<object>} the upserted row
+ */
+async function upsertLeaseDocumentExtraction({
+  documentId,
+  extractionStatus,
+  engine = null,
+  rawText = null,
+  extractedFields = null,
+  validationFindings = null,
+  confidenceScore = null,
+}) {
+  await pool.query(
+    `INSERT INTO document_extractions
+       (document_source, document_id, extraction_status, engine, raw_text,
+        extracted_fields, validation_findings, confidence_score)
+     VALUES ('lease', ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       extraction_status = VALUES(extraction_status),
+       engine = VALUES(engine),
+       raw_text = VALUES(raw_text),
+       extracted_fields = VALUES(extracted_fields),
+       validation_findings = VALUES(validation_findings),
+       confidence_score = VALUES(confidence_score)`,
+    [
+      documentId,
+      extractionStatus,
+      engine,
+      rawText,
+      extractedFields === null ? null : JSON.stringify(extractedFields),
+      validationFindings === null ? null : JSON.stringify(validationFindings),
+      confidenceScore,
+    ]
+  );
+  const [rows] = await pool.query(
+    `SELECT * FROM document_extractions WHERE document_source = 'lease' AND document_id = ?`,
+    [documentId]
+  );
+  return rows[0];
+}
+
+/**
+ * The extraction/validation row for one lease document, if any extraction
+ * has been attempted.
+ * @param {number} documentId lease_application_documents.id
+ * @returns {Promise<object|null>}
+ */
+async function getLeaseDocumentExtraction(documentId) {
+  const [rows] = await pool.query(
+    `SELECT * FROM document_extractions WHERE document_source = 'lease' AND document_id = ?`,
+    [documentId]
+  );
+  return rows[0] || null;
+}
+
+/**
+ * Every extraction row belonging to one lease application, joined back to
+ * the document it describes. Cross-document validation compares the chassis
+ * number across the CR copy, invoice, valuation and release letter, so it
+ * needs the whole set, not just the document that triggered a run.
+ * Mirrors loanModel.getLoanApplicationExtractions.
+ *
+ * @param {number} applicationId
+ * @returns {Promise<object[]>} extraction rows, each with document_type
+ */
+async function getLeaseApplicationExtractions(applicationId) {
+  const [rows] = await pool.query(
+    `SELECT de.*, d.document_type
+       FROM document_extractions de
+       JOIN lease_application_documents d ON d.id = de.document_id
+      WHERE de.document_source = 'lease' AND d.application_id = ?
+      ORDER BY de.document_id`,
+    [applicationId]
+  );
+  return rows;
+}
+
 /* ------------------------------------------------------------------ *
  * Products
  * ------------------------------------------------------------------ */
@@ -1117,6 +1212,9 @@ module.exports = {
   findLeaseDocumentById,
   deleteLeaseDocumentIfPending,
   verifyLeaseDocument,
+  upsertLeaseDocumentExtraction,
+  getLeaseDocumentExtraction,
+  getLeaseApplicationExtractions,
   findAllLeaseProducts,
   findLeaseProductById,
 };

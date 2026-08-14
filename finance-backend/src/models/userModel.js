@@ -204,6 +204,42 @@ exports.deleteCustomerPermanently = async (userId) => {
   return result.affectedRows > 0;
 };
 
+// The applicant-declared facts that cross-document validation checks the
+// uploaded documents against (documentValidation.service.js's `declared`
+// input). Read-only, and deliberately narrow — this is evidence for an
+// advisory comparison, not a profile view.
+//
+// date_of_birth is formatted in SQL rather than handed over as a JS Date:
+// nicValidation.crossCheckNic compares String(declaredDob).slice(0, 10)
+// against a 'YYYY-MM-DD' string, which a Date object would never match.
+//
+// The bank account is the customer's active one; a customer with none (they
+// have not accepted an offer yet) simply yields null, and the name checks
+// that would have used it are skipped rather than failed.
+exports.findDeclaredApplicantData = async (userId) => {
+  const [rows] = await db.promise().query(
+    `SELECT u.first_name, u.last_name,
+            DATE_FORMAT(cp.date_of_birth, '%Y-%m-%d') AS date_of_birth,
+            cp.gender, cp.monthly_income,
+            (SELECT ba.account_holder FROM bank_accounts ba
+              WHERE ba.user_id = u.user_id AND ba.status = 'active'
+              ORDER BY ba.id DESC LIMIT 1) AS bank_account_holder
+       FROM users u
+       LEFT JOIN customer_profiles cp ON cp.user_id = u.user_id
+      WHERE u.user_id = ?`,
+    [userId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    fullName: [row.first_name, row.last_name].filter(Boolean).join(" ") || null,
+    dateOfBirth: row.date_of_birth || null,
+    gender: row.gender || null,
+    monthlyIncome: row.monthly_income === null ? null : Number(row.monthly_income),
+    bankAccountHolderName: row.bank_account_holder || null,
+  };
+};
+
 exports.updateUserPassword = (user_id, hashedPassword) => {
   return new Promise((resolve, reject) => {
     db.query(

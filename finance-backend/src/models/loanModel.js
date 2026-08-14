@@ -1708,6 +1708,106 @@ async function verifyApplicationDocument(documentId, { verificationStatus, verif
 }
 
 /**
+ * Record (or re-record) rule-based OCR extraction/validation output for one
+ * loan document (054). One row per document — re-extracting overwrites the
+ * previous attempt rather than accumulating history, since only the latest
+ * run is ever actionable.
+ *
+ * ADVISORY ONLY: this never touches loan_application_documents.
+ * verification_status. Extraction and validation results are input for a
+ * human reviewer; staff sign-off via verifyApplicationDocument remains the
+ * sole authority on verification_status, exactly as the KYC design already
+ * requires (see 034 and loanDocument.service.js).
+ *
+ * @param {object} p
+ * @param {number} p.documentId loan_application_documents.id
+ * @param {'pending'|'succeeded'|'failed'|'skipped'} p.extractionStatus
+ * @param {string|null} [p.engine]
+ * @param {string|null} [p.rawText]
+ * @param {object|null} [p.extractedFields] documentExtraction.service.js's extractFields() output
+ * @param {Array|null} [p.validationFindings] documentValidation.service.js's validateApplication() output
+ * @param {number|null} [p.confidenceScore] 0..1
+ * @returns {Promise<object>} the upserted row
+ */
+async function upsertLoanDocumentExtraction({
+  documentId,
+  extractionStatus,
+  engine = null,
+  rawText = null,
+  extractedFields = null,
+  validationFindings = null,
+  confidenceScore = null,
+}) {
+  await pool.query(
+    `INSERT INTO document_extractions
+       (document_source, document_id, extraction_status, engine, raw_text,
+        extracted_fields, validation_findings, confidence_score)
+     VALUES ('loan', ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       extraction_status = VALUES(extraction_status),
+       engine = VALUES(engine),
+       raw_text = VALUES(raw_text),
+       extracted_fields = VALUES(extracted_fields),
+       validation_findings = VALUES(validation_findings),
+       confidence_score = VALUES(confidence_score)`,
+    [
+      documentId,
+      extractionStatus,
+      engine,
+      rawText,
+      extractedFields === null ? null : JSON.stringify(extractedFields),
+      validationFindings === null ? null : JSON.stringify(validationFindings),
+      confidenceScore,
+    ]
+  );
+  const [rows] = await pool.query(
+    `SELECT * FROM document_extractions WHERE document_source = 'loan' AND document_id = ?`,
+    [documentId]
+  );
+  return rows[0];
+}
+
+/**
+ * The extraction/validation row for one loan document, if any extraction
+ * has been attempted.
+ * @param {number} documentId loan_application_documents.id
+ * @returns {Promise<object|null>}
+ */
+async function getLoanDocumentExtraction(documentId) {
+  const [rows] = await pool.query(
+    `SELECT * FROM document_extractions WHERE document_source = 'loan' AND document_id = ?`,
+    [documentId]
+  );
+  return rows[0] || null;
+}
+
+/**
+ * Every extraction row belonging to one loan application, joined back to the
+ * document it describes. Cross-document validation (documentValidation
+ * .service.js) compares a payslip against a NIC against a bank statement, so
+ * it needs the whole set, not the one document that just triggered a run.
+ *
+ * Joined through loan_application_documents rather than stored with an
+ * application_id of its own: document_extractions deliberately has no
+ * application column, so a document can never disagree with its extraction
+ * about which application it belongs to.
+ *
+ * @param {number} applicationId
+ * @returns {Promise<object[]>} extraction rows, each with document_type
+ */
+async function getLoanApplicationExtractions(applicationId) {
+  const [rows] = await pool.query(
+    `SELECT de.*, d.document_type
+       FROM document_extractions de
+       JOIN loan_application_documents d ON d.id = de.document_id
+      WHERE de.document_source = 'loan' AND d.application_id = ?
+      ORDER BY de.document_id`,
+    [applicationId]
+  );
+  return rows;
+}
+
+/**
  * One guarantor's full exposure across the system, by NIC — for staff
  * visibility (unlike findGuarantorExposureByNic, this is a single-person
  * lookup for display, not a batch pre-policy-evaluation query, and it also
@@ -2747,6 +2847,9 @@ module.exports = {
   getApplicationDocumentById,
   deleteApplicationDocument,
   verifyApplicationDocument,
+  upsertLoanDocumentExtraction,
+  getLoanDocumentExtraction,
+  getLoanApplicationExtractions,
   getGuarantorExposureDetail,
   createOfferWithin,
   reissueOffer,

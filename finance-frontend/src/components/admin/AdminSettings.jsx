@@ -1,11 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Building, FileText, Bell, Info, Loader2 } from "lucide-react";
 import { useToast } from "../../components/toast/useToast";
+import api from "../../api/axios";
 
-// No system_settings table exists in the backend yet — this is a working
-// preview of the intended admin controls, not a wired-up feature. Saving
-// confirms locally but doesn't change live underwriting behavior. Kept
-// mocked deliberately rather than left half-built against a real endpoint.
+// No system_settings table exists in the backend for MOST of this page —
+// it's a working preview of the intended admin controls, not a wired-up
+// feature, and saving confirms locally without changing live behavior.
+// ocrAutoExtraction is the one exception: it's backed by a real
+// system_settings row (migration 055) and actually controls whether
+// documentPipeline.service.js runs when a document is uploaded — see
+// admin.controller.js#getOcrAutoExtractionSetting /
+// documentPipeline.service.js#processDocumentInBackground. It does NOT
+// control staff verification, which stays entirely under staff's own
+// verify/reject action regardless of this setting.
 export default function AdminSettings() {
   const { showToast } = useToast();
 
@@ -18,22 +25,51 @@ export default function AdminSettings() {
   const [riskBufferLimit, setRiskBufferLimit] = useState(45);
 
   const [emailAlerts, setEmailAlerts] = useState(true);
-  const [ocrAutoVerification, setOcrAutoVerification] = useState(true);
+  const [ocrAutoExtraction, setOcrAutoExtraction] = useState(true);
+  const [ocrSettingLoading, setOcrSettingLoading] = useState(true);
   const [criticalRiskBlock, setCriticalRiskBlock] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
-  const handleSave = (e) => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get("/admin/settings/ocr-auto-extraction");
+        setOcrAutoExtraction(Boolean(res.data?.enabled));
+      } catch {
+        // Fails open to the seeded/prior default (true) rather than
+        // blocking the whole settings page on one setting's fetch.
+      } finally {
+        setOcrSettingLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      // The one real setting on this page — persisted for real. Everything
+      // else below still only confirms locally; see the file header.
+      const res = await api.put("/admin/settings/ocr-auto-extraction", {
+        enabled: ocrAutoExtraction,
+      });
+      setOcrAutoExtraction(Boolean(res.data?.enabled));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       showToast({
         type: "success",
         title: "Settings Saved",
         message: "Your changes have been recorded for this session.",
       });
-    }, 600);
+    } catch (err) {
+      showToast({
+        type: "error",
+        title: "Couldn't Save Settings",
+        message: err.response?.data?.message || "The document extraction setting couldn't be updated.",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -57,8 +93,9 @@ export default function AdminSettings() {
 
       <div className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[11px] text-slate-500">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-400" />
-        Preview only — these settings aren't yet connected to a backend, so
-        saving won't change live system behavior.
+        Preview only, except Automatic Document Extraction below — the rest of
+        these settings aren't yet connected to a backend, so saving them
+        won't change live system behavior.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -167,13 +204,18 @@ export default function AdminSettings() {
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={ocrAutoVerification}
-                onChange={(e) => setOcrAutoVerification(e.target.checked)}
-                className="w-4 h-4 text-brand-primary border-slate-200 rounded-lg focus:ring-brand-primary/10 cursor-pointer"
+                checked={ocrAutoExtraction}
+                disabled={ocrSettingLoading}
+                onChange={(e) => setOcrAutoExtraction(e.target.checked)}
+                className="w-4 h-4 text-brand-primary border-slate-200 rounded-lg focus:ring-brand-primary/10 cursor-pointer disabled:opacity-50"
               />
               <div>
-                <span className="font-bold text-slate-700 block">Automated Document Verification</span>
-                <span className="text-[10px] text-slate-400">Run OCR checks automatically on uploaded documents.</span>
+                <span className="font-bold text-slate-700 block">Automatic Document Extraction</span>
+                <span className="text-[10px] text-slate-400">
+                  Run document extraction automatically on uploaded documents. Results are
+                  advisory and require staff review — this does not verify or reject documents
+                  on its own.
+                </span>
               </div>
             </label>
 

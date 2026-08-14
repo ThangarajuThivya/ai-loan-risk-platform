@@ -1,0 +1,47 @@
+{
+  "notes": [
+    "Ground truth values were transcribed by visually inspecting each image,",
+    "not generated programmatically — unlike ground_truth.json (the synthetic",
+    "set), a transcription error here is possible, particularly for small or",
+    "angled chassis numbers (see 'confidence' per document below).",
+    "'source' records what kind of document this actually is: several of the",
+    "documents supplied turned out to be third-party KYC-vendor mockup/sample",
+    "templates (watermarked 'Mr. Verify', 'Roposh.com', 'TemplateLab') rather",
+    "than genuine issued documents — both kinds are included and scored the",
+    "same way, since the pipeline can't tell the difference and shouldn't be",
+    "expected to; 'source' is recorded for transparency, not to exclude them.",
+    "Documents excluded entirely (see 'excluded' below) are ones where the",
+    "field itself is redacted, blank, absent, or illegible in the source",
+    "image — there is no correct value to score extraction against."
+  ],
+  "documents": [
+    { "file": "NIC-01.png", "documentType": "national_id", "expectedFields": { "nic": "961230144V" }, "source": "genuine (old-format photographed card)", "confidence": "medium" },
+    { "file": "NIC-03.jpg", "documentType": "national_id", "expectedFields": { "nic": "123432403440" }, "source": "third-party sample/mockup template (name/DOB redacted)", "confidence": "medium" },
+    { "file": "NIC-05.jpg", "documentType": "national_id", "expectedFields": { "nic": "123159322029" }, "source": "third-party sample/mockup template", "confidence": "low" },
+    { "file": "NIC-07.png", "documentType": "national_id", "expectedFields": { "nic": "198732403040" }, "source": "third-party sample/mockup template", "confidence": "medium" },
+
+    { "file": "CR-01.jpeg", "documentType": "cr_copy", "expectedFields": { "chassis_number": "MD2A57BZ5EWE19165" }, "source": "genuine registration document", "confidence": "medium" },
+    { "file": "CR-04.jpeg", "documentType": "cr_copy", "expectedFields": { "chassis_number": "JAAN3CR5S5G0493567" }, "source": "genuine registration document (marketplace listing photo)", "confidence": "low" },
+    { "file": "CR-07.jpg", "documentType": "cr_copy", "expectedFields": { "chassis_number": "MD2AAAAZZRWL86263" }, "source": "genuine registration document", "confidence": "high" },
+    { "file": "CR-08.jpg", "documentType": "cr_copy", "expectedFields": { "chassis_number": "NHP10-6248406" }, "source": "genuine registration document", "confidence": "high" },
+    { "file": "CR-09.jpg", "documentType": "cr_copy", "expectedFields": { "chassis_number": "MBLHA11EH99L06327" }, "source": "genuine registration document", "confidence": "high" },
+
+    { "file": "BS-01.jpg", "documentType": "bank_statement", "expectedFields": { "account_number": "422803******0489" }, "source": "third-party sample/mockup template (account number partially masked, as printed)", "confidence": "high" },
+    { "file": "BS-03.jpg", "documentType": "bank_statement", "expectedFields": { "account_number": "123456789" }, "source": "third-party sample/mockup template", "confidence": "high" },
+    { "file": "BS-06.jpg", "documentType": "bank_statement", "expectedFields": { "account_number": "072020175975" }, "source": "third-party sample/mockup template (photographed at an angle)", "confidence": "medium" },
+    { "file": "BS-08.jpg", "documentType": "bank_statement", "expectedFields": { "account_number": "0631671 0781391" }, "source": "third-party sample/mockup template (non-Sri-Lankan bank)", "confidence": "high" },
+    { "file": "BS-09.jpg", "documentType": "bank_statement", "expectedFields": { "account_number": "0631671 0781391" }, "source": "third-party sample/mockup template (same statement, photographed at an angle)", "confidence": "medium" }
+  ],
+  "excluded": [
+    { "file": "NIC-02.jpg", "reason": "placeholder/all-zero NIC number on a KYC-vendor mockup template — no valid value to score" },
+    { "file": "NIC-04.jpg", "reason": "every field including the NIC number is blurred/redacted in the source image" },
+    { "file": "NIC-06.jpg", "reason": "fan-made parody card design, not the official NIC layout — the printed number doesn't correspond to a real card format" },
+    { "file": "CR-02.jpeg", "reason": "blank/unfilled template — no chassis number present" },
+    { "file": "CR-03.jpeg", "reason": "this page is the certificate's terms-and-conditions cover page, not the data page — no chassis number on it" },
+    { "file": "CR-05.jpeg", "reason": "chassis number field is redacted (red box) in the source image" },
+    { "file": "CR-06.jpg", "reason": "chassis number field is partially covered by a redaction mark — not fully legible" },
+    { "file": "BS-02.jpg", "reason": "this statement layout has no field labelled 'Account No' (only a masked card number) — nothing for the current label-anchored extractor to find" },
+    { "file": "BS-05.png", "reason": "same layout as BS-02 — no 'Account No' labelled field" },
+    { "file": "BS-07.jpg", "reason": "account number field is redacted (strikethrough) in the source image" }
+  ]
+}

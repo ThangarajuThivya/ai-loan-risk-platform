@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import api from "../../api/axios";
+import ExtractionResult from "../documents/ExtractionResult";
 
 /**
  * Supporting documents for one LEASE application.
@@ -72,6 +73,26 @@ export default function LeaseDocumentPanel({
   const [busyId, setBusyId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectNote, setRejectNote] = useState("");
+  // Keyed by document id: { loading, error, data }. Fetched alongside the
+  // document list rather than on demand, so severity/confidence are visible
+  // for every document without an extra click — see ExtractionResult.
+  const [extractions, setExtractions] = useState({});
+
+  const fetchExtraction = useCallback(
+    async (doc) => {
+      setExtractions((prev) => ({
+        ...prev,
+        [doc.id]: { loading: true, error: false, data: prev[doc.id]?.data },
+      }));
+      try {
+        const res = await api.get(`/leases/${applicationId}/documents/${doc.id}/extraction`);
+        setExtractions((prev) => ({ ...prev, [doc.id]: { loading: false, error: false, data: res.data } }));
+      } catch {
+        setExtractions((prev) => ({ ...prev, [doc.id]: { loading: false, error: true, data: null } }));
+      }
+    },
+    [applicationId]
+  );
 
   const load = useCallback(async ({ spinner = false } = {}) => {
     // The spinner belongs to the FIRST fetch for an application. Re-fetching
@@ -87,6 +108,9 @@ export default function LeaseDocumentPanel({
       const list = res.data?.documents || [];
       setDocuments(list);
       onCountChange?.(list.length);
+      // Fire-and-forget: the document list must not wait on N extraction
+      // fetches, each of which is independently allowed to fail.
+      list.forEach((doc) => fetchExtraction(doc));
     } catch (err) {
       setError(err.response?.data?.message || t("leaseDocuments.loadError"));
     } finally {
@@ -96,7 +120,7 @@ export default function LeaseDocumentPanel({
     // every parent render unless the parent memoises, which it should not
     // have to.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [applicationId, t]);
+  }, [applicationId, t, fetchExtraction]);
 
   useEffect(() => {
     (async () => {
@@ -303,6 +327,8 @@ export default function LeaseDocumentPanel({
                   </button>
                 </div>
               )}
+
+              <ExtractionResult extraction={extractions[doc.id]} canVerify={canVerify} />
             </li>
           ))}
         </ul>
