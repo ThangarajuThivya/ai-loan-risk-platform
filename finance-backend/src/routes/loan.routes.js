@@ -556,6 +556,20 @@ router.get(
   loanController.downloadDocument
 );
 
+// GET /api/loans/:id/documents/:docId/extraction — the advisory OCR /
+// extraction result for one document. Same guard as the download route
+// above (owner, staff, or admin), because it exposes the document's
+// contents in field form.
+router.get(
+  "/:id/documents/:docId/extraction",
+  verifyToken,
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    param("docId").isInt({ gt: 0 }).withMessage("docId must be a positive integer").toInt(),
+  ],
+  loanController.getDocumentExtraction
+);
+
 // DELETE /api/loans/:id/documents/:docId (customer, own; E1) — only while
 // the document is still pending review. See loan.controller.js
 // deleteDocument for why an already-reviewed document 409s instead.

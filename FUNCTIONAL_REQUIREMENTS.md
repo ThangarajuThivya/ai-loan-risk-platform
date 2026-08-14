@@ -171,6 +171,7 @@ reserved for administrators (Section 5).
 ### 4.2 Verifying Documents, Identity & Security
 
 - **FR-STF-11**: A staff member can review documents uploaded by an applicant and mark each as verified or rejected (with a reason).
+- **FR-STF-11a**: For each uploaded document, the system can automatically read out key details (such as an ID number, vehicle chassis number, or bank account number) and check them against what the applicant declared elsewhere, flagging anything that doesn't match. This is shown to the staff member purely as a suggestion to speed up their review — it never verifies or rejects a document by itself, and the staff member's own decision (FR-STF-11) is always required.
 - **FR-STF-12**: A staff member can verify or reject a customer's submitted NIC/identity, updating their verified status.
 - **FR-STF-13**: A staff member can verify or reject a pledged piece of collateral before it is relied upon in a lending decision.
 
@@ -267,6 +268,7 @@ the bank's overall lending and currency book is performing.
 ### 5.5 System & Bank Settings
 
 - **FR-ADM-15**: An administrator can configure the bank's own identity details (name, main branch) as shown throughout the system.
+- **FR-ADM-15a**: An administrator can turn the automatic reading of uploaded-document details (FR-STF-11a) on or off system-wide. Turning it off only stops the automatic suggestions from being generated — it has no effect on staff's own ability to review and verify or reject a document.
 
 ### 5.6 Vehicle Leasing Configuration & Registers
 
@@ -289,6 +291,7 @@ that every part of the system is expected to have.
 - **FR-GEN-05**: A user only ever sees data and actions relevant to their own role — a customer cannot see another customer's information, and only administrators can access system configuration.
 - **FR-GEN-06**: Users receive timely notifications (in-app, and by email for major events) about anything requiring their attention or confirming an action has taken place.
 - **FR-GEN-07**: Card payment information is handled entirely by a trusted, independent, industry-standard payment provider (Stripe) — it is never stored on, or visible to, the bank's own systems.
+- **FR-GEN-08**: Every automated suggestion the system produces from AI (the risk assessment's recommendation, FR-STF-04; the automatic reading of uploaded documents, FR-STF-11a) is exactly that — a suggestion a staff member reviews and can accept or override. Nothing in the system lets an AI-generated result decide or finalise an outcome on its own.
 
 ---
 
@@ -307,7 +310,9 @@ that every part of the system is expected to have.
   finance lease ending in mandatory ownership transfer (there is no
   operating-lease/optional-return-the-vehicle variant), withdrawing a
   consent once given (a customer can only give a fresh, up-to-date consent —
-  see FR-CUS-12a), and refunding a loan or leasing fee once charged (an
+  see FR-CUS-12a), automatically reading details off a payslip specifically
+  (FR-STF-11a currently covers ID documents, vehicle registration, and bank
+  statements only), and refunding a loan or leasing fee once charged (an
   early settlement recalculates interest/finance charge owed, but never
   refunds a processing/documentation/insurance fee already deducted). These
   can be scoped as future additions if needed.

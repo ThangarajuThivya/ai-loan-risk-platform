@@ -4,6 +4,7 @@ const { validationResult } = require("express-validator");
 const userModel = require("../models/userModel");
 const bankAccountModel = require("../models/bankAccountModel");
 const { validateRegistration } = require("../services/bankAccount.service");
+const systemSettingsModel = require("../models/systemSettings.model");
 
 // exports.getAllCustomers = (req, res) => {
 //   const sql = `
@@ -532,5 +533,39 @@ exports.deleteStaff = async (req, res) => {
   } catch (err) {
     console.error("DELETE STAFF ERROR:", err);
     return res.status(500).json({ message: "Failed to delete staff account." });
+  }
+};
+
+// GET /api/admin/settings/ocr-auto-extraction (admin) — whether uploading a
+// document currently triggers automatic extraction. The one AdminSettings.jsx
+// toggle backed by a real setting; see systemSettings.model.js.
+exports.getOcrAutoExtractionSetting = async (req, res) => {
+  try {
+    const enabled = await systemSettingsModel.isOcrAutoExtractionEnabled();
+    return res.status(200).json({ enabled });
+  } catch (err) {
+    console.error("GET OCR AUTO-EXTRACTION SETTING ERROR:", err);
+    return res.status(500).json({ message: "Failed to load the setting." });
+  }
+};
+
+// PUT /api/admin/settings/ocr-auto-extraction (admin) — turn automatic
+// extraction on or off for future uploads. Does not touch documents already
+// uploaded, and never controls staff verification — verification_status is
+// unaffected either way (see documentPipeline.service.js's header).
+exports.updateOcrAutoExtractionSetting = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Invalid request.", errors: errors.array() });
+  }
+  try {
+    const enabled = await systemSettingsModel.setOcrAutoExtractionEnabled(
+      req.body.enabled,
+      req.user.user_id
+    );
+    return res.status(200).json({ enabled });
+  } catch (err) {
+    console.error("UPDATE OCR AUTO-EXTRACTION SETTING ERROR:", err);
+    return res.status(500).json({ message: "Failed to update the setting." });
   }
 };

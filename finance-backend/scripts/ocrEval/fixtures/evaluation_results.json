@@ -1,0 +1,621 @@
+{
+  "generatedAt": "2026-08-14T09:33:55.373Z",
+  "metrics": [
+    {
+      "field": "NIC number",
+      "documentType": "national_id",
+      "precision": 1,
+      "recall": 1,
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "documents": [
+        {
+          "file": "national_id_009.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "812856604V",
+          "predicted": "812856604V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_003.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "851914421V",
+          "predicted": "851914421V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_011.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "996962197X",
+          "predicted": "996962197X",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_012.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "927897714V",
+          "predicted": "927897714V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_010.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "611560198V",
+          "predicted": "611560198V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_001.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "715239414V",
+          "predicted": "715239414V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_007.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "865515825V",
+          "predicted": "865515825V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_006.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "880283272V",
+          "predicted": "880283272V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_002.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "825926006V",
+          "predicted": "825926006V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_005.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "750297112X",
+          "predicted": "750297112X",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_004.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "605247388V",
+          "predicted": "605247388V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_008.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "961585466V",
+          "predicted": "961585466V",
+          "outcome": "tp"
+        },
+        {
+          "file": "national_id_013.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "651025536V",
+          "predicted": "651025536V",
+          "outcome": "tp"
+        }
+      ]
+    },
+    {
+      "field": "Chassis number",
+      "documentType": "cr_copy",
+      "precision": 1,
+      "recall": 1,
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "documents": [
+        {
+          "file": "cr_copy_003.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "5E1NPT1XHBTK3342V",
+          "predicted": "5E1NPT1XHBTK3342V",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_009.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "143D8NELK8TE5S8SP",
+          "predicted": "143D8NELK8TE5S8SP",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_008.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "DVS8GPXCZPJRTGSYP",
+          "predicted": "DVS8GPXCZPJRTGSYP",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_011.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "ZTUYUKP1V466AKSLX",
+          "predicted": "ZTUYUKP1V466AKSLX",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_001.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "V7CDEZJPL8GWBFLRC",
+          "predicted": "V7CDEZJPL8GWBFLRC",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_012.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "8P6NDFKH1HPN65HGY",
+          "predicted": "8P6NDFKH1HPN65HGY",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_005.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "6YXBJ8KW3H81HY8T6",
+          "predicted": "6YXBJ8KW3H81HY8T6",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_013.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "LMHGXR16DJNCD0EEG",
+          "predicted": "LMHGXR16DJNCD0EEG",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_004.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "ZLK9AK27PNTFFF6LL",
+          "predicted": "ZLK9AK27PNTFFF6LL",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_002.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "JAVYWRMX50F1T6L1R",
+          "predicted": "JAVYWRMX50F1T6L1R",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_006.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "RGXC1ST576GVRZMXY",
+          "predicted": "RGXC1ST576GVRZMXY",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_010.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "W77YDY3ZY8G6VAGC9",
+          "predicted": "W77YDY3ZY8G6VAGC9",
+          "outcome": "tp"
+        },
+        {
+          "file": "cr_copy_007.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "6B9XBV24EAXAZ8ZHP",
+          "predicted": "6B9XBV24EAXAZ8ZHP",
+          "outcome": "tp"
+        }
+      ]
+    },
+    {
+      "field": "Net salary",
+      "documentType": "payslip",
+      "precision": null,
+      "recall": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 13,
+      "documents": [
+        {
+          "file": "payslip_011.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": 114800,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_003.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 69900,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_009.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": 49550,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_005.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 126600,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_006.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 129100,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_007.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": 141300,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_013.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 69000,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_008.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 108150,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_001.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": 101600,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_012.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 96550,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_010.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 125250,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_002.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": 151500,
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "payslip_004.jpg",
+          "documentType": "payslip",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": 168250,
+          "predicted": null,
+          "outcome": "fn"
+        }
+      ]
+    },
+    {
+      "field": "Account number",
+      "documentType": "bank_statement",
+      "precision": 1,
+      "recall": 1,
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "documents": [
+        {
+          "file": "bank_statement_004.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "757331290739",
+          "predicted": "757331290739",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_002.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "1930943523",
+          "predicted": "1930943523",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_005.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "3146957828",
+          "predicted": "3146957828",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_012.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "6958705609",
+          "predicted": "6958705609",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_007.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "50035397749",
+          "predicted": "50035397749",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_011.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "1544256502",
+          "predicted": "1544256502",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_001.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "32614854913",
+          "predicted": "32614854913",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_003.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "75358585014",
+          "predicted": "75358585014",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_006.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "71829685597",
+          "predicted": "71829685597",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_013.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "0147527289",
+          "predicted": "0147527289",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_009.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "36477730254",
+          "predicted": "36477730254",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_008.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "08868206763",
+          "predicted": "08868206763",
+          "outcome": "tp"
+        },
+        {
+          "file": "bank_statement_010.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "610877015514",
+          "predicted": "610877015514",
+          "outcome": "tp"
+        }
+      ]
+    }
+  ]
+}

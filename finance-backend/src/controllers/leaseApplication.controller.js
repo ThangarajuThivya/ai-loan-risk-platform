@@ -33,6 +33,10 @@ const leaseModel = require("../models/leaseModel");
 const loanModel = require("../models/loanModel");
 const consentModel = require("../models/consentModel");
 const leaseNotifier = require("../services/leaseNotifier.service");
+const {
+  processDocumentInBackground,
+  presentExtraction,
+} = require("../services/documentPipeline.service");
 
 const {
   ageFromDob,
@@ -411,10 +415,26 @@ exports.uploadDocument = async (req, res) => {
       mimeType: req.file.mimetype,
       sizeBytes: req.file.size,
     });
-    return res.status(201).json(doc);
+    res.status(201).json(doc);
+
+    // Advisory OCR/extraction, AFTER the response has gone out — see the
+    // loan equivalent in loan.controller.js#uploadDocument. Never rejects,
+    // never touches verification_status.
+    processDocumentInBackground({
+      source: "lease",
+      documentId: doc.id,
+      applicationId: application.id,
+      userId: application.lessee_id,
+      documentType: doc.document_type,
+      storagePath: req.file.path,
+      mimeType: req.file.mimetype,
+    });
+    return;
   } catch (err) {
-    discardUploadedFile(req.file);
     console.error("UPLOAD LEASE DOCUMENT ERROR:", err);
+    // See the loan equivalent: after the 201 the file must survive.
+    if (res.headersSent) return;
+    discardUploadedFile(req.file);
     return res.status(500).json({ message: "Failed to upload the document." });
   }
 };
@@ -466,6 +486,34 @@ exports.downloadDocument = async (req, res) => {
   } catch (err) {
     console.error("DOWNLOAD LEASE DOCUMENT ERROR:", err);
     return res.status(500).json({ message: "Failed to fetch the document." });
+  }
+};
+
+/**
+ * GET /api/leases/:id/documents/:docId/extraction — the advisory OCR result
+ * for one document. Same access rules as downloadDocument (owner, staff or
+ * admin, and the document must belong to the application in the path):
+ * extracted fields quote the document's contents, so anyone who may not
+ * read the document may not read what was pulled out of it either.
+ *
+ * Advisory only — this endpoint reports, it decides nothing, and the
+ * document's verification_status is unaffected by whatever it says.
+ */
+exports.getDocumentExtraction = async (req, res) => {
+  try {
+    const { application, error } = await loadForDocumentAccess(req.params.id, req.user);
+    if (error) return res.status(error.status).json({ message: error.message });
+
+    const doc = await leaseAppModel.findLeaseDocumentById(Number(req.params.docId));
+    if (!doc || doc.application_id !== application.id) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    const extraction = await leaseAppModel.getLeaseDocumentExtraction(doc.id);
+    return res.status(200).json(presentExtraction(doc, extraction));
+  } catch (err) {
+    console.error("GET LEASE DOCUMENT EXTRACTION ERROR:", err);
+    return res.status(500).json({ message: "Failed to fetch the extraction result." });
   }
 };
 

@@ -963,6 +963,22 @@ router.put(
   lease.updateSupplier
 );
 
+// System settings — currently just the one real toggle out of
+// AdminSettings.jsx (see admin.controller.js#getOcrAutoExtractionSetting).
+router.get(
+  "/settings/ocr-auto-extraction",
+  verifyToken,
+  allowRoles("admin"),
+  admin.getOcrAutoExtractionSetting
+);
+router.put(
+  "/settings/ocr-auto-extraction",
+  verifyToken,
+  allowRoles("admin"),
+  [body("enabled").isBoolean().withMessage("enabled must be true or false").toBoolean()],
+  admin.updateOcrAutoExtractionSetting
+);
+
 router.get("/lease/valuers", verifyToken, allowRoles("admin", "staff"), lease.listValuers);
 router.post(
   "/lease/valuers",

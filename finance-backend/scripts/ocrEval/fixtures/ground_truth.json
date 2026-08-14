@@ -1,0 +1,683 @@
+{
+  "seed": 20260814,
+  "generatedAt": "2026-08-14T07:25:33.072Z",
+  "documentCount": 52,
+  "documents": [
+    {
+      "file": "payslip_011.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0.3,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "net_salary": 114800
+      }
+    },
+    {
+      "file": "bank_statement_004.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": -4,
+        "blurPx": 0.4,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "account_number": "757331290739"
+      }
+    },
+    {
+      "file": "national_id_009.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": -2,
+        "blurPx": 0.9,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "nic": "812856604V"
+      }
+    },
+    {
+      "file": "payslip_003.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": -5,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "net_salary": 69900
+      }
+    },
+    {
+      "file": "bank_statement_002.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 4,
+        "blurPx": 0.7,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "account_number": "1930943523"
+      }
+    },
+    {
+      "file": "bank_statement_005.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "account_number": "3146957828"
+      }
+    },
+    {
+      "file": "national_id_003.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "nic": "851914421V"
+      }
+    },
+    {
+      "file": "bank_statement_012.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "account_number": "6958705609"
+      }
+    },
+    {
+      "file": "cr_copy_003.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "chassis_number": "5E1NPT1XHBTK3342V"
+      }
+    },
+    {
+      "file": "payslip_009.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0.3,
+        "glare": true,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 49550
+      }
+    },
+    {
+      "file": "payslip_005.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 6,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 126600
+      }
+    },
+    {
+      "file": "national_id_011.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "nic": "996962197X"
+      }
+    },
+    {
+      "file": "cr_copy_009.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": -8,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "chassis_number": "143D8NELK8TE5S8SP"
+      }
+    },
+    {
+      "file": "cr_copy_008.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": -7,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "chassis_number": "DVS8GPXCZPJRTGSYP"
+      }
+    },
+    {
+      "file": "national_id_012.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0.6,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "nic": "927897714V"
+      }
+    },
+    {
+      "file": "payslip_006.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 1,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 129100
+      }
+    },
+    {
+      "file": "cr_copy_011.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "chassis_number": "ZTUYUKP1V466AKSLX"
+      }
+    },
+    {
+      "file": "bank_statement_007.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": -2,
+        "blurPx": 0.7,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "account_number": "50035397749"
+      }
+    },
+    {
+      "file": "cr_copy_001.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 8,
+        "blurPx": 0.2,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "chassis_number": "V7CDEZJPL8GWBFLRC"
+      }
+    },
+    {
+      "file": "cr_copy_012.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 7,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "chassis_number": "8P6NDFKH1HPN65HGY"
+      }
+    },
+    {
+      "file": "payslip_007.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 3,
+        "blurPx": 0.4,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "net_salary": 141300
+      }
+    },
+    {
+      "file": "bank_statement_011.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "account_number": "1544256502"
+      }
+    },
+    {
+      "file": "national_id_010.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "nic": "611560198V"
+      }
+    },
+    {
+      "file": "national_id_001.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 7,
+        "blurPx": 0.8,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "nic": "715239414V"
+      }
+    },
+    {
+      "file": "bank_statement_001.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": -8,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "account_number": "32614854913"
+      }
+    },
+    {
+      "file": "bank_statement_003.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "account_number": "75358585014"
+      }
+    },
+    {
+      "file": "bank_statement_006.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 8,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "account_number": "71829685597"
+      }
+    },
+    {
+      "file": "bank_statement_013.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": -5,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "account_number": "0147527289"
+      }
+    },
+    {
+      "file": "cr_copy_005.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 1,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "chassis_number": "6YXBJ8KW3H81HY8T6"
+      }
+    },
+    {
+      "file": "bank_statement_009.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "account_number": "36477730254"
+      }
+    },
+    {
+      "file": "bank_statement_008.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "account_number": "08868206763"
+      }
+    },
+    {
+      "file": "cr_copy_013.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "chassis_number": "LMHGXR16DJNCD0EEG"
+      }
+    },
+    {
+      "file": "payslip_013.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 69000
+      }
+    },
+    {
+      "file": "payslip_008.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 8,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 108150
+      }
+    },
+    {
+      "file": "national_id_007.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 8,
+        "blurPx": 0.2,
+        "glare": true,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "nic": "865515825V"
+      }
+    },
+    {
+      "file": "cr_copy_004.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0.5,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "chassis_number": "ZLK9AK27PNTFFF6LL"
+      }
+    },
+    {
+      "file": "national_id_006.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 6,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "nic": "880283272V"
+      }
+    },
+    {
+      "file": "cr_copy_002.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "chassis_number": "JAVYWRMX50F1T6L1R"
+      }
+    },
+    {
+      "file": "cr_copy_006.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": -2,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "chassis_number": "RGXC1ST576GVRZMXY"
+      }
+    },
+    {
+      "file": "national_id_002.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0.6,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "nic": "825926006V"
+      }
+    },
+    {
+      "file": "national_id_005.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0.9,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "nic": "750297112X"
+      }
+    },
+    {
+      "file": "national_id_004.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": -1,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "nic": "605247388V"
+      }
+    },
+    {
+      "file": "payslip_001.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": -1,
+        "blurPx": 0.4,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "net_salary": 101600
+      }
+    },
+    {
+      "file": "cr_copy_010.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": -8,
+        "blurPx": 0.6,
+        "glare": true,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "chassis_number": "W77YDY3ZY8G6VAGC9"
+      }
+    },
+    {
+      "file": "bank_statement_010.jpg",
+      "documentType": "bank_statement",
+      "augmentation": {
+        "rotateDeg": -2,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "account_number": "610877015514"
+      }
+    },
+    {
+      "file": "national_id_008.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 5,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "nic": "961585466V"
+      }
+    },
+    {
+      "file": "payslip_012.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 8,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 96550
+      }
+    },
+    {
+      "file": "payslip_010.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0.8,
+        "glare": false,
+        "jpegQuality": 65
+      },
+      "expectedFields": {
+        "net_salary": 125250
+      }
+    },
+    {
+      "file": "cr_copy_007.jpg",
+      "documentType": "cr_copy",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0.3,
+        "glare": false,
+        "jpegQuality": 90
+      },
+      "expectedFields": {
+        "chassis_number": "6B9XBV24EAXAZ8ZHP"
+      }
+    },
+    {
+      "file": "national_id_013.jpg",
+      "documentType": "national_id",
+      "augmentation": {
+        "rotateDeg": 0,
+        "blurPx": 0.8,
+        "glare": false,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "nic": "651025536V"
+      }
+    },
+    {
+      "file": "payslip_002.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 8,
+        "blurPx": 0,
+        "glare": false,
+        "jpegQuality": 80
+      },
+      "expectedFields": {
+        "net_salary": 151500
+      }
+    },
+    {
+      "file": "payslip_004.jpg",
+      "documentType": "payslip",
+      "augmentation": {
+        "rotateDeg": 3,
+        "blurPx": 0,
+        "glare": true,
+        "jpegQuality": 50
+      },
+      "expectedFields": {
+        "net_salary": 168250
+      }
+    }
+  ]
+}

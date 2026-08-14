@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import api from "../../api/axios";
+import ExtractionResult from "../documents/ExtractionResult";
 
 const DOCUMENT_TYPES = ["national_id", "payslip", "bank_statement", "other"];
 
@@ -59,6 +60,23 @@ export default function LoanDocumentPanel({
   const [busyId, setBusyId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectNote, setRejectNote] = useState("");
+  // Keyed by document id: { loading, error, data }. Fetched alongside the
+  // document list rather than on demand, so severity/confidence are visible
+  // for every document without an extra click — see ExtractionResult.
+  const [extractions, setExtractions] = useState({});
+
+  const fetchExtraction = async (doc) => {
+    setExtractions((prev) => ({
+      ...prev,
+      [doc.id]: { loading: true, error: false, data: prev[doc.id]?.data },
+    }));
+    try {
+      const res = await api.get(`/loans/${applicationId}/documents/${doc.id}/extraction`);
+      setExtractions((prev) => ({ ...prev, [doc.id]: { loading: false, error: false, data: res.data } }));
+    } catch {
+      setExtractions((prev) => ({ ...prev, [doc.id]: { loading: false, error: true, data: null } }));
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -68,6 +86,9 @@ export default function LoanDocumentPanel({
       const list = res.data?.documents || [];
       setDocuments(list);
       onCountChange?.(list.length);
+      // Fire-and-forget: the document list must not wait on N extraction
+      // fetches, each of which is independently allowed to fail.
+      list.forEach((doc) => fetchExtraction(doc));
     } catch (err) {
       setError(err.response?.data?.message || t("loanDocuments.loadError"));
     } finally {
@@ -272,6 +293,8 @@ export default function LoanDocumentPanel({
                   </button>
                 </div>
               )}
+
+              <ExtractionResult extraction={extractions[doc.id]} canVerify={canVerify} />
             </li>
           ))}
         </ul>

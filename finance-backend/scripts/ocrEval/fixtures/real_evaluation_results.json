@@ -1,0 +1,234 @@
+{
+  "generatedAt": "2026-08-14T09:26:26.348Z",
+  "excluded": [
+    {
+      "file": "NIC-02.jpg",
+      "reason": "placeholder/all-zero NIC number on a KYC-vendor mockup template — no valid value to score"
+    },
+    {
+      "file": "NIC-04.jpg",
+      "reason": "every field including the NIC number is blurred/redacted in the source image"
+    },
+    {
+      "file": "NIC-06.jpg",
+      "reason": "fan-made parody card design, not the official NIC layout — the printed number doesn't correspond to a real card format"
+    },
+    {
+      "file": "CR-02.jpeg",
+      "reason": "blank/unfilled template — no chassis number present"
+    },
+    {
+      "file": "CR-03.jpeg",
+      "reason": "this page is the certificate's terms-and-conditions cover page, not the data page — no chassis number on it"
+    },
+    {
+      "file": "CR-05.jpeg",
+      "reason": "chassis number field is redacted (red box) in the source image"
+    },
+    {
+      "file": "CR-06.jpg",
+      "reason": "chassis number field is partially covered by a redaction mark — not fully legible"
+    },
+    {
+      "file": "BS-02.jpg",
+      "reason": "this statement layout has no field labelled 'Account No' (only a masked card number) — nothing for the current label-anchored extractor to find"
+    },
+    {
+      "file": "BS-05.png",
+      "reason": "same layout as BS-02 — no 'Account No' labelled field"
+    },
+    {
+      "file": "BS-07.jpg",
+      "reason": "account number field is redacted (strikethrough) in the source image"
+    }
+  ],
+  "metrics": [
+    {
+      "field": "NIC number",
+      "documentType": "national_id",
+      "precision": 1,
+      "recall": 0.75,
+      "tp": 3,
+      "fp": 0,
+      "fn": 1,
+      "documents": [
+        {
+          "file": "NIC-01.png",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "961230144V",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "NIC-03.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "123432403440",
+          "predicted": "123432403440",
+          "outcome": "tp"
+        },
+        {
+          "file": "NIC-05.jpg",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "123159322029",
+          "predicted": "123159322029",
+          "outcome": "tp"
+        },
+        {
+          "file": "NIC-07.png",
+          "documentType": "national_id",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "198732403040",
+          "predicted": "198732403040",
+          "outcome": "tp"
+        }
+      ]
+    },
+    {
+      "field": "Chassis number",
+      "documentType": "cr_copy",
+      "precision": null,
+      "recall": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 5,
+      "documents": [
+        {
+          "file": "CR-01.jpeg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "MD2A57BZ5EWE19165",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "CR-04.jpeg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "JAAN3CR5S5G0493567",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "CR-07.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "MD2AAAAZZRWL86263",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "CR-08.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "NHP10-6248406",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "CR-09.jpg",
+          "documentType": "cr_copy",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "MBLHA11EH99L06327",
+          "predicted": null,
+          "outcome": "fn"
+        }
+      ]
+    },
+    {
+      "field": "Account number",
+      "documentType": "bank_statement",
+      "precision": 1,
+      "recall": 0.2,
+      "tp": 1,
+      "fp": 0,
+      "fn": 4,
+      "documents": [
+        {
+          "file": "BS-01.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "422803******0489",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "BS-03.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "123456789",
+          "predicted": "123456789",
+          "outcome": "tp"
+        },
+        {
+          "file": "BS-06.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "072020175975",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "BS-08.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-3.1-flash-lite",
+          "extractionError": null,
+          "expected": "0631671 0781391",
+          "predicted": null,
+          "outcome": "fn"
+        },
+        {
+          "file": "BS-09.jpg",
+          "documentType": "bank_statement",
+          "ocrStatus": "succeeded",
+          "ocrEngine": "gemini-vision",
+          "modelUsed": "gemini-flash-lite-latest",
+          "extractionError": null,
+          "expected": "0631671 0781391",
+          "predicted": null,
+          "outcome": "fn"
+        }
+      ]
+    }
+  ]
+}

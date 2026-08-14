@@ -28,19 +28,7 @@ const { loanDocumentUpload } = require("../config/multer");
 const { CATEGORY_VALUES } = require("../services/mlClient.service");
 const { VEHICLE_CONDITIONS } = require("../services/leasing.service");
 const { FUEL_TYPES, TRANSMISSIONS } = require("../services/leaseVehicle.service");
-
-/** Document types a lease application accepts (045's ENUM). */
-const LEASE_DOCUMENT_TYPES = [
-  "national_id",
-  "payslip",
-  "bank_statement",
-  "vehicle_invoice",
-  "valuation_report",
-  "cr_copy",
-  "lease_agreement",
-  "release_letter",
-  "other",
-];
+const { LEASE_DOCUMENT_TYPES } = require("../services/leaseDocument.service");
 
 // Multer signals a rejected file (too large, wrong type) by calling next()
 // with an error, which would otherwise surface as Express's HTML 500 page.
@@ -162,6 +150,10 @@ router.post(
   lease.uploadDocument
 );
 router.get("/:id/documents", verifyToken, idParam, lease.listDocuments);
+// Declared BEFORE /:id/documents/:docId so "extraction" can never be read
+// as a document id. Same guard as the download route — it exposes the
+// document's contents in field form.
+router.get("/:id/documents/:docId/extraction", verifyToken, idParam, lease.getDocumentExtraction);
 router.get("/:id/documents/:docId", verifyToken, idParam, lease.downloadDocument);
 
 // Staff sign-off. Lives on /api/leases rather than /api/admin because a

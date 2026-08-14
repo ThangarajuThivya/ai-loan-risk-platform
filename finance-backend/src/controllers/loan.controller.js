@@ -22,6 +22,10 @@ const { findMissingConsents } = require("../services/consent.service");
 const { LOAN_DOCUMENT_DIR } = require("../config/multer");
 const { sanitizeDownloadFilename } = require("../services/loanDocument.service");
 const {
+  processDocumentInBackground,
+  presentExtraction,
+} = require("../services/documentPipeline.service");
+const {
   mapProfileToModelFields,
   predictRisk,
   isProvided,
@@ -1072,10 +1076,30 @@ exports.uploadDocument = async (req, res) => {
       sizeBytes: req.file.size,
     });
 
-    return res.status(201).json(doc);
+    res.status(201).json(doc);
+
+    // Advisory OCR/extraction, AFTER the response has gone out: the upload
+    // is complete and the customer has been told so, so this cannot slow
+    // the upload down or fail it. processDocumentInBackground never
+    // rejects, and never touches verification_status — staff sign-off
+    // remains the sole authority on whether a document is accepted.
+    processDocumentInBackground({
+      source: "loan",
+      documentId: doc.id,
+      applicationId: row.id,
+      userId: row.user_id,
+      documentType: doc.document_type,
+      storagePath: req.file.path,
+      mimeType: req.file.mimetype,
+    });
+    return;
   } catch (err) {
-    discardUploadedLoanFile(req.file);
     console.error("UPLOAD LOAN DOCUMENT ERROR:", err);
+    // Once the 201 is out the upload HAS succeeded and the stored file must
+    // survive — only a failure before that point discards it and reports an
+    // error, or we would delete a document the customer was told we kept.
+    if (res.headersSent) return;
+    discardUploadedLoanFile(req.file);
     return res.status(500).json({ message: "Failed to upload the document." });
   }
 };
@@ -1149,6 +1173,34 @@ exports.downloadDocument = async (req, res) => {
   } catch (err) {
     console.error("DOWNLOAD LOAN DOCUMENT ERROR:", err);
     return res.status(500).json({ message: "Failed to fetch the document." });
+  }
+};
+
+// GET /api/loans/:id/documents/:docId/extraction — the advisory OCR result
+// for one document. Same access rules as every other document read (owner,
+// staff or admin, and the document must belong to the application in the
+// path): extracted fields quote the document's contents, so anyone who may
+// not read the document may not read what was pulled out of it either.
+//
+// Advisory only. This endpoint reports; it decides nothing. The document's
+// own verification_status is unaffected by anything here, whatever the
+// findings say.
+exports.getDocumentExtraction = async (req, res) => {
+  const applicationId = Number(req.params.id);
+  try {
+    const { row, error } = await loadApplicationForDocumentAccess(applicationId, req.user);
+    if (error) return res.status(error.status).json({ message: error.message });
+
+    const doc = await loanModel.getApplicationDocumentById(Number(req.params.docId));
+    if (!doc || doc.application_id !== row.id) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    const extraction = await loanModel.getLoanDocumentExtraction(doc.id);
+    return res.status(200).json(presentExtraction(doc, extraction));
+  } catch (err) {
+    console.error("GET LOAN DOCUMENT EXTRACTION ERROR:", err);
+    return res.status(500).json({ message: "Failed to fetch the extraction result." });
   }
 };
 
