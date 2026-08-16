@@ -28,7 +28,7 @@ const { loanDocumentUpload } = require("../config/multer");
 const { CATEGORY_VALUES } = require("../services/mlClient.service");
 const { VEHICLE_CONDITIONS } = require("../services/leasing.service");
 const { FUEL_TYPES, TRANSMISSIONS } = require("../services/leaseVehicle.service");
-const { LEASE_DOCUMENT_TYPES } = require("../services/leaseDocument.service");
+const { LEASE_DOCUMENT_TYPES, DOCUMENT_SIDES } = require("../services/leaseDocument.service");
 
 // Multer signals a rejected file (too large, wrong type) by calling next()
 // with an error, which would otherwise surface as Express's HTML 500 page.
@@ -146,6 +146,13 @@ router.post(
       .withMessage("document_type is required")
       .isIn(LEASE_DOCUMENT_TYPES)
       .withMessage(`document_type must be one of: ${LEASE_DOCUMENT_TYPES.join(", ")}`),
+    // Optional: only meaningful for a two-sided document submitted as a
+    // photo (see TWO_SIDED_DOCUMENT_TYPES) — leaseApplication.controller
+    // .uploadDocument rejects it for any other document_type.
+    body("side")
+      .optional({ checkFalsy: true })
+      .isIn(DOCUMENT_SIDES)
+      .withMessage(`side must be one of: ${DOCUMENT_SIDES.join(", ")}`),
   ],
   lease.uploadDocument
 );
@@ -154,6 +161,14 @@ router.get("/:id/documents", verifyToken, idParam, lease.listDocuments);
 // as a document id. Same guard as the download route — it exposes the
 // document's contents in field form.
 router.get("/:id/documents/:docId/extraction", verifyToken, idParam, lease.getDocumentExtraction);
+// POST — re-run OCR/extraction on demand (owner, staff, or admin). See
+// leaseApplication.controller.js#retryDocumentExtraction.
+router.post(
+  "/:id/documents/:docId/extraction/retry",
+  verifyToken,
+  idParam,
+  lease.retryDocumentExtraction
+);
 router.get("/:id/documents/:docId", verifyToken, idParam, lease.downloadDocument);
 
 // Staff sign-off. Lives on /api/leases rather than /api/admin because a

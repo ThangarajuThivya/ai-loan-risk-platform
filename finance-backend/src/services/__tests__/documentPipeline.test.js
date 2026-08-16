@@ -64,6 +64,9 @@ function deps(source, overrides = {}) {
   return {
     sources: { loan: source.wiring, lease: source.wiring },
     isPathAllowed: () => true,
+    // Instant — the retry-on-'failed' path exercised below must not add a
+    // real RECOGNITION_RETRY_DELAY_MS wait to every run of this suite.
+    sleep: async () => {},
     readFile: async () => Buffer.from("bytes"),
     recognize: async () => ({
       status: "succeeded",
@@ -181,6 +184,46 @@ async function run() {
     const final = last(src.writes);
     assert.strictEqual(final.extractionStatus, "failed");
     assert.strictEqual(final.engine, "gemini-vision");
+  });
+
+  await check("retries a transient recognition failure and succeeds on the second attempt", async () => {
+    const src = fakeSource();
+    let calls = 0;
+    await runExtractionPipeline(
+      BASE_ARGS,
+      deps(src, {
+        recognize: async () => {
+          calls += 1;
+          if (calls === 1) {
+            return { status: "failed", engine: "gemini-vision", rawText: null, pageCount: null };
+          }
+          return {
+            status: "succeeded",
+            engine: "gemini-vision",
+            rawText: "National Identity Card\nNIC No: 851234567V\n",
+            pageCount: 1,
+          };
+        },
+      })
+    );
+    assert.strictEqual(calls, 2, "expected exactly one retry");
+    assert.strictEqual(last(src.writes).extractionStatus, "succeeded");
+  });
+
+  await check("does not retry a 'skipped' recognition result", async () => {
+    const src = fakeSource();
+    let calls = 0;
+    await runExtractionPipeline(
+      BASE_ARGS,
+      deps(src, {
+        recognize: async () => {
+          calls += 1;
+          return { status: "skipped", engine: null, rawText: null, pageCount: null };
+        },
+      })
+    );
+    assert.strictEqual(calls, 1, "a skip is a config-level outcome, retrying cannot change it");
+    assert.strictEqual(last(src.writes).extractionStatus, "skipped");
   });
 
   await check("refuses to read a storage path outside the document directory", async () => {

@@ -12,6 +12,7 @@ import {
   XCircle,
   MinusCircle,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 /**
@@ -89,7 +90,7 @@ function humanizeKey(key) {
 // the document — never shown, translated or not.
 const HIDDEN_SUBKEYS = new Set(["valid", "errors", "format"]);
 
-export default function ExtractionResult({ extraction, canVerify = false }) {
+export default function ExtractionResult({ extraction, canVerify = false, onRetry, retrying = false }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -193,12 +194,60 @@ export default function ExtractionResult({ extraction, canVerify = false }) {
             </p>
           )}
 
+          {/* A 'failed' status means the document was never actually read —
+              nothing to do with what fields it does or doesn't contain, and
+              nothing to do with which language it's in. Surfacing that
+              plainly here, with a way to try again, replaces a generic "no
+              fields found" message that was easy to misread as an
+              extraction-quality problem when it was really recognition
+              never completing at all. */}
+          {data.extraction_status === "failed" && (
+            <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-2">
+              <XCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              <p className="text-[10px] text-rose-700 flex-1">
+                {t("documentExtraction.recognitionFailedExplain")}
+              </p>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  disabled={retrying}
+                  className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-rose-700 bg-white border border-rose-300 rounded-lg hover:bg-rose-100 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {retrying ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3 h-3" />
+                  )}
+                  {retrying ? t("documentExtraction.retrying") : t("documentExtraction.retry")}
+                </button>
+              )}
+            </div>
+          )}
+
+          {data.extraction_status === "skipped" && (
+            <p className="flex items-start gap-1.5 text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2">
+              <MinusCircle className="w-3 h-3 shrink-0 mt-0.5 text-slate-400" />
+              {t("documentExtraction.recognitionSkippedExplain")}
+            </p>
+          )}
+
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
               {t("documentExtraction.fieldsTitle")}
             </p>
             {fields.length === 0 ? (
-              <p className="text-[10px] text-slate-400">{t("documentExtraction.noFields")}</p>
+              // 'failed' and 'skipped' already have their own explanation in
+              // the banners above — repeating "no fields" underneath them
+              // would read as a second, different-sounding excuse for the
+              // same thing.
+              ["succeeded", "pending"].includes(data.extraction_status) && (
+                <p className="text-[10px] text-slate-400">
+                  {data.extraction_status === "succeeded"
+                    ? t("documentExtraction.noFields")
+                    : t("documentExtraction.loading")}
+                </p>
+              )
             ) : (
               <ul className="space-y-1">
                 {fields.map(([key, field]) => (

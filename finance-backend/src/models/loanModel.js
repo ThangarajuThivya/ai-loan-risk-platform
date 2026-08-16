@@ -1598,6 +1598,7 @@ async function verifyCollateralItem(collateralId, { verificationStatus, verified
 async function createApplicationDocument({
   applicationId,
   documentType,
+  side,
   uploadedBy,
   originalName,
   storagePath,
@@ -1606,12 +1607,12 @@ async function createApplicationDocument({
 }) {
   const [result] = await pool.query(
     `INSERT INTO loan_application_documents
-       (application_id, document_type, uploaded_by, original_name, storage_path, mime_type, size_bytes)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [applicationId, documentType, uploadedBy, originalName, storagePath, mimeType, sizeBytes]
+       (application_id, document_type, side, uploaded_by, original_name, storage_path, mime_type, size_bytes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [applicationId, documentType, side ?? null, uploadedBy, originalName, storagePath, mimeType, sizeBytes]
   );
   const [rows] = await pool.query(
-    `SELECT id, application_id, document_type, original_name, mime_type, size_bytes,
+    `SELECT id, application_id, document_type, side, original_name, mime_type, size_bytes,
             verification_status, verified_at, verification_notes, created_at
        FROM loan_application_documents WHERE id = ?`,
     [result.insertId]
@@ -1629,7 +1630,7 @@ async function createApplicationDocument({
 async function getApplicationDocuments(applicationId) {
   const [rows] = await pool.query(
     `SELECT
-       lad.id, lad.document_type, lad.original_name, lad.mime_type, lad.size_bytes,
+       lad.id, lad.document_type, lad.side, lad.original_name, lad.mime_type, lad.size_bytes,
        lad.verification_status, lad.verified_by, lad.verified_at, lad.verification_notes,
        lad.created_at,
        verifier.first_name AS verified_by_first_name, verifier.last_name AS verified_by_last_name

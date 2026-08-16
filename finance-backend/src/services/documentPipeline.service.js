@@ -88,6 +88,33 @@ function isPathInsideDocumentDir(storagePath) {
   return resolved.startsWith(path.resolve(LOAN_DOCUMENT_DIR) + path.sep);
 }
 
+// A single transient recognition failure (a momentary 429 from Gemini's
+// free-tier quota, a slow response) used to permanently strand a document
+// with nothing ever read from it — 'failed' was recorded on the first try
+// and nothing tried again. Two attempts, a short gap between them, gives a
+// genuinely transient failure a real second chance without materially
+// delaying a pipeline that already runs in the background. A 'skipped'
+// result is NOT retried: it means recognition was never attempted at all
+// (no API key configured, an unsupported mime type, an empty buffer), and
+// trying again cannot change that outcome.
+const RECOGNITION_ATTEMPTS = 2;
+const RECOGNITION_RETRY_DELAY_MS = 3000;
+
+async function recognizeWithRetry(recognize, args, sleep) {
+  let result;
+  for (let attempt = 1; attempt <= RECOGNITION_ATTEMPTS; attempt += 1) {
+    result = await recognize(args);
+    if (result.status !== "failed") return result;
+    if (attempt < RECOGNITION_ATTEMPTS) {
+      console.warn(
+        `[pipeline] recognition failed (attempt ${attempt}/${RECOGNITION_ATTEMPTS}) — retrying.`
+      );
+      await sleep(RECOGNITION_RETRY_DELAY_MS);
+    }
+  }
+  return result;
+}
+
 /**
  * Assemble the cross-document field bundle documentValidation expects:
  * `{ [document_type]: { field: {value, snippet, confidence} } }`.
@@ -132,6 +159,7 @@ const DEFAULT_DEPS = {
   readFile: (p) => fs.readFile(p),
   findDeclared: (userId) => userModel.findDeclaredApplicantData(userId),
   isPathAllowed: isPathInsideDocumentDir,
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 };
 
 /**
@@ -154,7 +182,10 @@ async function runExtractionPipeline(
   { source, documentId, applicationId, userId, documentType, storagePath, mimeType },
   deps = {}
 ) {
-  const { sources, recognize, readFile, findDeclared, isPathAllowed } = { ...DEFAULT_DEPS, ...deps };
+  const { sources, recognize, readFile, findDeclared, isPathAllowed, sleep } = {
+    ...DEFAULT_DEPS,
+    ...deps,
+  };
   const wiring = sources[source];
   if (!wiring) throw new Error(`Unknown document source: ${source}`);
 
@@ -188,7 +219,7 @@ async function runExtractionPipeline(
   }
 
   // ---- 2. Recognition (the only I/O-to-a-model step) -----------------
-  const ocr = await recognize({ buffer, mimeType });
+  const ocr = await recognizeWithRetry(recognize, { buffer, mimeType }, sleep);
   if (ocr.status !== "succeeded" || !ocr.rawText) {
     // 'skipped' and 'failed' both pass straight through — ocr.service has
     // already decided which one this was, and the distinction (never
