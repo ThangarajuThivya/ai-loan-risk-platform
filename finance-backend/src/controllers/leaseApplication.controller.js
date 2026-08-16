@@ -35,8 +35,10 @@ const consentModel = require("../models/consentModel");
 const leaseNotifier = require("../services/leaseNotifier.service");
 const {
   processDocumentInBackground,
+  runExtractionPipeline,
   presentExtraction,
 } = require("../services/documentPipeline.service");
+const { TWO_SIDED_DOCUMENT_TYPES } = require("../services/leaseDocument.service");
 
 const {
   ageFromDob,
@@ -393,6 +395,17 @@ exports.uploadDocument = async (req, res) => {
   }
   if (!req.file) return res.status(400).json({ message: "A file is required." });
 
+  // `side` only means something for a two-sided document submitted as a
+  // photo (a National ID card, a CR copy) — see the loan equivalent in
+  // loan.controller.js#uploadDocument.
+  const side = req.body.side || null;
+  if (side && !TWO_SIDED_DOCUMENT_TYPES.includes(req.body.document_type)) {
+    discardUploadedFile(req.file);
+    return res.status(400).json({
+      message: `side is only accepted for: ${TWO_SIDED_DOCUMENT_TYPES.join(", ")}`,
+    });
+  }
+
   try {
     const application = await leaseAppModel.findLeaseApplicationById(req.params.id);
     if (!application) {
@@ -409,6 +422,7 @@ exports.uploadDocument = async (req, res) => {
     const doc = await leaseAppModel.createLeaseDocument({
       applicationId: application.id,
       documentType: req.body.document_type,
+      side,
       uploadedBy: req.user.user_id,
       originalName: req.file.originalname,
       storagePath: req.file.path,
@@ -514,6 +528,44 @@ exports.getDocumentExtraction = async (req, res) => {
   } catch (err) {
     console.error("GET LEASE DOCUMENT EXTRACTION ERROR:", err);
     return res.status(500).json({ message: "Failed to fetch the extraction result." });
+  }
+};
+
+/**
+ * POST /api/leases/:id/documents/:docId/extraction/retry — re-run the
+ * advisory OCR/extraction pipeline for one document on demand. Same access
+ * rule as getDocumentExtraction above (owner, staff or admin).
+ *
+ * See the loan equivalent in loan.controller.js#retryDocumentExtraction for
+ * why this exists (a transient recognition failure previously left a
+ * document permanently stuck with nothing ever read) and why it bypasses
+ * the ocr_auto_extraction setting on purpose.
+ */
+exports.retryDocumentExtraction = async (req, res) => {
+  try {
+    const { application, error } = await loadForDocumentAccess(req.params.id, req.user);
+    if (error) return res.status(error.status).json({ message: error.message });
+
+    const doc = await leaseAppModel.findLeaseDocumentById(Number(req.params.docId));
+    if (!doc || doc.application_id !== application.id) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    await runExtractionPipeline({
+      source: "lease",
+      documentId: doc.id,
+      applicationId: application.id,
+      userId: application.lessee_id,
+      documentType: doc.document_type,
+      storagePath: doc.storage_path,
+      mimeType: doc.mime_type,
+    });
+
+    const extraction = await leaseAppModel.getLeaseDocumentExtraction(doc.id);
+    return res.status(200).json(presentExtraction(doc, extraction));
+  } catch (err) {
+    console.error("RETRY LEASE DOCUMENT EXTRACTION ERROR:", err);
+    return res.status(500).json({ message: "Failed to retry the extraction." });
   }
 };
 

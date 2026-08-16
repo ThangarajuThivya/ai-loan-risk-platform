@@ -19,6 +19,17 @@ const DOCUMENT_TYPES = ["national_id", "payslip", "bank_statement", "other"];
 const VERIFICATION_STATUSES = ["pending", "verified", "rejected"];
 
 /**
+ * Document types that are physically two-sided, so a customer submitting a
+ * photo (rather than a scanned/printed PDF) may reasonably want to attach
+ * both the front and the back. A front/back photo is stored as two ordinary
+ * rows of the same document_type — see migration 056's `side` column.
+ */
+const TWO_SIDED_DOCUMENT_TYPES = ["national_id"];
+
+/** Valid values for the `side` column (migration 056). */
+const DOCUMENT_SIDES = ["front", "back"];
+
+/**
  * Make a customer-supplied filename safe to embed in a `Content-Disposition`
  * header. Strips quotes and newlines, which could otherwise be used to
  * inject extra header directives or break out of the quoted filename.
@@ -35,5 +46,7 @@ function sanitizeDownloadFilename(name) {
 module.exports = {
   DOCUMENT_TYPES,
   VERIFICATION_STATUSES,
+  TWO_SIDED_DOCUMENT_TYPES,
+  DOCUMENT_SIDES,
   sanitizeDownloadFilename,
 };

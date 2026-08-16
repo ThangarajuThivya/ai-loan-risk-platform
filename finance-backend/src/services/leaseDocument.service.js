@@ -25,6 +25,20 @@ const LEASE_DOCUMENT_TYPES = [
   "other",
 ];
 
+/**
+ * Lease document types that are physically two-sided (a National ID card;
+ * a CR copy's data lives on the front, but a customer photographing rather
+ * than scanning one may still want the back attached). Stored as two rows
+ * of the same document_type, distinguished by the `side` column (migration
+ * 056) — mirrors loanDocument.service.js's TWO_SIDED_DOCUMENT_TYPES.
+ */
+const TWO_SIDED_DOCUMENT_TYPES = ["national_id", "cr_copy"];
+
+/** Valid values for the `side` column (migration 056). */
+const DOCUMENT_SIDES = ["front", "back"];
+
 module.exports = {
   LEASE_DOCUMENT_TYPES,
+  TWO_SIDED_DOCUMENT_TYPES,
+  DOCUMENT_SIDES,
 };

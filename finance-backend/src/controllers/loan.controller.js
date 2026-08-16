@@ -20,9 +20,13 @@ const loanModel = require("../models/loanModel");
 const consentModel = require("../models/consentModel");
 const { findMissingConsents } = require("../services/consent.service");
 const { LOAN_DOCUMENT_DIR } = require("../config/multer");
-const { sanitizeDownloadFilename } = require("../services/loanDocument.service");
+const {
+  sanitizeDownloadFilename,
+  TWO_SIDED_DOCUMENT_TYPES,
+} = require("../services/loanDocument.service");
 const {
   processDocumentInBackground,
+  runExtractionPipeline,
   presentExtraction,
 } = require("../services/documentPipeline.service");
 const {
@@ -1053,6 +1057,18 @@ exports.uploadDocument = async (req, res) => {
     return res.status(400).json({ message: "A file is required." });
   }
 
+  // `side` only means something for a two-sided document submitted as a
+  // photo (a National ID card) — reject it outright for anything else
+  // rather than silently store a value that can never apply, e.g. a bank
+  // statement PDF with side=front.
+  const side = req.body.side || null;
+  if (side && !TWO_SIDED_DOCUMENT_TYPES.includes(req.body.document_type)) {
+    discardUploadedLoanFile(req.file);
+    return res.status(400).json({
+      message: `side is only accepted for: ${TWO_SIDED_DOCUMENT_TYPES.join(", ")}`,
+    });
+  }
+
   try {
     const row = await loanModel.findApplicationById(applicationId);
     if (!row) {
@@ -1069,6 +1085,7 @@ exports.uploadDocument = async (req, res) => {
     const doc = await loanModel.createApplicationDocument({
       applicationId,
       documentType: req.body.document_type,
+      side,
       uploadedBy: req.user.user_id,
       originalName: req.file.originalname,
       storagePath: req.file.path,
@@ -1116,6 +1133,7 @@ exports.listDocuments = async (req, res) => {
       documents: documents.map((d) => ({
         id: d.id,
         document_type: d.document_type,
+        side: d.side,
         original_name: d.original_name,
         mime_type: d.mime_type,
         size_bytes: d.size_bytes,
@@ -1201,6 +1219,50 @@ exports.getDocumentExtraction = async (req, res) => {
   } catch (err) {
     console.error("GET LOAN DOCUMENT EXTRACTION ERROR:", err);
     return res.status(500).json({ message: "Failed to fetch the extraction result." });
+  }
+};
+
+// POST /api/loans/:id/documents/:docId/extraction/retry — re-run the
+// advisory OCR/extraction pipeline for one document on demand (owner,
+// staff, or admin — same access rule as reading the result above).
+//
+// runExtractionPipeline already retries a transient recognition failure
+// once on its own, but that only covers the automatic run triggered at
+// upload time. This exists for everything that first retry didn't fix — a
+// document whose recognition genuinely failed twice in a row, or one
+// uploaded while auto-extraction was switched off. Deliberately bypasses
+// the ocr_auto_extraction setting: that setting only gates the automatic,
+// upload-triggered run (see processDocumentInBackground's jsdoc), not a
+// human deliberately asking for another attempt right now. Awaited rather
+// than fire-and-forget, unlike the upload path — there is no response
+// already sent to protect here, and the caller needs the fresh result to
+// show it.
+exports.retryDocumentExtraction = async (req, res) => {
+  const applicationId = Number(req.params.id);
+  try {
+    const { row, error } = await loadApplicationForDocumentAccess(applicationId, req.user);
+    if (error) return res.status(error.status).json({ message: error.message });
+
+    const doc = await loanModel.getApplicationDocumentById(Number(req.params.docId));
+    if (!doc || doc.application_id !== row.id) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    await runExtractionPipeline({
+      source: "loan",
+      documentId: doc.id,
+      applicationId: row.id,
+      userId: row.user_id,
+      documentType: doc.document_type,
+      storagePath: doc.storage_path,
+      mimeType: doc.mime_type,
+    });
+
+    const extraction = await loanModel.getLoanDocumentExtraction(doc.id);
+    return res.status(200).json(presentExtraction(doc, extraction));
+  } catch (err) {
+    console.error("RETRY LOAN DOCUMENT EXTRACTION ERROR:", err);
+    return res.status(500).json({ message: "Failed to retry the extraction." });
   }
 };
 

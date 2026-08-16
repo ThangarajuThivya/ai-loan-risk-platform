@@ -946,6 +946,7 @@ async function getPortfolioRows() {
 async function createLeaseDocument({
   applicationId,
   documentType,
+  side,
   uploadedBy,
   originalName,
   storagePath,
@@ -954,10 +955,10 @@ async function createLeaseDocument({
 }) {
   const [result] = await pool.query(
     `INSERT INTO lease_application_documents
-       (application_id, document_type, uploaded_by, original_name,
+       (application_id, document_type, side, uploaded_by, original_name,
         storage_path, mime_type, size_bytes)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [applicationId, documentType, uploadedBy ?? null, originalName, storagePath, mimeType, sizeBytes]
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [applicationId, documentType, side ?? null, uploadedBy ?? null, originalName, storagePath, mimeType, sizeBytes]
   );
   const [rows] = await pool.query(`SELECT * FROM lease_application_documents WHERE id = ?`, [
     result.insertId,

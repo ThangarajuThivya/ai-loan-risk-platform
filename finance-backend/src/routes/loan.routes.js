@@ -12,7 +12,7 @@ const {
   COLLATERAL_TYPES,
   isValidNic,
 } = require("../services/collateralGuarantor.service");
-const { DOCUMENT_TYPES } = require("../services/loanDocument.service");
+const { DOCUMENT_TYPES, DOCUMENT_SIDES } = require("../services/loanDocument.service");
 const repaymentController = require("../controllers/repayment.controller");
 const { PAYMENT_KINDS } = require("../services/repaymentQuote.service");
 
@@ -533,6 +533,13 @@ router.post(
       .withMessage("document_type is required")
       .isIn(DOCUMENT_TYPES)
       .withMessage(`document_type must be one of: ${DOCUMENT_TYPES.join(", ")}`),
+    // Optional: only meaningful for a two-sided document submitted as a
+    // photo (see TWO_SIDED_DOCUMENT_TYPES) — loanController.uploadDocument
+    // rejects it for any other document_type.
+    body("side")
+      .optional({ checkFalsy: true })
+      .isIn(DOCUMENT_SIDES)
+      .withMessage(`side must be one of: ${DOCUMENT_SIDES.join(", ")}`),
   ],
   loanController.uploadDocument
 );
@@ -568,6 +575,19 @@ router.get(
     param("docId").isInt({ gt: 0 }).withMessage("docId must be a positive integer").toInt(),
   ],
   loanController.getDocumentExtraction
+);
+
+// POST /api/loans/:id/documents/:docId/extraction/retry — re-run OCR/
+// extraction on demand (owner, staff, or admin). See loan.controller.js
+// retryDocumentExtraction.
+router.post(
+  "/:id/documents/:docId/extraction/retry",
+  verifyToken,
+  [
+    param("id").isInt({ gt: 0 }).withMessage("id must be a positive integer").toInt(),
+    param("docId").isInt({ gt: 0 }).withMessage("docId must be a positive integer").toInt(),
+  ],
+  loanController.retryDocumentExtraction
 );
 
 // DELETE /api/loans/:id/documents/:docId (customer, own; E1) — only while
