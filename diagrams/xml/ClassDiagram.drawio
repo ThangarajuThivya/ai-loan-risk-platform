@@ -1,0 +1,246 @@
+<mxfile host="app.diagrams.net" modified="2026-08-17T00:00:00.000Z" agent="claude-code" version="24.0.0" type="device">
+  <diagram name="Class Diagram" id="class-diagram-1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="2450" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Class Diagram &#8212; Core Loan Domain" style="text;align=center;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="0" width="600" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ======================= USER (abstract) ======================= -->
+        <mxCell id="User" value="User" style="swimlane;fontStyle=3;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="680" y="40" width="260" height="246" as="geometry" />
+        </mxCell>
+        <mxCell id="User_a1" value="- userId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_a2" value="- email: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_a3" value="- passwordHash: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_a4" value="# role: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_a5" value="- createdAt: Date" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="134" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="User"><mxGeometry y="160" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="User_o1" value="+ login(email: string, password: string): Token" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="168" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_o2" value="+ logout(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="194" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="User_o3" value="# validateCredentials(password: string): boolean" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="User"><mxGeometry y="220" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= CUSTOMER ======================= -->
+        <mxCell id="Customer" value="Customer" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="380" width="260" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="Customer_a1" value="- nic: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_a2" value="- phone: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_a3" value="- dateOfBirth: Date" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_a4" value="- province: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_a5" value="- employmentType: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="134" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_a6" value="- monthlySalary: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="160" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Customer"><mxGeometry y="186" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Customer_o1" value="+ applyForLoan(details: LoanRequest): LoanApplication" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="194" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_o2" value="+ viewApplications(): LoanApplication[]" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="220" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Customer_o3" value="+ acceptOffer(offerId: int): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Customer"><mxGeometry y="246" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= STAFF ======================= -->
+        <mxCell id="Staff" value="Staff" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="380" width="260" height="168" as="geometry" />
+        </mxCell>
+        <mxCell id="Staff_a1" value="- staffId: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Staff"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Staff_a2" value="- department: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Staff"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Staff_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Staff"><mxGeometry y="82" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Staff_o1" value="+ reviewApplication(appId: int): Decision" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Staff"><mxGeometry y="90" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Staff_o2" value="+ issueOffer(appId: int): LoanOffer" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Staff"><mxGeometry y="116" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Staff_o3" value="+ recordRepayment(loanId: int, amount: number): Payment" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Staff"><mxGeometry y="142" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= ADMIN ======================= -->
+        <mxCell id="Admin" value="Admin" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="720" width="260" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="Admin_a1" value="- permissions: string[]" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Admin"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Admin_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Admin"><mxGeometry y="56" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Admin_o1" value="+ manageLoanProducts(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Admin"><mxGeometry y="64" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Admin_o2" value="+ manageStaffAccounts(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Admin"><mxGeometry y="90" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Admin_o3" value="+ configureFXSettings(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Admin"><mxGeometry y="116" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= LOAN PRODUCT ======================= -->
+        <mxCell id="LoanProduct" value="LoanProduct" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1100" width="260" height="246" as="geometry" />
+        </mxCell>
+        <mxCell id="LoanProduct_a1" value="- productId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanProduct"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_a2" value="- name: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanProduct"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_a3" value="- baseInterestRate: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanProduct"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_a4" value="- minAmount: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanProduct"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_a5" value="- maxAmount: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanProduct"><mxGeometry y="134" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_a6" value="+ MAX_TENURE_MONTHS: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=4;" vertex="1" parent="LoanProduct"><mxGeometry y="160" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="LoanProduct"><mxGeometry y="186" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_o1" value="+ calculateFees(amount: number): number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanProduct"><mxGeometry y="194" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanProduct_o2" value="+ findById(id: int): LoanProduct" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=4;" vertex="1" parent="LoanProduct"><mxGeometry y="220" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= LOAN APPLICATION ======================= -->
+        <mxCell id="LoanApplication" value="LoanApplication" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="1100" width="260" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="LoanApplication_a1" value="- applicationId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_a2" value="- amountRequested: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_a3" value="- tenureMonths: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_a4" value="- status: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_a5" value="- submittedAt: Date" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="134" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_a6" value="+ ALLOWED_TRANSITIONS: Map" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;fontStyle=4;" vertex="1" parent="LoanApplication"><mxGeometry y="160" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="LoanApplication"><mxGeometry y="186" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_o1" value="+ submit(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="194" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_o2" value="+ updateStatus(newStatus: string): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="220" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanApplication_o3" value="+ withdraw(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanApplication"><mxGeometry y="246" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= RISK ASSESSMENT ======================= -->
+        <mxCell id="RiskAssessment" value="RiskAssessment" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1100" width="260" height="168" as="geometry" />
+        </mxCell>
+        <mxCell id="RiskAssessment_a1" value="- assessmentId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RiskAssessment"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RiskAssessment_a2" value="- probabilityOfDefault: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RiskAssessment"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RiskAssessment_a3" value="- riskBand: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RiskAssessment"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RiskAssessment_a4" value="- modelVersion: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RiskAssessment"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RiskAssessment_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="RiskAssessment"><mxGeometry y="134" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="RiskAssessment_o1" value="+ computeBand(pd: number): string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RiskAssessment"><mxGeometry y="142" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= RECOMMENDATION ======================= -->
+        <mxCell id="Recommendation" value="Recommendation" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="1100" width="260" height="194" as="geometry" />
+        </mxCell>
+        <mxCell id="Recommendation_a1" value="- recommendationId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Recommendation"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Recommendation_a2" value="- loanType: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Recommendation"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Recommendation_a3" value="- recommendedAmount: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Recommendation"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Recommendation_a4" value="- emi: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Recommendation"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Recommendation_a5" value="- explanation: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Recommendation"><mxGeometry y="134" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Recommendation_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Recommendation"><mxGeometry y="160" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Recommendation_o1" value="+ generateExplanation(): string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Recommendation"><mxGeometry y="168" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= LOAN OFFER ======================= -->
+        <mxCell id="LoanOffer" value="LoanOffer" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="1100" width="260" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="LoanOffer_a1" value="- offerId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_a2" value="- amount: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_a3" value="- interestRate: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_a4" value="- emi: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_a5" value="- expiryDate: Date" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="134" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_a6" value="- status: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="160" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="LoanOffer"><mxGeometry y="186" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_o1" value="+ accept(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="194" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_o2" value="+ decline(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="220" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="LoanOffer_o3" value="+ waiveFee(reason: string): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="LoanOffer"><mxGeometry y="246" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= GUARANTOR ======================= -->
+        <mxCell id="Guarantor" value="Guarantor" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1440" width="260" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="Guarantor_a1" value="- guarantorId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Guarantor"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Guarantor_a2" value="- nic: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Guarantor"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Guarantor_a3" value="- name: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Guarantor"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Guarantor_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Guarantor"><mxGeometry y="108" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Guarantor_o1" value="+ getTotalExposure(): number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Guarantor"><mxGeometry y="116" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= COLLATERAL ITEM ======================= -->
+        <mxCell id="CollateralItem" value="CollateralItem" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="1440" width="260" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="CollateralItem_a1" value="- collateralId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="CollateralItem"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="CollateralItem_a2" value="- type: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="CollateralItem"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="CollateralItem_a3" value="- estimatedValue: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="CollateralItem"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="CollateralItem_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="CollateralItem"><mxGeometry y="108" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="CollateralItem_o1" value="+ getDescription(): string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="CollateralItem"><mxGeometry y="116" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= REPAYMENT SCHEDULE ======================= -->
+        <mxCell id="RepaymentSchedule" value="RepaymentSchedule" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="680" y="1440" width="260" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="RepaymentSchedule_a1" value="- scheduleId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RepaymentSchedule"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RepaymentSchedule_a2" value="- outstandingBalance: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RepaymentSchedule"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RepaymentSchedule_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="RepaymentSchedule"><mxGeometry y="82" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="RepaymentSchedule_o1" value="+ computeAmortization(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RepaymentSchedule"><mxGeometry y="90" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="RepaymentSchedule_o2" value="+ getOutstandingBalance(): number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="RepaymentSchedule"><mxGeometry y="116" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= INSTALLMENT ======================= -->
+        <mxCell id="Installment" value="Installment" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="1440" width="260" height="168" as="geometry" />
+        </mxCell>
+        <mxCell id="Installment_a1" value="- installmentId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Installment"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Installment_a2" value="- dueDate: Date" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Installment"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Installment_a3" value="- amountDue: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Installment"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Installment_a4" value="- status: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Installment"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Installment_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Installment"><mxGeometry y="134" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Installment_o1" value="+ markPaid(payment: Payment): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Installment"><mxGeometry y="142" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= PAYMENT ======================= -->
+        <mxCell id="Payment" value="Payment" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="1440" width="260" height="168" as="geometry" />
+        </mxCell>
+        <mxCell id="Payment_a1" value="- paymentId: int" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Payment"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Payment_a2" value="- amount: number" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Payment"><mxGeometry y="56" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Payment_a3" value="- channel: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Payment"><mxGeometry y="82" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Payment_a4" value="- paidAt: Date" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Payment"><mxGeometry y="108" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="Payment_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="Payment"><mxGeometry y="134" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="Payment_o1" value="+ allocate(): void" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="Payment"><mxGeometry y="142" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= ML RISK CLIENT ======================= -->
+        <mxCell id="MLRiskClient" value="MLRiskClient" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="1780" width="260" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="MLRiskClient_a1" value="- serviceUrl: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="MLRiskClient"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="MLRiskClient_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="MLRiskClient"><mxGeometry y="56" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="MLRiskClient_o1" value="+ predict(features: FeatureSet): RiskAssessment" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="MLRiskClient"><mxGeometry y="64" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= IPaymentGateway (interface) ======================= -->
+        <mxCell id="IPaymentGateway" value="&#171;interface&#187;&#10;IPaymentGateway" style="swimlane;fontStyle=3;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="1780" width="260" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="IPaymentGateway_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="IPaymentGateway"><mxGeometry y="40" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="IPaymentGateway_o1" value="+ createCheckoutSession(amount: number): Session" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="IPaymentGateway"><mxGeometry y="48" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="IPaymentGateway_o2" value="+ verifyWebhook(payload: string, signature: string): boolean" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="IPaymentGateway"><mxGeometry y="74" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ======================= StripePaymentService ======================= -->
+        <mxCell id="StripePaymentService" value="StripePaymentService" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=0;resizeParentMax=0;collapsible=0;marginBottom=0;swimlaneFillColor=#ffffff;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="2120" width="260" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="StripePaymentService_a1" value="- apiKey: string" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="StripePaymentService"><mxGeometry y="30" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="StripePaymentService_div" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;" vertex="1" parent="StripePaymentService"><mxGeometry y="56" width="260" height="8" as="geometry" /></mxCell>
+        <mxCell id="StripePaymentService_o1" value="+ createCheckoutSession(amount: number): Session" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="StripePaymentService"><mxGeometry y="64" width="260" height="26" as="geometry" /></mxCell>
+        <mxCell id="StripePaymentService_o2" value="+ verifyWebhook(payload: string, signature: string): boolean" style="text;align=left;verticalAlign=middle;spacingLeft=6;fontSize=11;" vertex="1" parent="StripePaymentService"><mxGeometry y="90" width="260" height="26" as="geometry" /></mxCell>
+
+        <!-- ============================= RELATIONSHIPS ============================= -->
+
+        <!-- Generalization: solid line, hollow triangle at parent -->
+        <mxCell id="rel_g1" style="endArrow=block;endFill=0;endSize=16;html=0;" edge="1" parent="1" source="Customer" target="User"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_g2" style="endArrow=block;endFill=0;endSize=16;html=0;" edge="1" parent="1" source="Staff" target="User"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_g3" style="endArrow=block;endFill=0;endSize=16;html=0;" edge="1" parent="1" source="Admin" target="Staff"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Realization: dashed line, hollow triangle at interface -->
+        <mxCell id="rel_r1" style="endArrow=block;endFill=0;endSize=16;dashed=1;html=0;" edge="1" parent="1" source="StripePaymentService" target="IPaymentGateway"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Association: plain solid line -->
+        <mxCell id="rel_a1" value="submits" style="endArrow=none;html=0;fontSize=10;" edge="1" parent="1" source="Customer" target="LoanApplication"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_a2" value="applies for" style="endArrow=none;html=0;fontSize=10;" edge="1" parent="1" source="LoanApplication" target="LoanProduct"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_a3" value="reviews" style="endArrow=none;html=0;fontSize=10;" edge="1" parent="1" source="Staff" target="LoanApplication"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_a4" value="results in" style="endArrow=none;html=0;fontSize=10;" edge="1" parent="1" source="LoanApplication" target="LoanOffer"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_a5" value="receives" style="endArrow=none;html=0;fontSize=10;" edge="1" parent="1" source="RepaymentSchedule" target="Payment"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Aggregation: hollow diamond at the whole -->
+        <mxCell id="rel_ag1" style="startArrow=diamondThin;startFill=0;endArrow=none;html=0;" edge="1" parent="1" source="LoanApplication" target="Guarantor"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_ag2" style="startArrow=diamondThin;startFill=0;endArrow=none;html=0;" edge="1" parent="1" source="LoanApplication" target="CollateralItem"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Composition: filled diamond at the whole -->
+        <mxCell id="rel_c1" style="startArrow=diamond;startFill=1;endArrow=none;html=0;" edge="1" parent="1" source="LoanApplication" target="RiskAssessment"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_c2" style="startArrow=diamond;startFill=1;endArrow=none;html=0;" edge="1" parent="1" source="LoanApplication" target="Recommendation"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_c3" style="startArrow=diamond;startFill=1;endArrow=none;html=0;" edge="1" parent="1" source="LoanApplication" target="RepaymentSchedule"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_c4" style="startArrow=diamond;startFill=1;endArrow=none;html=0;" edge="1" parent="1" source="RepaymentSchedule" target="Installment"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Dependency: dashed arrow, open arrowhead at the used class -->
+        <mxCell id="rel_d1" value="&#171;uses&#187;" style="endArrow=open;endFill=0;dashed=1;html=0;fontSize=10;" edge="1" parent="1" source="LoanApplication" target="MLRiskClient"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_d2" value="&#171;uses&#187;" style="endArrow=open;endFill=0;dashed=1;html=0;fontSize=10;" edge="1" parent="1" source="Recommendation" target="RiskAssessment"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="rel_d3" value="&#171;uses&#187;" style="endArrow=open;endFill=0;dashed=1;html=0;fontSize=10;" edge="1" parent="1" source="Payment" target="IPaymentGateway"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="Legend&#10;+ public   - private   # protected   ~ package&#10;underline = static   italics = abstract / interface&#10;&#8212;&#8212;&#9651;  generalization (child &#8594; parent)&#10;- - -&#9651;  realization (impl &#8594; interface)&#10;&#8212;&#8212;  association&#10;&#8212;&#9671;  aggregation (whole-part, part is independent)&#10;&#8212;&#9670;  composition (whole-part, part cannot survive alone)&#10;- - &#8250;  dependency (uses)" style="text;align=left;verticalAlign=top;fontSize=11;strokeColor=#999999;rounded=1;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1780" width="260" height="180" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

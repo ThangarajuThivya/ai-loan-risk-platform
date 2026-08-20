@@ -1775,13 +1775,24 @@ flowchart LR
   automatically on upload at all — checked before a `document_extractions`
   row is even claimed, so disabling it leaves zero trace. It does not, and
   structurally cannot, affect staff's own verify/reject action.
+- **Retry.** Recognition distinguishes a permanent `skipped` (no API key,
+  feature disabled) from a transient `failed` (network/timeout/Gemini
+  error), and only the latter is retried — once, automatically, with a
+  fixed delay — before the pipeline persists the outcome
+  (`documentPipeline.service.js`'s `recognizeWithRetry`). A document still
+  `failed` after that shows a distinct "analysis failed" state in the UI
+  (not conflated with "nothing found") with a manual retry action that
+  re-runs the pipeline on demand, intentionally bypassing the
+  `ocr_auto_extraction` gate above since it's an explicit reviewer request.
 - **Staff-facing UI**: `LoanDocumentPanel.jsx`/`LeaseDocumentPanel.jsx`
   (via a shared `ExtractionResult.jsx`) show extracted fields, confidence,
   and severity-differentiated findings per document, with an explicit
   "assistive, not automated" disclaimer — extracted content itself is
   never translated (§6.1's i18n policy), only the surrounding UI chrome.
-- **API**: `GET /loan/:id/documents/:docId/extraction` and the lease
-  equivalent, same ownership/role checks as the existing document routes.
+- **API**: `GET /loan/:id/documents/:docId/extraction` and
+  `POST /loan/:id/documents/:docId/extraction/retry` (and the lease
+  equivalents), same ownership/role checks as the existing document
+  routes.
 
 Implementation: `db/migrations/054_document_extraction.sql`,
 `055_system_settings.sql`, `services/{ocr,documentExtraction,
