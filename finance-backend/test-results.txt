@@ -1,0 +1,1198 @@
+> backend@1.0.0 test
+> node src/services/__tests__/recommendation.test.js && node src/services/__tests__/applicationStatus.test.js && 
+node src/services/__tests__/loanOffer.test.js && node src/services/__tests__/loanFees.test.js && 
+node src/services/__tests__/leasing.test.js && node src/services/__tests__/leaseStatus.test.js && 
+node src/services/__tests__/leaseRegistration.test.js && node src/services/__tests__/leaseRegister.test.js && 
+node src/services/__tests__/leasePortfolio.test.js && node src/services/__tests__/leaseRentalQuote.test.js && 
+node src/services/__tests__/stripeSessionShape.test.js && node src/services/__tests__/leaseAgreement.test.js && 
+node src/services/__tests__/consent.test.js && node src/services/__tests__/loanSchedule.test.js && 
+node src/services/__tests__/amortization.test.js && node src/services/__tests__/repayment.test.js && 
+node src/services/__tests__/repaymentQuote.test.js && node src/services/__tests__/creditPolicy.test.js && 
+node src/services/__tests__/decisionMatrix.test.js && node src/services/__tests__/interestPricing.test.js && 
+node src/services/__tests__/adverseAction.test.js && node src/services/__tests__/collateralGuarantor.test.js && 
+node src/services/__tests__/behaviouralFeatures.test.js && node src/services/__tests__/loanDraft.test.js && 
+node src/services/__tests__/beneficiaryAccount.test.js && node src/services/__tests__/bankAccount.test.js && 
+node src/services/__tests__/loanDocument.test.js && node src/services/__tests__/loanReports.test.js && 
+node src/services/__tests__/crossRate.test.js && node src/services/__tests__/fxQuote.test.js && node src/services/__tests__/liveForecast.test.js && 
+node src/services/__tests__/liveAnomaly.test.js && 
+node src/services/__tests__/fxVar.test.js && node src/services/__tests__/fxCompliance.test.js && node src/services/__tests__/fxReports.test.js && 
+node src/services/__tests__/fxInventoryConcurrency.test.js && 
+node src/services/__tests__/leaseNotification.test.js && node src/services/__tests__/leaseReminders.test.js && 
+node src/services/__tests__/nicValidation.test.js && node src/services/__tests__/documentExtraction.test.js && 
+node src/services/__tests__/documentValidation.test.js && node src/services/__tests__/ocr.test.js && node src/services/__tests__/documentPipeline.test.js
+
+computeEmi
+  ok - matches hand-checked value for (2,500,000 @ 14.5% / 36m)
+  ok - r = 0 falls back to straight-line repayment
+  ok - principal <= 0 gives 0
+  ok - tenure <= 0 throws
+  ok - 1-month tenure pays off the whole principal in one instalment
+computeFlatEmi (G1 — two of the six seeded products are rate_type='flat')
+  ok - matches hand-checked value: P=1,200,000 @ 12% / 12m
+  ok - zero rate is straight-line principal / tenure, same as computeEmi's r=0 case
+  ok - principal <= 0 gives 0
+  ok - tenure <= 0 throws
+  ok - 1-month tenure charges exactly one month's flat interest
+  ok - flat EMI is always >= the reducing-balance EMI for the same inputs
+computeEmiForRateType (dispatch — see loan_products.rate_type)
+  ok - 'flat' dispatches to computeFlatEmi
+  ok - 'reducing' dispatches to computeEmi
+  ok - an unrecognised or missing rate_type falls back to reducing-balance
+affordabilityFactor / risk bands
+  ok - Low (0) = 0.50, Medium (1) = 0.35, High (2) = 0.20
+  ok - unknown risk label falls back to most conservative (0.20)
+maxAffordableAmount
+  ok - scales maxEMI by the risk-band affordability factor
+  ok - non-positive income gives 0
+  ok - r = 0 inverts straight-line correctly
+principal-inversion round-trip
+  ok - EMI of maxAffordableAmount output ≈ maxEMI for each band
+pickLoanType
+  ok - purpose keywords map to SL products
+  ok - small high-risk ask with no clear purpose → Pawning
+  ok - defaults to Personal
+buildRecommendation
+  ok - returns the full recommendation shape
+  ok - caps recommended amount at the affordable maximum
+  ok - honours a smaller requested amount
+
+All 26 assertions passed.
+machine integrity
+  ok - every status has a TRANSITIONS entry and vice versa
+  ok - every transition target is itself a declared status
+  ok - every transition names at least one role
+  ok - no transition loops back to its own status
+  ok - the initial status is a real status and is not terminal
+  ok - every status is reachable from the initial status
+terminal states
+  ok - withdrawn / closed are terminal
+  ok - rejected is no longer terminal — an admin can reopen it
+  ok - pending / under_review / approved / disbursed are not terminal
+  ok - nothing at all can leave a terminal state
+role permissions
+  ok - staff and admin can decide a pending application
+  ok - a customer cannot decide their own application
+  ok - only a customer may withdraw
+  ok - a customer may withdraw from every state still awaiting an outcome
+  ok - a disbursed loan can no longer be withdrawn — the money is gone
+  ok - an unknown role gets no permissions anywhere
+illegal moves
+  ok - approved cannot jump straight to closed
+  ok - pending cannot jump straight to disbursed
+  ok - a rejected application cannot leap straight back to approved
+  ok - only an admin may reopen a rejection
+  ok - approving twice is refused
+checkTransition messages
+  ok - a legal move reports ok with no reason
+  ok - leaving a terminal state says so
+  ok - a move legal for someone else blames the role, not the move
+  ok - an unknown status is reported rather than silently allowed
+credit decisions
+  ok - only approved and rejected are credit decisions
+targetStatusesForRoles
+  ok - reviewers can target every status except withdrawn and pending
+  ok - customers can only ever target withdrawn, under_review or accepted
+offer & acceptance (C1)
+  ok - approved can NO LONGER jump straight to disbursed
+  ok - drawdown is reachable ONLY via accepted
+  ok - only the applicant may accept an offer
+  ok - declining an offer is a withdrawal, and only the applicant may do it
+  ok - staff disburse once terms are accepted
+  ok - the applicant can still pull out after accepting, before drawdown
+  ok - accepting is not a credit decision — it must not restamp decided_by
+  ok - accepted is neither terminal nor an info step
+info request/response (more_info_required loop)
+  ok - only more_info_required is an info request
+  ok - a customer answering more_info_required is an info response
+  ok - staff making the same move is NOT an info response
+  ok - the same target from a different source is not an info response
+  ok - a customer may answer a more_info_required request
+  ok - staff may still close the loop themselves (e.g. phone call)
+  ok - a customer still cannot decide from more_info_required
+notifications
+  ok - a decision notification carries the reviewer's note
+  ok - no note means no dangling 'Note:' suffix
+  ok - a customer withdrawing is not notified about their own action
+  ok - every reviewer-reachable status has notification copy
+needsStaffAction / AWAITING_ACTION_STATUSES (F2)
+  ok - only pending/under_review/more_info_required need staff action
+  ok - decided/terminal statuses do not need staff action
+computeProcessingAge (F2)
+  ok - zero days since the last status change is on_track
+  ok - one day under the warning threshold is still on_track
+  ok - exactly at the warning threshold is due_soon
+  ok - one day under the breach threshold is still due_soon
+  ok - exactly at the breach threshold is overdue
+  ok - well past the breach threshold is still just overdue, not a new tier
+  ok - defaults to today when asOf is omitted, without crashing
+shouldEmailStatusChange / EMAIL_NOTIFIED_STATUSES (G2)
+  ok - major transitions (approved/rejected/more_info_required/disbursed/closed) are emailed
+  ok - routine/self-action statuses are NOT emailed, only notified in-app
+  ok - every emailed status still has real notification copy to send
+
+59 assertions passed.
+computeFlatEmi
+  ok - matches the hand-checked flat-rate figure
+  ok - a flat loan always costs MORE per month than reducing at the same rate
+  ok - zero interest degenerates to straight-line, same as reducing
+  ok - principal <= 0 gives 0; tenure <= 0 throws
+computeEmiForRateType
+  ok - dispatches on rate_type
+  ok - an unknown/missing rate_type falls back to reducing (the column default)
+buildOfferTerms — fallbacks
+  ok - with no overrides, offers the RECOMMENDED amount, not the requested one
+  ok - falls back to the requested amount when there is no recommendation
+  ok - a recommended amount of 0 is honoured, not treated as missing
+  ok - with no overrides and no priced rate, offers the PRODUCT's rate (pre-D3 behaviour)
+  ok - with no overrides, offers the rate this application was ASSESSED at (D3)
+  ok - a staff override still beats the priced rate
+  ok - staff overrides beat both the recommendation and the request
+  ok - rate and rate_type come from the PRODUCT, not the recommendation
+buildOfferTerms — money
+  ok - EMI is computed with the product's own formula
+  ok - a client-supplied emi is ignored — the instalment is never taken on trust
+  ok - money is rounded to 2dp, with no binary-float tails
+  ok - total repayable is emi × tenure and exceeds the principal on an interest-bearing loan
+buildOfferTerms — validity
+  ok - defaults to the standard validity window
+  ok - an out-of-range validity is refused
+buildOfferTerms — product limits
+  ok - a counter-offer outside the product's amount range is refused
+  ok - a counter-offer outside the product's tenure range is refused
+  ok - offering LESS than requested is allowed — that's the counter-offer case
+  ok - nonsense terms are refused rather than silently coerced
+
+24 assertions passed.
+resolveFee — percentage
+  ok - takes a straight percentage of the APPROVED amount
+  ok - clamps up to the configured floor
+  ok - clamps down to the configured ceiling
+  ok - leaves an in-range percentage untouched by the caps
+  ok - rounds to 2dp rather than carrying float noise
+
+resolveFee — fixed
+  ok - ignores the approved amount entirely
+  ok - ignores min/max — a flat fee is already its own answer
+  ok - never produces a negative fee
+
+resolveFees
+  ok - drops inactive fees so no caller can forget to
+  ok - survives an empty or missing config list
+  ok - every advertised fee type and calc method resolves
+
+applyWaivers
+  ok - zeroes the waived fee but KEEPS the line and its reason
+  ok - leaves un-waived fees completely alone
+  ok - does not mutate its input
+  ok - ignores a waiver for a fee that isn't on this offer
+  ok - handles multiple waivers at once
+
+summarizeFees
+  ok - totals the lines and nets them off the approved amount
+  ok - a waived fee lowers the total and raises the net
+  ok - no fees means net === approved
+  ok - never nets below zero, even on a misconfigured fee schedule
+
+computeEffectiveApr — the known-answer check
+  ok - a ZERO-FEE loan's APR equals its nominal rate (proves the solver)
+  ok - fees push the APR ABOVE the nominal rate
+  ok - more fees means a strictly higher APR
+  ok - the same fee costs MORE on a short loan than a long one
+  ok - works for a FLAT-rate loan too (APR far exceeds the quoted flat rate)
+
+computeEffectiveApr — refuses rather than guesses
+  ok - returns null (not 0) when the borrower repays no more than received
+  ok - returns null on non-finite, zero, or negative inputs
+  ok - returns null rather than clamping when the true rate is absurd
+
+buildOfferFees — the one call an offer makes
+  ok - returns lines, totals, net, and APR together and consistently
+  ok - waiving every fee collapses the APR back to the nominal rate
+  ok - a product with no configured fees yields a clean zero-fee offer
+
+31 assertions passed.
+leasing.service — down payment, LTV, quote, early settlement
+  ok - every condition needs an independent valuation, brand new included
+  ok - an absolute down payment is echoed back with its percentage
+  ok - a percentage down payment resolves to an amount
+  ok - supplying neither quotes the policy minimum for the condition
+  ok - a short down payment is reported, never silently topped up
+  ok - the minimum rises as the vehicle gets older
+  ok - a down payment at or above the vehicle price is not a lease
+  ok - degenerate down-payment inputs return null rather than a number
+  ok - financed amount is price minus down payment, and guards its inputs
+  ok - a brand-new vehicle with no valuation yet has no base at all
+  ok - a brand-new vehicle's invoice can still be its base, once valued
+  ok - an INFLATED INVOICE is caught — the lower valuation becomes the base
+  ok - an INFLATED VALUATION is caught — the lower invoice becomes the base
+  ok - a missing valuation on a used vehicle yields no base at all
+  ok - LTV is financed over base, as a percentage
+  ok - a brand-new lease is undecidable before its own valuation is back
+  ok - a compliant brand-new lease is within policy, once valued
+  ok - LOAD-BEARING: a used lease that passes on invoice FAILS on valuation
+  ok - a missing valuation is undecidable — neither a pass nor a fail
+  ok - the LTV cap tightens as the vehicle gets older
+  ok - a flat-rate lease quote is arithmetically consistent
+  ok - the rental delegates to the shared EMI maths, not a second formula
+  ok - financed + interest always equals the rentals collected
+  ok - a quote carries its down-payment shortfall rather than hiding it
+  ok - a reducing-rate lease costs less than a flat one at the same rate
+  ok - degenerate quote inputs return null
+  ok - nothing paid yet means the whole interest is unearned
+  ok - a lease run to term has no interest left to rebate
+  ok - the rebate shrinks monotonically as rentals are paid
+  ok - sum-of-digits rebates more than straight-line at the same point
+  ok - rebate rejects impossible instalment counts
+  ok - LOAD-BEARING: settling before any rental is paid costs exactly the financed amount
+  ok - settling after the final rental costs nothing
+  ok - settling midway is the remaining rentals less the unearned interest
+  ok - settlement is always cheaper than paying the remaining rentals out
+  ok - settlement rejects degenerate inputs
+
+36 passed
+leaseStatus.service — transitions and the valuation gate
+  ok - every status in the table is a declared status, and vice versa
+  ok - every transition names at least one role
+  ok - no 'system' role exists — leases are never auto-rejected
+  ok - accepted, declined, rejected and withdrawn are terminal
+  ok - accepted is terminal because the AGREEMENT takes over, not because nothing follows
+  ok - live statuses are not terminal
+  ok - only the lessee may withdraw, and never staff
+  ok - only the lessee may answer a quotation
+  ok - staff may reissue a quotation but cannot accept on the lessee's behalf
+  ok - approval leads only to a quotation — never straight to accepted
+  ok - a rejected lease application stays rejected
+  ok - a legal move is permitted
+  ok - a move legal for someone else names the role problem, not an impossibility
+  ok - an impossible move lists what is actually allowed
+  ok - unknown statuses are rejected rather than silently allowed
+  ok - targetStatusesForRoles covers staff powers without customer-only ones
+  ok - LOAD-BEARING: a used vehicle cannot be approved without a valuation
+  ok - a reconditioned vehicle is gated the same way
+  ok - a brand-new vehicle is gated the same way as any other condition
+  ok - a completed valuation opens the gate for a used vehicle
+  ok - the gate only guards approval — rejecting an unvalued lease is always allowed
+
+21 passed
+leaseRegistration.service — purchase and title ordering
+  ok - every transition target is a declared status
+  ok - the title lifecycle is strictly linear and ends at transferred
+  ok - a CR cannot be issued before the papers are lodged
+  ok - title cannot transfer before a release letter is issued
+  ok - a transferred vehicle is done
+  ok - LOAD-BEARING: the dealer cannot be paid before the down payment settles
+  ok - the dealer cannot be paid before the lessee accepts terms
+  ok - a dealer with no bank account on file cannot be paid
+  ok - a private seller has no dealer to vet, so the payout is allowed
+  ok - a vehicle cannot be paid for twice
+  ok - everything in order means the payout is allowed
+  ok - LOAD-BEARING: the CR cannot be lodged before the vehicle is paid for
+  ok - once paid for, the CR can be lodged
+  ok - the CR cannot be lodged twice
+  ok - next step walks the whole sequence in order
+  ok - every next step carries a sentence someone could act on
+
+16 passed
+leaseRegister.service — who may write what to the registers
+  ok - only admin may set banking details
+  ok - only admin may suspend or reactivate
+  ok - admin creating a dealer keeps every field
+  ok - staff creating a dealer keeps the identity
+  ok - STAFF CANNOT SET BANKING DETAILS ON CREATE
+  ok - a staff-created dealer is born unpayable
+  ok - staff sending no banking fields is not flagged as an omission
+  ok - blank banking strings do not count as an attempted write
+  ok - staff cannot suspend a dealer at creation
+  ok - a non-admin update PRESERVES stored banking rather than nulling it
+  ok - a non-admin cannot REDIRECT an existing dealer's account
+  ok - an admin update may change banking
+  ok - a non-admin update cannot flip status
+  ok - an admin may suspend
+  ok - status defaults to the stored value, not to active
+  ok - staff may create a valuer outright
+  ok - staff cannot suspend a valuer whose report they dislike
+  ok - an admin may suspend a valuer
+  ok - a fully banked dealer is payable with nothing missing
+  ok - a missing branch does NOT block a payout
+  ok - one missing field reads as a singular phrase
+  ok - several missing fields read as a list
+  ok - whitespace is not a bank account
+  ok - no dealer at all is reported, not crashed on
+
+24 assertions passed.
+leasePortfolio.service — book roll-up
+  ok - application counts split by status
+  ok - agreement counts split by status
+  ok - financed total spans the WHOLE book, live and closed
+  ok - rentals due and received count only ACTIVE agreements
+  ok - LOAD-BEARING: a completed lease is no longer an owned asset
+  ok - collection rate is received over due
+  ok - collection rate is null rather than zero when nothing is due
+  ok - the registration backlog is what has been bought but not titled
+  ok - an empty book does not crash
+
+9 passed
+  ok - a fresh lease owes every rental and nothing has been paid
+  ok - the next rental is #1 at its full contractual amount
+  ok - a rental due TODAY is not in arrears — arrears begin the day after
+  ok - LOAD-BEARING: a part-paid rental is quoted as the TOP-UP (4,333.33), not the full 9,333.33
+  ok - outstanding drops by exactly what was received
+  ok - money beyond a rental rolls onto the next one and reduces what it costs to clear
+  ok - three months unpaid on 1 April is 3 rentals of arrears, totalling 27,999.99
+  ok - arrears are judged on the DUE DATE, and today's rental is not overdue
+  ok - paying the arrears figure exactly clears the arrears
+  ok - LOAD-BEARING: settling before any rental is paid rebates the entire finance charge
+  ok - the saving is stated, and settlement is cheaper than the remaining rentals
+  ok - half way through, the rebate is sum-of-digits on the SIX rentals not yet reached
+  ok - LOAD-BEARING: credit on a part-paid rental is netted off settlement, but earns no rebate
+  ok - a fully paid lease is not payable, and offers no options
+  ok - LOAD-BEARING: a lease discharged by settlement owes 0 — the rebate is not a debt
+  ok - the schedule's own status decides which rental comes next
+  ok - no schedule, or a negative receipt total, returns null rather than a wrong number
+  ok - each kind resolves to the figure the server computed, not one the client supplied
+  ok - a custom amount within the balance is accepted
+  ok - LOAD-BEARING: a custom amount beyond the balance is refused BEFORE any card is charged
+  ok - zero, negative and non-numeric custom amounts are all refused
+  ok - an unrecognised kind is refused rather than defaulted
+  ok - LOAD-BEARING: typing the settlement figure into custom buys a part payment, not a discharge
+  ok - asking to pay arrears on a lease with none is refused
+  ok - nothing can be paid on a lease that owes nothing
+  ok - reproduced: rental #3 is sitting 0.36 short, exactly as on #103
+  ok - LOAD-BEARING: the 0.36 residual rolls forward into rental #4 rather than standing alone
+  ok - resolvePaymentAmount charges the combined figure, not the original 0.36
+  ok - an ordinary full rental is quoted as itself, with no roll-forward field at all
+  ok - LOAD-BEARING: dust on the LAST rental has nowhere to roll to, so the floor refuses it (never Stripe)
+
+30 passed
+  ok - retrieveSession returns the six camelCase fields its callers read
+  ok - the mapped object deliberately does NOT expose payment_status/payment_intent
+  ok - LOAD-BEARING: no caller reads payment_status/payment_intent off a mapped session
+  ok - a paid session satisfies the camelCase condition callers now use
+  ok - LOAD-BEARING: the OLD snake_case condition is false on a genuinely paid session
+  ok - an expired session is detectable — `status` is now part of the mapped shape
+
+6 passed
+  ok - produces a real PDF (starts with the %PDF magic bytes)
+  ok - LOAD-BEARING: an ordinary agreement is exactly 2 pages, not 18
+  ok - LOAD-BEARING: every figure, clause and page-number label is present in the rendered text
+  ok - an unwaived fee (waived: 0) shows its real amount, with no stray '0' from the falsy TINYINT
+  ok - LOAD-BEARING: a pending quotation is stamped NOT YET ACCEPTED, never mistaken for a signed lease
+  ok - no fees and a null effective APR both degrade to their stated empty cases, not blank rows
+  ok - LOAD-BEARING: 14 fee lines paginate cleanly (3 pages), every footer numbered correctly
+  ok - the letter of release is exactly 1 page
+  ok - every clause and reference number the release letter must state is present
+  ok - a supplied lessor name replaces the default everywhere, including the letterhead
+
+10 passed
+consent.service.js: all assertions passed.
+addMonths — the ordinary cases
+  ok - adds whole months within a year
+  ok - crosses year boundaries
+  ok - adding zero months is the identity
+  ok - accepts a YYYY-MM-DD string as well as a Date
+addMonths — month-end clamping (the part that bites)
+  ok - 31 Jan + 1 month is the LAST day of February, not early March
+  ok - clamping respects leap years
+  ok - 31st of a 31-day month lands on the 30th of a 30-day month
+  ok - clamping does NOT stick — it re-reads the original day each time
+  ok - a 30-day-month date is unaffected by clamping
+addMonths — timezone safety
+  ok - a late-evening UTC timestamp does not slip to the previous day
+  ok - an early-morning UTC timestamp does not slip forward either
+addMonths — rejects nonsense
+  ok - a non-integer month count throws
+  ok - an invalid date throws rather than yielding NaN-NaN-NaN
+deriveAccountDates
+  ok - first instalment is one month after drawdown
+  ok - maturity is tenureMonths after drawdown — the final instalment date
+  ok - the gap between first due and maturity is exactly tenure-1 months
+  ok - a one-month loan matures on its only due date
+  ok - month-end drawdown clamps both derived dates
+  ok - maturity is always strictly after the first due date beyond 1 month
+  ok - a zero or negative tenure throws
+
+20 assertions passed.
+shape & basic invariants
+  ok - produces exactly tenureMonths rows, numbered 1..n
+  ok - installment 1's due date is exactly first_due_date
+  ok - due dates are one month apart and clamp at month-end (reuses loanSchedule)
+  ok - each row's opening balance equals the previous row's closing balance
+  ok - the first row's opening balance is the principal
+  ok - the LAST row's closing balance is exactly 0 — no leftover cents
+  ok - no row's closing balance is ever negative
+reducing-balance reconciliation
+  ok - sum of principal components equals the original principal exactly
+  ok - interest declines monotonically as the balance shrinks
+  ok - every row but the last carries the nominal EMI; only the last absorbs rounding
+  ok - zero-interest reducing loan is straight-line principal, no interest anywhere
+flat-rate reconciliation
+  ok - sum of principal components equals the original principal exactly
+  ok - sum of interest components equals the flat total-interest formula exactly
+  ok - interest and principal are constant every month except the last (rounding absorption)
+  ok - a flat schedule's total repayment matches computeFlatEmi × tenure to the cent
+edge cases
+  ok - a 1-month loan has exactly one row that pays off everything
+  ok - rejects non-positive principal, non-integer/zero tenure, negative rate
+  ok - an unrecognised rate_type falls back to reducing (matches computeEmiForRateType)
+
+18 assertions passed.
+allocatePayment — ordering
+  ok - interest is satisfied before principal within an installment
+  ok - the oldest unpaid installment is served first, not the nearest due
+  ok - input order does not matter — rows are sorted by installment_no
+  ok - already-settled installments are skipped entirely
+allocatePayment — amounts
+  ok - a payment smaller than the first installment's interest is all interest
+  ok - a payment covering several installments spreads across them in order
+  ok - allocated + unallocated always equals the payment exactly
+  ok - no allocation ever exceeds what that installment actually owes
+  ok - an overpayment is reported as unallocated, never invented as credit
+  ok - paying the exact outstanding total clears everything with nothing left over
+  ok - a zero or negative payment is refused
+allocatePayment — the ledger reconciles with the running totals
+  ok - sequential partial payments reconstruct the totals exactly
+  ok - many small payments still fully retire the loan without drift
+computeArrears
+  ok - a loan with nothing yet due is not in arrears
+  ok - an installment due TODAY is not yet late
+  ok - DPD starts the day after the due date
+  ok - DPD is measured from the OLDEST unpaid installment, not the newest
+  ok - clearing the oldest arrear moves DPD to the next one, it does not reset
+  ok - a partially paid overdue installment still counts, for its remainder only
+  ok - a fully repaid loan is never in arrears, however old
+computeSettlement
+  ok - future interest is waived; already-due interest is not
+  ok - settling on day one waives essentially all the interest
+  ok - settlement never exceeds the plain outstanding total
+  ok - at maturity, settlement equals the full outstanding — nothing left to waive
+  ok - a settled loan settles for zero
+computeSettlementWaivers — waive-then-allocate
+  ok - only not-yet-due installments are waived
+  ok - after waiving, outstanding equals the settlement quote exactly
+  ok - paying the quote after waiving clears the loan to exactly zero
+  ok - allocate-then-waive would NOT clear the loan — order is load-bearing
+  ok - waived interest reduces what is owed without counting as received
+computeLateFee
+  ok - charges the greater of the flat minimum and the percentage
+  ok - a zero or missing EMI still charges the flat minimum, never negative
+  ok - custom policy options override the defaults
+computeLateFeeAssessments
+  ok - nothing is assessed within the grace period
+  ok - a fee is assessed the day AFTER the grace period elapses
+  ok - multiple overdue installments are each assessed independently
+  ok - an installment already charged a fee is never charged a second one
+  ok - an installment already fully repaid earns no fee, however overdue
+  ok - a partially paid overdue installment still earns the fee
+  ok - custom grace period is honoured
+late fees inside allocation / outstanding / arrears / settlement
+  ok - outstandingOn includes the fee bucket in the total
+  ok - allocatePayment pays the fee BEFORE interest and principal
+  ok - a fee-only payment settles the fee and leaves interest/principal untouched
+  ok - computeOutstanding sums fees across installments into its own bucket
+  ok - computeArrears' amount includes outstanding fees on overdue installments
+  ok - computeSettlement never waives a fee — it only ever sits on a due installment
+  ok - a waived fee is excluded from outstanding without counting as paid
+  ok - a partially waived fee leaves the remainder still collectible
+installmentStatus
+  ok - due / partial / paid are mutually exclusive and exhaustive
+  ok - a late fee affects status too — paying only the fee counts as 'partial'
+  ok - an installment is not 'paid' while its fee is still outstanding
+
+51 assertions passed.
+nextInstallmentDue
+  ok - returns the OLDEST unpaid instalment, matching allocation order
+  ok - skips fully-paid rows
+  ok - is the REMAINING balance, not the nominal EMI
+  ok - includes an unpaid late fee
+  ok - excludes waived interest and waived fees
+  ok - returns null on a fully repaid loan
+  ok - does not depend on the caller sorting the rows
+
+buildQuoteOptions
+  ok - agrees with the engine it composes — no independent arithmetic
+  ok - payable is false only when nothing is owed
+
+resolvePayment — kind: installment
+  ok - charges the oldest unpaid instalment
+  ok - ignores any amount the client tries to supply
+
+resolvePayment — kind: settlement
+  ok - charges exactly computeSettlement's figure
+  ok - settlement is cheaper than the outstanding total when future interest is waived
+  ok - settlement amount is exact — recordPayment rejects anything else
+
+resolvePayment — kind: custom
+  ok - accepts a valid amount inside the outstanding balance
+  ok - accepts exactly the outstanding balance
+  ok - rejects an overpayment, naming the balance
+  ok - rejects zero, negative, NaN and non-numeric amounts
+  ok - rejects an amount below the processing minimum
+
+resolvePayment — guards
+  ok - rejects an unknown kind rather than defaulting to one
+  ok - every advertised kind actually resolves
+  ok - a fully repaid loan refuses every kind
+  ok - a residual below MIN_PAYMENT rolls forward into the next instalment
+  ok - an ordinary, non-dust instalment is unaffected by roll-forward
+  ok - dust on the FINAL instalment, with nothing to roll into, is refused not charged
+  ok - resolvePayment for 'installment' charges the rolled-forward figure, never the dust
+  ok - every rejection carries a message a customer could act on
+
+27 assertions passed.
+baseline
+  ok - a comfortably-qualifying applicant passes every rule
+  ok - the evaluation is stamped with the policy version
+  ok - the same input always yields the same verdict
+  ok - metrics are computed from the applicant's own figures
+age rules
+  ok - age at maturity rounds a part-year term UP
+  ok - an applicant under the minimum age is a mandatory decline
+  ok - exactly the minimum age passes
+  ok - maturing past the age ceiling is a mandatory decline
+  ok - a missing date of birth skips both age rules rather than guessing
+income and affordability rules
+  ok - income below the floor is a mandatory decline
+  ok - declared additional income counts toward the income floor
+  ok - expenses at or above income is a mandatory decline
+  ok - DTI over the refer line refers, over the ceiling declines
+  ok - DTI is compared at 4dp, so a rounding-dust overshoot isn't a finding
+  ok - DTI is the instalment over income, not the principal
+  ok - residual income catches a passing DTI with crushing expenses
+  ok - a negative residual is a mandatory decline
+  ok - loan-to-income refers above 5x and declines above 8x
+  ok - ratios over unknown income are null, never a flawless zero
+employment and credit-history rules
+  ok - non-permanent employment carries the longer service requirement
+  ok - one prior default refers; the second is a mandatory decline
+  ok - a CRIB score below the floor is a mandatory decline
+  ok - stacking existing facilities refers
+  ok - a default on a guaranteed facility refers
+undeclared credit history
+  ok - undeclared history is skipped, never scored as clean or as a finding
+  ok - a declared zero is a real declaration, not an absence
+guarantor reliability (D5)
+  ok - no linked guarantor passes — a confirmed absence, not missing data
+  ok - a clean linked guarantor (no distress elsewhere) passes
+  ok - a guarantor overdue on another facility elsewhere refers
+  ok - one distressed guarantor among several still refers
+  ok - GUARANTOR_RELIABILITY is independent of GUARANTOR_DEFAULTS — different questions
+collateral coverage (D5)
+  ok - no collateral pledged passes — a confirmed absence, not missing data
+  ok - omitting loan.collateral entirely behaves exactly like no collateral
+  ok - unverified collateral ALWAYS refers, however large the claimed value
+  ok - verified collateral at or above the coverage floor passes
+  ok - fully verified collateral below the coverage floor refers
+  ok - verified collateral exactly AT the floor passes (inclusive)
+  ok - there is no decline tier for collateral — worst case is refer
+  ok - COLLATERAL_COVERAGE and GUARANTOR_RELIABILITY never touch the model score
+verdict aggregation
+  ok - one mandatory breach outweighs an otherwise clean file
+  ok - a decline outranks concurrent refers
+  ok - refer wins over pass but never over decline
+  ok - the verdict never consults a risk label
+summaries
+  ok - the summary names the rules that decided the verdict
+  ok - every rule carries a code, label, detail and threshold
+  ok - rule codes are unique
+  ok - an empty input degrades to skips and income failures, not a crash
+  ok - LOAD-BEARING: a loan evaluation is unchanged by the leasing rules existing
+  ok - a compliant lease adds both rules and still passes
+  ok - LTV above the cap is a mandatory breach, not a referral
+  ok - an LTV judged on a valuation says so in its detail
+  ok - a missing valuation refers — neither a pass nor a decline
+  ok - a short down payment is a mandatory breach
+  ok - an unsupplied down payment skips rather than failing
+  ok - lease rule codes stay unique alongside the loan ones
+
+55 assertions passed.
+the matrix itself
+  ok - every cell of the documented table produces its documented action
+  ok - a policy decline is unaffected by the risk band
+  ok - exactly one cell auto-approves
+  ok - only auto_reject ever acts on its own
+  ok - every cell yields a known action, and every action is reachable
+  ok - the MATRIX constant and the evaluated result never disagree
+inputs and degradation
+  ok - evaluations are stamped with the matrix version
+  ok - unrecognised inputs fall to a human, never to an automatic verdict
+  ok - a risk label arriving as a string from SQL still resolves
+  ok - every result carries a rationale naming the risk band
+  ok - the same inputs always produce the same result
+end-to-end with the real policy engine
+  ok - a clean, low-risk applicant reaches auto_approve
+  ok - a mandatory policy breach reaches auto_reject even at low risk
+  ok - a referred policy never auto-approves, whatever the model says
+override gate
+  ok - agreeing with the matrix needs no reason code
+  ok - approving what the matrix wanted rejected is a lenient override
+  ok - rejecting what the matrix wanted approved is a strict override
+  ok - approving over a policy decline is gated whatever the matrix said
+  ok - manual_review cannot be contradicted, so neither verdict is an override
+  ok - workflow moves are never treated as overrides
+  ok - reopening a rejection always requires a reason
+  ok - reopening is the only way out of rejected, and only for an admin
+  ok - an application with no matrix evaluation is decided the old way
+  ok - an unrecognised stored action does not silently gate or ungate
+reason codes
+  ok - codes are unique and well-formed
+  ok - a lenient override is never offered a strict-only justification
+  ok - a strict override is never offered a lenient-only justification
+  ok - 'any' codes are offered in both directions
+  ok - omitting the direction returns the whole catalogue
+  ok - validation matches exactly what the catalogue offers
+  ok - an invented code is never valid
+  ok - codes that mean nothing alone are flagged as needing a note
+
+32 assertions passed.
+configured range
+  ok - low risk prices to the minimum
+  ok - medium risk prices to the base rate
+  ok - high risk prices to the maximum
+  ok - an unrecognised risk label prices to the base rate, not a bound
+unconfigured / flat-rate products
+  ok - no range configured prices every risk band at the flat rate
+  ok - only one bound configured behaves as unconfigured
+  ok - a nonsensical stored range (min > max, or base outside it) falls back to the base rate
+  ok - bounds exactly equal to the base rate are still a valid (zero-width) range
+input handling
+  ok - a numeric-string baseRate/minRate/maxRate (as read back from SQL DECIMAL) still works
+  ok - a risk label arriving as a string from SQL/JSON still resolves
+  ok - a missing baseRate throws rather than silently pricing at zero
+  ok - results are deterministic
+isConfiguredRange
+  ok - agrees with priceInterestRate's own risk_based flag in every case above
+  ok - TIER_BY_RISK has exactly the three known labels
+
+14 assertions passed.
+catalog integrity
+  ok - every reason has a code, label, and description
+  ok - codes are unique
+  ok - REASON_CODES matches the catalog order exactly
+  ok - findReason / isValidReasonCode agree with the catalog
+  ok - codes with no policy mapping are the ones a machine could never infer
+  ok - OTHER is flagged as requiring a note; the rest are not
+deriveReasonCodesFromPolicy
+  ok - maps a single policy rule code to its one adverse-action reason
+  ok - several policy rules collapse into ONE reason, not several near-duplicates
+  ok - multiple distinct findings produce multiple distinct reasons, in catalog order
+  ok - an unrecognised policy code derives nothing, rather than throwing
+  ok - no input derives no reasons
+  ok - the mapping is deterministic and idempotent
+deriveReasonCodesFromPolicy × the real policy engine
+  ok - every policy rule that can decline maps to a real adverse-action reason
+D5 mappings (guarantor reliability / collateral coverage)
+  ok - GUARANTOR_RELIABILITY maps to its own dedicated reason
+  ok - COLLATERAL_COVERAGE maps to its own dedicated reason
+  ok - the two D5 reasons don't collide with any D1 reason's mapping
+buildAdverseActionRecord
+  ok - assembles a record carrying the full immutable snapshot
+  ok - rejects an empty reason list — a rejection must always have a reason
+  ok - rejects an invented reason code
+  ok - rejects an invalid decisionSource
+  ok - deduplicates reason codes while preserving first-seen order
+  ok - an omitted snapshot stores every field as null, never guessed
+  ok - a manual rejection carries the reviewer's decidedBy and note through untouched
+
+23 assertions passed.
+isValidNic
+  ok - accepts the old 9-digit + V/X format, either case
+  ok - accepts the new 12-digit format
+  ok - tolerates surrounding whitespace
+  ok - rejects the wrong digit count, missing suffix, or garbage
+summarizeCollateral
+  ok - no items summarizes to all zeros, no unverified flag
+  ok - self_declared items count toward the declared total but not verified
+  ok - verified items count toward both totals
+  ok - rejected items still count toward the DECLARED total (an honest record of what was claimed), never the verified one
+  ok - a mix sums correctly and flags unverified only while something is unresolved
+  ok - all-verified items never flag hasUnverified
+  ok - a missing or non-numeric estimated_value contributes zero, not NaN
+computeCoverageRatio
+  ok - full coverage is exactly 1
+  ok - partial and over-coverage compute correctly
+  ok - zero verified value against a real request is a real zero ratio
+  ok - a non-positive or missing requested amount is null, not a division error
+summarizeGuarantorFindings
+  ok - no rows summarizes to an empty array
+  ok - a clean guarantor with no other exposure is not distressed
+  ok - a guarantor backing other clean facilities is not distressed
+  ok - even one distressed facility elsewhere flags the guarantor
+  ok - multiple guarantor rows are summarized independently
+  ok - SQL string-typed DECIMAL/COUNT results are coerced numerically
+catalog
+  ok - COLLATERAL_TYPES is a fixed, non-empty list
+
+22 assertions passed.
+deriveBehaviouralFeatures — a customer with no record
+  ok - null history is a thin file, not a crash
+  ok - a customer with no record reports UNKNOWN, not an average
+  ok - evidence_weight is 0 when nothing has been observed
+deriveBehaviouralFeatures — hard counts are never softened
+  ok - a written-off facility becomes a default, at full weight
+  ok - overdue instalments pass through exactly
+  ok - late instalments become historical delinquencies
+  ok - account statuses map to active/settled counts
+deriveBehaviouralFeatures — punctuality
+  ok - a spotless long record approaches, but never fakes, perfection
+  ok - a bad record drags punctuality below the prior
+  ok - punctuality is judged on CONCLUDED instalments only
+  ok - more history means more weight on the customer's own record
+deriveBehaviouralFeatures — utilisation
+  ok - utilisation reflects how much of the schedule is still owed
+  ok - a nearly-repaid book reads as low utilisation
+  ok - utilisation stays within 0..100 even on absurd input
+shrink
+  ok - no observations returns the prior exactly
+  ok - equal weight at exactly k observations
+  ok - converges on the observed value as evidence accumulates
+  ok - a non-finite observation falls back to the prior
+mapProfileToModelFields — source precedence
+  ok - with nothing known, unknown fields reach the model as null
+  ok - a declaration alone is still a fact, not unknown
+  ok - an observation alone is still a fact, not unknown
+  ok - fields with a genuine real-world zero are NOT nulled
+  ok - a behavioural observation beats the neutral default
+  ok - an applicant declaration beats a behavioural observation
+  ok - a blank declaration does NOT clobber a behavioural value
+mapProfileToModelFields — the v1 defaults defect
+  ok - a declared previous_defaults reaches number_of_defaults
+  ok - the retired previous_defaults field is no longer sent
+  ok - declared and observed defaults take the worse, never the sum
+  ok - an observed default survives an applicant declaring none
+  ok - a declared default survives an empty internal record
+mapProfileToModelFields — protected attributes and derived fields
+  ok - gender is never sent to the model
+  ok - derived features are never sent — the model computes them
+  ok - savings_ratio is derived from real income and expense
+  ok - the request's own loan terms always win
+reconcileDeclaredCribScore — an unverifiable claim vs. the file
+  ok - a clean file's high score is left completely alone
+  ok - a modest score is never raised toward the ceiling
+  ok - declaring 900 alongside three defaults is capped
+  ok - the ceiling falls monotonically as defaults accumulate
+  ok - heavy arrears cap the score even with no recorded default
+  ok - the stricter of the two ceilings wins
+  ok - no declaration stays null rather than becoming the ceiling
+  ok - the cap reaches the model through the mapper
+  ok - an honest applicant is unaffected end-to-end
+  ok - observed defaults cap a declaration even when none were declared
+normalizeEmploymentType — two vocabularies that never matched
+  ok - EVERY registration option maps into the model's vocabulary
+  ok - legacy free text already in the database is handled
+  ok - the model's own values pass through unchanged
+  ok - matching ignores case and surrounding whitespace
+  ok - a salaried job maps to permanent, a business owner to self-employed
+[mlClient] Unmapped employment_type "Gig Worker" — scoring as "Contract". Add it to EMPLOYMENT_TYPE_MAP if it is a real registration option.
+[mlClient] Unmapped employment_type 42 — scoring as "Contract". Add it to EMPLOYMENT_TYPE_MAP if it is a real registration option.
+[mlClient] Unmapped employment_type "  " — scoring as "Contract". Add it to EMPLOYMENT_TYPE_MAP if it is a real registration option.
+  ok - missing or unrecognised never throws and never escapes the vocabulary
+  ok - the fallback is conservative, not the most favourable option
+[mlClient] Unmapped employment_type "Gig Worker" — scoring as "Contract". Add it to EMPLOYMENT_TYPE_MAP if it is a real registration option.
+  ok - the mapper only ever sends a valid employment_type
+
+52 passed
+sanitizeDraftPayload — whitelisting
+  ok - keeps known wizard fields verbatim
+  ok - SECURITY: silently drops keys outside the whitelist
+  ok - SECURITY: a payload of ONLY unknown keys sanitizes to an empty object
+  ok - omitted known keys stay absent rather than being invented
+  ok - FORWARD COMPAT: a draft predating a field still round-trips the rest
+sanitizeDraftPayload — value coercion
+  ok - null/undefined collapse to the wizard's empty-answer value
+  ok - numbers and booleans survive as-is
+  ok - rejects a non-finite number
+  ok - rejects a nested object where a scalar belongs
+  ok - rejects an over-long string
+  ok - accepts a string exactly at the length limit
+sanitizeDraftPayload — payload shape
+  ok - rejects a non-object payload
+  ok - an empty object is a legitimate (if useless) draft
+  ok - rejects an oversized payload
+sanitizeDraftPayload — collateralItems
+  ok - keeps only the four known item keys
+  ok - missing item keys normalise to empty rather than undefined
+  ok - null/absent collateralItems becomes an empty array
+  ok - rejects a non-array collateralItems
+  ok - rejects a non-object entry inside collateralItems
+  ok - rejects more collateral items than the cap
+  ok - accepts exactly the cap
+sanitizeStep
+  ok - accepts every real wizard step
+  ok - accepts a numeric string, as sent over JSON by some clients
+  ok - defaults a missing step to 0 rather than throwing
+  ok - rejects out-of-range, fractional and non-numeric steps
+catalog
+  ok - DRAFT_FIELDS covers every wizard step and the H1 reaffirmations
+  ok - DRAFT_FIELDS has no duplicates
+
+27 assertions passed.
+isValidAccountNumber
+  ok - accepts digits-only within the length range
+  ok - tolerates surrounding whitespace
+  ok - rejects too short, too long, non-digits, and garbage
+isValidTextField
+  ok - accepts a non-empty string within the cap
+  ok - rejects empty, whitespace-only, and over-length strings
+  ok - accepts exactly at the cap
+  ok - rejects non-strings
+isCompleteBeneficiaryAccount — the disbursement gate's single source of truth
+  ok - a fully-populated profile is complete
+  ok - null/undefined profile is incomplete
+  ok - a brand-new customer_profiles row (all three fields NULL) is incomplete
+  ok - SECURITY: missing any ONE of the three fields fails the whole check
+  ok - a malformed account number fails completeness even if the other two fields are fine
+  ok - extra/unrelated fields on the object don't affect the result
+
+13 assertions passed.
+branchCodeFor
+  ok - maps every known branch to its own 4-digit code
+  ok - branch codes are unique — two branches must never share one
+  ok - tolerates surrounding whitespace
+  ok - falls back rather than throwing on an unknown or non-string branch
+  ok - the default branch resolves to the fallback code, not by accident
+
+formatAccountNumber
+  ok - is <4-digit branch code><6-digit zero-padded id>
+  ok - output always satisfies the existing ACCOUNT_NUMBER_PATTERN
+  ok - ids past the 6-digit pad widen the number instead of wrapping
+  ok - distinct ids never collide, and neither do equal ids across branches
+  ok - an unknown branch still yields a valid, well-formed number
+
+validateRegistration
+  ok - accepts a complete, well-formed staff registration
+  ok - rejects each field being missing, with a message naming it
+  ok - rejects a malformed account number
+  ok - rejects over-length branch and holder
+  ok - survives null/undefined input rather than throwing
+
+15 assertions passed.
+catalog
+  ok - DOCUMENT_TYPES is a fixed, non-empty list including the roadmap's examples
+  ok - VERIFICATION_STATUSES is pending/verified/rejected
+sanitizeDownloadFilename
+  ok - passes through an ordinary filename unchanged
+  ok - strips double quotes so they cannot close the Content-Disposition value early
+  ok - strips CR/LF so they cannot inject extra header lines
+  ok - a missing or non-string name becomes an empty string, not a crash
+
+6 assertions passed.
+summarizeApprovalRates
+  ok - counts every status into by_status, zero-filled for absent ones
+  ok - accepted/disbursed/closed all count as EVER approved, not just 'approved'
+  ok - withdrawn and still-in-flight statuses are excluded from the denominator
+  ok - no decidable applications yields null rates, not a division error
+  ok - an empty portfolio summarizes without crashing
+summarizeProductDistribution
+  ok - groups by product_id, summing requested amounts
+  ok - a missing product_id/name groups under its own bucket rather than crashing
+summarizeRiskDistribution
+  ok - groups by risk_category, with nulls under 'Not assessed'
+summarizeDisbursement
+  ok - zero-fills every trailing month, including ones with no disbursements
+summarizePortfolioAtRisk
+  ok - buckets by daysPastDue, cumulatively, weighted by outstanding principal
+  ok - an entirely current (no overdue) active portfolio has zero PAR everywhere
+  ok - no active accounts at all yields null percentages, not a division error
+
+12 assertions passed.
+toLkrPerUnit
+  ok - USD -> LKR is the raw LKR-per-USD rate directly
+  ok - EUR -> LKR divides LKR-per-USD by EUR-per-USD
+  ok - GBP -> LKR divides LKR-per-USD by GBP-per-USD
+  ok - JPY -> LKR divides LKR-per-USD by JPY-per-USD (low-value currency sanity check)
+  ok - INR -> LKR divides LKR-per-USD by INR-per-USD
+  ok - missing LKR rate throws
+  ok - missing target-currency rate throws
+  ok - zero/negative rates are rejected, not silently divided by
+applySpread
+  ok - buy is below mid, sell is above mid, by the configured bps
+  ok - zero spread returns mid on both sides
+
+10 checks passed.
+◇ injected env (28) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+rateForDirection
+  ok - customer 'buy' prices at the board's sell_rate (bank sells FX)
+  ok - customer 'sell' prices at the board's buy_rate (bank buys FX)
+verifyQuote
+  ok - a valid, unexpired quote for the right user decodes
+  ok - an expired quote throws a 410 (Gone) QuoteError
+  ok - a quote redeemed by a different user throws a 403 QuoteError
+  ok - a malformed quote id throws a 400 QuoteError
+  ok - a quote signed with a different secret throws a 400 QuoteError
+
+7 checks passed.
+◇ injected env (29) from .env // tip: ⌘ override existing { override: true }
+fitLinearTrend
+  ok - recovers the exact slope of a perfectly linear series
+  ok - slope is ~0 for a flat series
+computeProjection — insufficient data
+  ok - fewer than 5 points returns an insufficient-data response, not a guess
+computeProjection — known linear trend
+  ok - projects the next day exactly one dailyDelta past the last observed rate
+  ok - horizon is capped at MAX_HORIZON_DAYS even if a larger value is requested
+  ok - horizon defaults sensibly when omitted
+
+6 passing
+liveAnomaly.service
+  ok - MIN_POINTS_REQUIRED matches the model's ISOFOREST_MIN_WINDOW (21)
+  ok - below the minimum returns insufficient_data without calling the model
+  ok - exactly the minimum is enough
+  ok - sends the live mid rates, in order, as the scored window
+  ok - null, undefined, zero and negative rates are dropped before scoring
+  ok - string DECIMAL values are coerced to numbers
+  ok - a detection is logged onto the LIVE plane, never the model plane
+  ok - basis reports the real live window, separate from model vintage
+  ok - a non-detection still calls logAnomaly, which no-ops on isAnomalous=false
+
+9 passed
+fxVar.service
+  ok - aggregate(h=1) returns the column unchanged
+  ok - aggregate(h=5) sums log returns over overlapping windows
+  ok - riskFrom reports losses as positive magnitudes
+  ok - a profitable-only distribution yields zero VaR, never negative
+  ok - a long position loses when the currency falls
+  ok - SIGN: a short position of the same size carries the same risk here
+  ok - perfectly negatively correlated longs hedge to ~zero portfolio VaR
+  ok - portfolio VaR never exceeds the sum of standalone VaRs
+  ok - a longer horizon carries more risk
+  ok - positions with no scenario history are reported, not silently dropped
+  ok - zero net positions are ignored
+  ok - a missing scenario artifact yields null rather than throwing
+
+12 passed
+requiresDocumentsFor
+controller/migration consistency
+  ok - a NULL threshold means no documentation requirement at all
+  ok - an undefined/missing threshold column is also treated as no requirement
+  ok - an amount below the threshold does not require documents
+  ok - BOUNDARY: an amount exactly at the threshold DOES require documents
+  ok - an amount above the threshold requires documents
+  ok - mysql2's string-typed DECIMAL threshold is compared numerically, not lexically
+  ok - a zero threshold means every request needs documents, unlike NULL
+  ok - the rule under test still matches the controller's implementation
+  ok - approval is gated on requires_documents AND a zero document count
+  ok - compliance documents are never written under the statically-served uploads/ dir
+
+10 passed
+computeSpreadRevenueLkr
+controller drift guard
+  ok - customer 'buy': revenue matches (quoted_lkr - mid_lkr) computed independently via applySpread
+  ok - customer 'sell': revenue matches (mid_lkr - quoted_lkr) computed independently via applySpread
+  ok - zero spread yields zero revenue on both directions
+  ok - revenue is always non-negative, whichever direction
+  ok - a missing/zero quoted_lkr_amount yields zero revenue rather than NaN
+  ok - mysql2's string-typed DECIMAL columns are handled numerically
+  ok - the rule under test still matches the controller's implementation
+  ok - volume_by_currency and spread_revenue are computed from settled requests only
+  ok - 'cancelled' requests are excluded from the rate denominator
+
+9 passed
+◇ injected env (29) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+✅ MySQL Database Connected
+fxInventoryModel reserve-on-approve — 30 concurrent-approval races
+  ok - every one of 30 races produced exactly one 200 and one 409
+  ok - NEVER two successes and NEVER two failures, in any race
+  ok - reserved never exceeded on_hand — no oversell — in any race
+  ok - reserved settled at exactly 1000 (the one winner), on_hand unchanged, in every race
+  ok - exactly one 'reserve' ledger row was written per race — never zero, never two
+  ok - the ledger reconstructs on_hand/reserved EXACTLY, in every race
+  ok - the winner reached ready_for_settlement and the loser stayed pending_review, in every race
+  ok - the losing approval's 409 names the shortage, in every race
+  ok - all 30 seeded requests were cleaned up — nothing left behind
+  ok - GBP's ledger and vault were fully cleaned up and restored
+
+10 passed
+  ok - all 29 notices carry a category, event type, link and reference
+  ok - LOAD-BEARING: staff notices link to the queue, lessee notices to their own lease — never crossed
+  ok - LOAD-BEARING: the same rental reminder twice produces the same dedupe key
+  ok - a 7-day and a 3-day notice for the same rental are distinct — both should send
+  ok - the same day-marker on a different rental is distinct
+  ok - LOAD-BEARING: overdue notices escalate by bucket, not once per day
+  ok - LOAD-BEARING: a reissued quotation notifies again — keyed per quotation, not per application
+  ok - LOAD-BEARING: payment-received notices are NOT deduped — collapsing them would hide money
+  ok - one-shot milestones all carry a dedupe key, so a retried request cannot duplicate them
+  ok - LOAD-BEARING: 'approved' says outright that approval is not the last step
+  ok - an unrecognised status returns null rather than an empty notification
+  ok - a missing lessee name and vehicle degrade to readable prose, not 'undefined undefined'
+  ok - LOAD-BEARING: no notice leaks 'undefined' or 'NaN' into text a customer reads
+
+13 passed
+  ok - daysBetween is exact across months and returns null on unparseable input
+  ok - LOAD-BEARING: across 15 days a rental produces exactly 4 due-soon notices, at 7/3/1/0
+  ok - re-running the same day is deterministic — the sweep can be as dumb as it likes
+  ok - overdue buckets widen and never run out — a year late still maps to the last bucket
+  ok - LOAD-BEARING: 90 days overdue yields only 6 distinct buckets — the dedupe key collapses 88 true days into 6 notices
+  ok - LOAD-BEARING: three rentals behind produces ONE overdue notice, about the oldest
+  ok - already-paid rentals are never reported overdue
+  ok - a fully paid lease is never reminded of anything
+  ok - no schedule produces no reminders rather than throwing
+  ok - a quotation warns at 3 and 1 days out, and never after it has lapsed
+  ok - LOAD-BEARING: only a LIVE quotation warns — an accepted one must never nag
+  ok - an unpaid signing amount is chased at 3, 7, 14 and 30 days after acceptance
+  ok - LOAD-BEARING: a settled or not-yet-accepted lease is never chased for money
+  ok - a lease waiting on us for 7 days nudges the desk
+  ok - LOAD-BEARING: only staff-owned stages nudge the desk — a customer's delay is not our stall
+
+15 passed
+normalizeNic
+  ok - strips spaces and dashes and uppercases the trailing letter
+  ok - leaves an all-digit new-format NIC unchanged apart from stray whitespace
+  ok - a missing or non-string value becomes an empty string, not a crash
+parseNic — old format
+  ok - parses a male old-format NIC
+  ok - parses a female old-format NIC (day-of-year offset by 500)
+  ok - accepts a lowercase trailing letter and embedded dashes
+parseNic — new format
+  ok - parses a male new-format NIC
+  ok - parses a female new-format NIC (day-of-year offset by 500)
+parseNic — structural validation
+  ok - rejects a string that matches neither NIC format
+  ok - rejects a day-of-year of 0
+  ok - rejects a day-of-year above the valid female range
+parseNic — leap year handling
+  ok - accepts day-of-year 366 in a leap birth year
+  ok - rejects day-of-year 366 in a non-leap birth year
+parseNic — plausibility rules
+  ok - rejects a birth year in the future
+  ok - rejects an applicant who is not yet 18
+  ok - accepts an adult applicant born well over 18 years ago
+crossCheckNic
+  ok - reports no mismatch when declared DOB and gender agree with the NIC
+  ok - flags a declared date of birth that disagrees with the NIC
+  ok - flags a declared gender that disagrees with the NIC
+  ok - an unparseable NIC cannot be cross-checked and is reported invalid
+
+20 assertions passed.
+parseLkrAmount
+  ok - parses a 'Rs.' prefixed amount with thousands separators
+  ok - parses a Sinhala 'රු.' prefixed amount
+  ok - parses an 'LKR' prefixed amount
+  ok - parses the trailing '/=' convention
+  ok - treats a parenthesized amount as negative
+  ok - returns null for text with no parseable amount
+parseLocalDate
+  ok - parses DD/MM/YYYY, never MM/DD/YYYY
+  ok - rejects a US-ordered date that isn't a valid DD/MM date
+  ok - accepts '-' and '.' separators
+  ok - expands a 2-digit year using the pivot
+  ok - returns null for an unparseable string
+extractFields — national_id
+  ok - extracts a label-anchored old-format NIC with high confidence
+  ok - falls back to a loose bare-pattern match at lower confidence when there is no label
+  ok - never guesses — an invalid-looking token yields a null field, not a bad extraction
+extractFields — cr_copy
+  ok - extracts the full set of CR copy fields from a labelled document
+  ok - flags a finance company as absolute owner — an encumbrance signal for underwriting
+  ok - does not flag an individual as absolute owner
+  ok - recognizes the old two/three-digit-dash-four-digit plate format
+  ok - falls back to a loose plate match at lower confidence with no label
+  ok - leaves unfound cr_copy fields null rather than guessing
+extractFields — bank_statement
+  ok - identifies the bank from header keywords and extracts account fields
+  ok - extracts a statement period as DD/MM/YYYY-parsed ISO dates
+  ok - extracts opening/closing balances through parseLkrAmount
+  ok - identifies a bank whose full name is used instead of its abbreviation
+  ok - carries a parenthesized negative closing balance through as a negative number
+  ok - leaves a missing statement period null rather than guessing one
+extractFields — document type handling
+  ok - returns an empty field set for a supported document type with no extraction rules yet
+  ok - recognizes a lease-only document type (LEASE_DOCUMENT_TYPES) as valid, not just DOCUMENT_TYPES
+  ok - throws for a document_type outside both DOCUMENT_TYPES and LEASE_DOCUMENT_TYPES
+
+29 assertions passed.
+nameMatchScore
+  ok - scores an exact name match at 1
+  ok - scores an initial standing in for a full given name above threshold
+  ok - is order-insensitive
+  ok - scores a materially different name below threshold
+3.1 payslip arithmetic
+  ok - flags consistent gross - deductions = net as info
+  ok - flags an arithmetic mismatch as a warning
+  ok - skips arithmetic check entirely when a figure is missing
+  ok - corroborates an 8% EPF employee contribution against basic salary
+  ok - flags an EPF employee contribution inconsistent with 8% of basic
+  ok - corroborates EPF employer (12%) and ETF employer (3%) rates
+3.2 cross-document identity
+  ok - matches names that are consistent across NIC, payslip, and bank statement
+  ok - flags a mismatched name across documents as a warning
+  ok - compares the registered bank account holder from declared data
+  ok - skips identity comparisons when fewer than two names are available
+3.3 NIC-derived identity facts
+  ok - matches NIC-derived DOB and gender against declared data
+  ok - blocks on a NIC-derived date of birth mismatch
+  ok - blocks on a NIC-derived gender mismatch
+  ok - skips NIC-derived checks when the NIC itself is invalid
+3.4 income corroboration
+  ok - corroborates payslip net salary against declared income within tolerance
+  ok - flags an income figure inconsistent with declared income
+  ok - compares the recurring bank salary credit as well
+  ok - skips income corroboration when no comparable figures are present
+3.5 chassis chain
+  ok - confirms a matching chassis number across all four documents
+  ok - blocks on a chassis number mismatch across documents
+  ok - skips the chassis chain check when fewer than two documents have a chassis number
+3.6 encumbrance
+  ok - returns a blocker when the absolute owner is not the applicant on a lease
+  ok - returns info when the absolute owner matches the applicant on a lease
+  ok - does not run the encumbrance check outside of a lease application
+
+28 assertions passed.
+PDF text-layer routing
+  ok - extracts text directly from a PDF with a text layer, skipping OCR
+Scanned-document routing
+  ok - routes a text-less (scanned) PDF to Gemini Vision
+  ok - routes an image straight to Gemini Vision
+Missing-key fallback
+  ok - skips recognition (never calls axios) when GEMINI_API_KEY is unset
+Timeout fallback
+[ocr] Gemini Vision recognition failed (ECONNABORTED).
+  ok - returns failed, not a throw, when the Gemini call times out
+Empty-response fallback
+[ocr] Gemini Vision returned an empty response — marking failed.
+  ok - returns failed when Gemini responds with no usable text
+Other resilience edges
+  ok - skips an empty buffer without touching the network
+  ok - skips an unsupported mime type without touching the network
+[ocr] Gemini Vision recognition failed (boom).
+  ok - never throws even when axios throws something unexpected
+
+9 assertions passed.
+◇ injected env (29) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+Happy path
+  ok - extracts, validates and persists a recognised document
+  ok - cross-checks the NIC against the applicant's declared facts
+  ok - validates the new document against ones already extracted
+Failure modes
+  ok - records 'skipped' when OCR was never attempted
+[pipeline] recognition failed (attempt 1/2) — retrying.
+  ok - records 'failed' when OCR was attempted and produced nothing
+[pipeline] recognition failed (attempt 1/2) — retrying.
+  ok - retries a transient recognition failure and succeeds on the second attempt
+  ok - does not retry a 'skipped' recognition result
+[pipeline] refusing to read a path outside the document dir: /etc/passwd
+  ok - refuses to read a storage path outside the document directory
+[pipeline] could not read document 7 (ENOENT).
+  ok - records 'failed' when the stored file has gone missing
+[pipeline] validation failed for document 7: database unavailable
+  ok - keeps the extracted fields when validation itself fails
+Advisory-only guarantee
+[pipeline] recognition failed (attempt 1/2) — retrying.
+  ok - never writes verification_status, on any path
+Auto-extraction setting
+  ok - skips the pipeline entirely when auto-extraction is disabled
+  ok - runs the pipeline as normal when auto-extraction is enabled
+DOCUMENT EXTRACTION PIPELINE ERROR: Error: database unavailable
+    at isAutoExtractionEnabled (/home/nisshan/Downloads/finance-application/finance-backend/src/services/__tests__/documentPipeline.test.js:335:19)
+    at processDocumentInBackground (/home/nisshan/Downloads/finance-application/finance-backend/src/services/documentPipeline.service.js:299:26)
+    at /home/nisshan/Downloads/finance-application/finance-backend/src/services/__tests__/documentPipeline.test.js:331:7
+    at check (/home/nisshan/Downloads/finance-application/finance-backend/src/services/__tests__/documentPipeline.test.js:30:26)
+    at run (/home/nisshan/Downloads/finance-application/finance-backend/src/services/__tests__/documentPipeline.test.js:328:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+  ok - swallows a failure in the setting lookup itself rather than rejecting
+Pure helpers
+  ok - overallConfidence averages the extracted fields' confidences
+  ok - buildExtractedBundle merges stored rows under the run in progress
+  ok - presentExtraction reports a never-extracted document as pending, not missing
+  ok - presentExtraction never leaks the raw transcript
+
+18 assertions passed.

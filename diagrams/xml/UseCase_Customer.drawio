@@ -1,0 +1,93 @@
+<mxfile host="app.diagrams.net" modified="2026-08-17T00:00:00.000Z" agent="claude-code" version="24.0.0" type="device">
+  <diagram name="Customer" id="usecase-customer">
+<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="c_title" value="Use Case Diagram &#8212; Customer" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="0" width="500" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_boundary" value="AI-Powered Loan Risk &amp; Recommendation System &#8212; Customer View" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;strokeWidth=2;verticalAlign=top;align=center;fontStyle=1;fontSize=13;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="170" y="40" width="500" height="1720" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_actor_customer" value="Customer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f5f5f5;strokeColor=#333333;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="860" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_actor_gemini" value="Gemini API" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="700" y="570" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="c_actor_stripe" value="Stripe" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="700" y="920" width="30" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="c_uc1" value="Register / Login" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="220" height="60" as="geometry" /></mxCell>
+        <mxCell id="c_uc2" value="Manage Profile &amp; Submit KYC" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="180" width="280" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc3" value="Apply for Loan" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="280" width="190" height="60" as="geometry" /></mxCell>
+        <mxCell id="c_uc4" value="Submit Consent" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="390" y="360" width="170" height="50" as="geometry" /></mxCell>
+        <mxCell id="c_uc5" value="Upload Loan Documents" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="390" y="420" width="210" height="50" as="geometry" /></mxCell>
+        <mxCell id="c_uc6" value="Auto-Save Draft (on Exit)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="390" y="480" width="230" height="50" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc7" value="Track Application Status" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="570" width="220" height="60" as="geometry" /></mxCell>
+        <mxCell id="c_uc8" value="Download Decision Letter (if Decided)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="1"><mxGeometry x="390" y="650" width="230" height="50" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc9" value="View &amp; Accept Loan Offer" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="740" width="220" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc10" value="Make Online Repayment" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="840" width="210" height="60" as="geometry" /></mxCell>
+        <mxCell id="c_uc11" value="Process Card Payment" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="390" y="920" width="200" height="50" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc12" value="View Schedule &amp; Download Statement" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="1010" width="280" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc13" value="Apply for Vehicle Lease" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="1110" width="230" height="60" as="geometry" /></mxCell>
+        <mxCell id="c_uc14" value="Track Lease &amp; Pay Rentals" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="1210" width="230" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc15" value="View Currency Outlook &amp; Live Rates" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="1310" width="300" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc16" value="Submit FX Exchange Request" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="1410" width="250" height="60" as="geometry" /></mxCell>
+        <mxCell id="c_uc17" value="Upload Compliance Document (if Over Threshold)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="390" y="1490" width="250" height="50" as="geometry" /></mxCell>
+        <mxCell id="c_uc18" value="Print Settlement Slip (if Settled)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1"><mxGeometry x="390" y="1550" width="220" height="50" as="geometry" /></mxCell>
+
+        <mxCell id="c_uc19" value="Contact Support / View FAQ" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="320" y="1640" width="250" height="60" as="geometry" /></mxCell>
+
+        <!-- Actor associations -->
+        <mxCell id="c_e1" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e2" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e3" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e7" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e9" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc9"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e10" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc10"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e12" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc12"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e13" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc13"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e14" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc14"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e15" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc15"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e16" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc16"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e19" style="endArrow=none;rounded=0;strokeColor=#333333;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="c_actor_customer" target="c_uc19"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Include relationships (base -> included, arrow at included) -->
+        <mxCell id="c_i1" value="&#171;include&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#333333;exitX=0.3;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="c_uc3" target="c_uc4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_i2" value="&#171;include&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#333333;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="c_uc3" target="c_uc5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_i3" value="&#171;include&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#333333;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="c_uc10" target="c_uc11"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Extend relationships (extension -> base, arrow at base) -->
+        <mxCell id="c_x1" value="&#171;extend&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#9673a6;exitX=0.5;exitY=0;entryX=0.7;entryY=1;" edge="1" parent="1" source="c_uc6" target="c_uc3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_x2" value="&#171;extend&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#9673a6;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="c_uc8" target="c_uc7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_x3" value="&#171;extend&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#9673a6;exitX=0.5;exitY=0;entryX=0.3;entryY=1;" edge="1" parent="1" source="c_uc17" target="c_uc16"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_x4" value="&#171;extend&#187;" style="endArrow=open;endFill=0;dashed=1;fontSize=10;strokeColor=#9673a6;exitX=0.5;exitY=0;entryX=0.7;entryY=1;" edge="1" parent="1" source="c_uc18" target="c_uc16"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- External systems -->
+        <mxCell id="c_e_gemini" value="risk explanation" style="endArrow=none;dashed=1;fontSize=10;strokeColor=#999999;fontColor=#666666;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="c_actor_gemini" target="c_uc7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c_e_stripe" value="checkout session" style="endArrow=none;dashed=1;fontSize=10;strokeColor=#999999;fontColor=#666666;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="c_actor_stripe" target="c_uc11"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Legend -->
+        <mxCell id="c_legend" value="Legend&#10;&#8212;&#8212;  association&#10;- - &#8250;  &#171;include&#187; (mandatory)&#10;- - &#8250;  &#171;extend&#187; (conditional, arrow points at base)&#10;- - -  external system (Gemini / Stripe)" style="text;align=left;verticalAlign=top;fontSize=11;strokeColor=#999999;rounded=1;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="1620" width="340" height="120" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

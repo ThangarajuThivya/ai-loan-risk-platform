@@ -1,0 +1,184 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.0.0" type="device">
+  <diagram name="Lease Application State Machine" id="lease-app-sm">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Lease Application Lifecycle — UML State Machine Diagram" style="text;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="0" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Initial pseudostate -->
+        <mxCell id="init1" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="155" y="40" width="30" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Spine states -->
+        <mxCell id="applied" value="applied" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="60" y="110" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="under_review" value="under_review" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="60" y="230" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="valuation" value="valuation" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="60" y="350" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="approved" value="approved" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="470" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="quoted" value="quoted" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="590" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="accepted" value="accepted" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="710" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="down_payment" value="down_payment" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="830" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="vehicle_purchased" value="vehicle_purchased" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="950" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="registered" value="registered" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1070" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="active" value="active" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1190" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="released" value="released" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1310" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Side (dead-end) states -->
+        <mxCell id="rejected" value="rejected" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="560" y="230" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="declined" value="declined" style="rounded=1;arcSize=25;whiteSpace=wrap;html=1;fontSize=13;fontStyle=1;align=center;verticalAlign=middle;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="560" y="590" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Final pseudostate -->
+        <mxCell id="final_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="155" y="1410" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="final_inner" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#000000;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="161" y="1416" width="18" height="18" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Transitions ===== -->
+
+        <mxCell id="e_init" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;" edge="1" parent="1" source="init1" target="applied">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="staff/admin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="applied" target="under_review">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" value="every vehicle, brand new included" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="under_review" target="valuation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" value="staff/admin (LTV re-evaluated against valuation)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="valuation" target="approved">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- under_review -> rejected (same row, straight horizontal) -->
+        <mxCell id="e4" value="staff/admin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="under_review" target="rejected">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="staff/admin issues terms" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="approved" target="quoted">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e6" value="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="quoted" target="accepted">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- quoted -> declined (same row, straight horizontal) -->
+        <mxCell id="e7" value="customer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="quoted" target="declined">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e8" value="card online, or staff-recorded offline" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="accepted" target="down_payment">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e9" value="institution pays the dealer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="down_payment" target="vehicle_purchased">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e10" value="DMT/CR names lessor as absolute owner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="vehicle_purchased" target="registered">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e11" value="agreement activated, rental schedule generated" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="registered" target="active">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- active self-loop -->
+        <mxCell id="e_loop" value="monthly rentals, or early settlement" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=1;exitY=0.3;entryX=1;entryY=0.7;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="active" target="active">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="360" y="1208" />
+              <mxPoint x="360" y="1232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e12" value="every rental paid — letter of release issued" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="active" target="released">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e13" value="DMT transfer — lessee becomes legal owner" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;strokeColor=#333333;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="released" target="final_outer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- rejected -> final (dead end) -->
+        <mxCell id="e_rej_final" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;dashed=1;strokeColor=#999999;exitX=0.5;exitY=1;entryX=1;entryY=0.25;" edge="1" parent="1" source="rejected" target="final_outer">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="800" />
+              <mxPoint x="800" y="800" />
+              <mxPoint x="800" y="1417" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- declined -> final (dead end) -->
+        <mxCell id="e_dec_final" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;endSize=10;dashed=1;strokeColor=#999999;exitX=0.5;exitY=1;entryX=1;entryY=0.75;" edge="1" parent="1" source="declined" target="final_outer">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="900" />
+              <mxPoint x="770" y="900" />
+              <mxPoint x="770" y="1432" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== Legend ===== -->
+        <mxCell id="legend" value="Notation&#10;&#8226; Filled circle = initial pseudostate (start of lifecycle)&#10;&#8226; Circle-in-circle = final pseudostate (end of lifecycle)&#10;&#8226; Rounded rectangle = state&#10;&#8226; Solid arrow, label = trigger / role that causes the transition&#10;&#8226; Dashed grey arrow = terminal (dead-end) path back to the final state, no further transitions defined&#10;&#8226; Self-loop on active = repeatable transition (each rental payment)&#10;&#10;Colour key: blue = entry &#183; amber = staff review / valuation &#183; green = positive progression to completion &#183; red = rejected &#183; grey = declined by customer" style="text;align=left;verticalAlign=top;spacingLeft=6;fontSize=11;whiteSpace=wrap;html=0;rounded=1;fillColor=#f5f5f5;strokeColor=#cccccc;" vertex="1" parent="1">
+          <mxGeometry x="900" y="230" width="300" height="260" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note" value="Source: ARCHITECTURE.md &#167;9.19 lifecycle diagram. No disbursed/closed states — a lease has no disbursement. Step order (down_payment &#8594; vehicle_purchased &#8594; registered) is load-bearing: the institution's money never chases an unmade commitment, and rentals never begin before the CR names the lessor as absolute owner." style="text;align=left;verticalAlign=top;spacingLeft=6;fontSize=10;fontStyle=2;whiteSpace=wrap;html=0;" vertex="1" parent="1">
+          <mxGeometry x="900" y="510" width="300" height="140" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

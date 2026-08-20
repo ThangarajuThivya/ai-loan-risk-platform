@@ -116,6 +116,18 @@ flowchart LR
   throws — every failure mode (no API key, network error, timeout, empty
   response, unreadable input) resolves to `{status: 'skipped'|'failed', ...}`
   instead, so an upload can never fail because OCR failed.
+- **Retry.** `skipped` (no API key, feature disabled — a config-level state)
+  is never retried. `failed` (network error, timeout, transient Gemini
+  error — anything that could succeed on a second attempt) is retried once
+  automatically, with a fixed delay, before the pipeline gives up and
+  persists the failure (`documentPipeline.service.js`'s
+  `recognizeWithRetry`). If it's still `failed` after that, the staff/
+  applicant document panel shows an explicit "analysis failed" state
+  (distinct from "nothing found") with a **manual retry** action —
+  `POST /:id/documents/:docId/extraction/retry` on both the loan and lease
+  routes — that re-runs the pipeline on demand, bypassing the
+  `ocr_auto_extraction` setting gate since the reviewer explicitly asked
+  for it.
 - **Extraction** (`documentExtraction.service.js`) is pure and does no I/O.
   Currently implemented for `national_id` (NIC number), `cr_copy` (vehicle
   registration — chassis number, engine number, make/model/year, absolute

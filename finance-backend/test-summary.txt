@@ -1,0 +1,47 @@
+$ for f in src/services/__tests__/*.test.js; do node "$f"; done
+
+ok  adverseAction.test.js               23 assertions   node adverseAction.test.js
+ok  amortization.test.js                18 assertions   node amortization.test.js
+ok  applicationStatus.test.js           59 assertions   node applicationStatus.test.js
+ok  bankAccount.test.js                 15 assertions   node bankAccount.test.js
+ok  behaviouralFeatures.test.js         52 assertions   node behaviouralFeatures.test.js
+ok  beneficiaryAccount.test.js          13 assertions   node beneficiaryAccount.test.js
+ok  collateralGuarantor.test.js         22 assertions   node collateralGuarantor.test.js
+ok  consent.test.js                      0 assertions   node consent.test.js
+ok  creditPolicy.test.js                55 assertions   node creditPolicy.test.js
+ok  crossRate.test.js                   10 assertions   node crossRate.test.js
+ok  decisionMatrix.test.js              32 assertions   node decisionMatrix.test.js
+ok  documentExtraction.test.js          29 assertions   node documentExtraction.test.js
+ok  documentPipeline.test.js            18 assertions   node documentPipeline.test.js
+ok  documentValidation.test.js          28 assertions   node documentValidation.test.js
+ok  fxCompliance.test.js                10 assertions   node fxCompliance.test.js
+ok  fxInventoryConcurrency.test.js      10 assertions   node fxInventoryConcurrency.test.js
+ok  fxQuote.test.js                      7 assertions   node fxQuote.test.js
+ok  fxReports.test.js                    9 assertions   node fxReports.test.js
+ok  fxVar.test.js                       12 assertions   node fxVar.test.js
+ok  interestPricing.test.js             14 assertions   node interestPricing.test.js
+ok  leaseAgreement.test.js              10 assertions   node leaseAgreement.test.js
+ok  leaseNotification.test.js           13 assertions   node leaseNotification.test.js
+ok  leasePortfolio.test.js               9 assertions   node leasePortfolio.test.js
+ok  leaseRegister.test.js               24 assertions   node leaseRegister.test.js
+ok  leaseRegistration.test.js           16 assertions   node leaseRegistration.test.js
+ok  leaseReminders.test.js              15 assertions   node leaseReminders.test.js
+ok  leaseRentalQuote.test.js            30 assertions   node leaseRentalQuote.test.js
+ok  leaseStatus.test.js                 21 assertions   node leaseStatus.test.js
+ok  leasing.test.js                     36 assertions   node leasing.test.js
+ok  liveAnomaly.test.js                  9 assertions   node liveAnomaly.test.js
+ok  liveForecast.test.js                 6 assertions   node liveForecast.test.js
+ok  loanDocument.test.js                 6 assertions   node loanDocument.test.js
+ok  loanDraft.test.js                   27 assertions   node loanDraft.test.js
+ok  loanFees.test.js                    31 assertions   node loanFees.test.js
+ok  loanOffer.test.js                   24 assertions   node loanOffer.test.js
+ok  loanReports.test.js                 12 assertions   node loanReports.test.js
+ok  loanSchedule.test.js                20 assertions   node loanSchedule.test.js
+ok  nicValidation.test.js               20 assertions   node nicValidation.test.js
+ok  ocr.test.js                          9 assertions   node ocr.test.js
+ok  recommendation.test.js              26 assertions   node recommendation.test.js
+ok  repayment.test.js                   51 assertions   node repayment.test.js
+ok  repaymentQuote.test.js              27 assertions   node repaymentQuote.test.js
+ok  stripeSessionShape.test.js           6 assertions   node stripeSessionShape.test.js
+
+43 suites, 884 assertions, 0 failures — exit code 0 for every suite
